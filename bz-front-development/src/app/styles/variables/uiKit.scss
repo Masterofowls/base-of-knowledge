@@ -1,0 +1,65 @@
+:root {
+  --font-family-main: 'Mulish', sans-serif;
+
+  --font-size-xs: 12px;
+  --font-line-xs: 20px;
+  --font-xs: var(--font-size-xs) / var(--font-line-xs) var(--font-family-main);
+
+  --font-size-s: 14px;
+  --font-line-s: 22px;
+  --font-s: var(--font-size-s) / var(--font-line-s) var(--font-family-main);
+
+  --font-size-m: 16px;
+  --font-line-m: 24px;
+  --font-m: var(--font-size-m) / var(--font-line-m) var(--font-family-main);
+
+  --font-size-l: 20px;
+  --font-line-l: 28px;
+  --font-l: var(--font-size-l) / var(--font-line-l) var(--font-family-main);
+
+  --font-size-xl: 32px;
+  --font-line-xl: 40px;
+  --font-xl: var(--font-size-xl) / var(--font-line-xl) var(--font-family-main);
+
+
+  --violet-color: rgba(127, 97, 221, 1);
+  --green-color: rgba(146, 218, 99, 1);
+  --red-color: rgba(228, 74, 119, 1);
+  --blue-color: rgba(0, 170, 255, 1);
+  --black-color: black;
+  --grey-color: rgba(223, 223, 223, 1);
+  --white-color: white;
+
+  @font-face {
+    font-family: "Mulish";
+    src: url("../../../shared/assets/fonts/Mulish-Medium.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: "Mulish";
+    src: url("../../../shared/assets/fonts/Mulish-Black.woff2") format("woff2");
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: "Mulish";
+    src: url("../../../shared/assets/fonts/Mulish-ExtraBold.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: "Mulish";
+    src: url("../../../shared/assets/fonts/Mulish-Light.woff2") format("woff2");
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+  }
+
+}

@@ -1,0 +1,176 @@
+.containerEditor .ql-editor {
+  background-color: white;
+  width: 8.5in;
+  min-height: 11in;
+  padding: 1in;
+  margin: 1rem;
+  box-shadow: 0 0 5px 0 rgba(0,0,0, .5);
+}
+
+.containerEditor .ql-container.ql-snow {
+  border: none;
+  display: flex;
+  justify-content: center;
+}
+
+.ql-snow .ql-picker.ql-size .ql-picker-label::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item::before {
+  content: 'Обычный' !important;
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="small"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="small"]::before {
+  content: 'Маленький' !important;
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="large"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="large"]::before {
+  content: 'Большой' !important;
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="huge"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="huge"]::before {
+  content: 'Огромный' !important;
+}
+
+.ql-snow .ql-picker.ql-header .ql-picker-label::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item::before {
+  content: 'Обычный' !important; /* Для заголовка по умолчанию (false в опциях) */
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="1"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="1"]::before {
+  content: 'Заго-вок 1' !important;
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="2"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="2"]::before {
+  content: 'Заго-вок 2' !important;
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="3"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="3"]::before {
+  content: 'Заго-вок 3' !important;
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="4"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="4"]::before {
+  content: 'Заго-вок 4' !important;
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="5"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="5"]::before {
+  content: 'Заго-вок 5' !important;
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="6"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="6"]::before {
+  content: 'Заго-вок 6' !important;
+}
+
+.containerEditor .ql-toolbar.ql-snow {
+  display: flex;
+  justify-content: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: #F3F3F3F3;
+  border: none;
+  box-shadow: 0 0 5px 0 rgba(0,0,0, 0.5);
+}
+
+.ql-formats {
+  button,
+  .ql-picker {
+    &[class^='ql-'] {
+      position: relative;
+      &::after {
+        white-space: nowrap;
+        position: absolute;
+        display: none;
+        bottom: 100%;
+        left: 50%;
+        transform: translate(-50%, -10px);
+        background-color: #000;
+        color: #fff;
+      }
+      &::before {
+        content: '';
+        position: absolute;
+        display: none;
+        width: 0;
+        height: 0;
+        border-width: 10px;
+        border-style: solid;
+        border-color: rgb(34, 41, 85) transparent transparent;
+        left: 0;
+        transform: translate(30%, -18px);
+        z-index: 10;
+      }
+      &:hover {
+        &::after,
+        &::before {
+          display: block;
+        }
+      }
+    }
+    &.ql-bold::after {
+      content: 'Жирный';
+    }
+    &.ql-italic::after {
+      content: 'Курсив';
+    }
+    &.ql-underline::after {
+      content: 'Подчёркивание';
+    }
+    &.ql-strike::after {
+      content: 'Зачёркивание';
+    }
+    &.ql-font-style::after {
+      content: 'Выбор шрифта';
+    }
+    &.ql-size::after {
+      content: 'Размер шрифта';
+    }
+    &.ql-font::after {
+      content: 'Типаж шрифта';
+    }
+    &.ql-header::after {
+      content: 'Уровень заголовка';
+    }
+    &.ql-background::after {
+      content: 'Цвет фона';
+    }
+    &.ql-align::after {
+      content: 'Центрирование';
+    }
+    &.ql-align {
+      &[value='']::after {
+        content: 'Align Left';
+      }
+      &[value='center']::after {
+        content: 'Align Center';
+      }
+      &[value='right']::after {
+        content: 'Align Right';
+      }
+      &[value='justify']::after {
+        content: 'Align Justify';
+      }
+    }
+    &.ql-list {
+      &[value='bullet']::after {
+        content: 'Точечный лист';
+      }
+      &[value='ordered']::after {
+        content: 'Нумерной лист';
+      }
+    }
+    &.ql-blockquote::after {
+      content: 'Blockquote';
+    }
+    &.ql-link::after {
+      content: 'Ссылка';
+    }
+    &.ql-image::after {
+      content: 'Картинка';
+    }
+    &.ql-clean::after {
+      content: 'Очистить инструменты';
+    }
+    &.ql-color::after {
+      content: 'Цвет текста';
+    }
+  }
+}

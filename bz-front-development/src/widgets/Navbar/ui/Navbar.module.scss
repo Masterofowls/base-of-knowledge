@@ -1,0 +1,37 @@
+.Navbar {
+  width: 100%;
+  height: var(--navbar-height);
+  background: var(--bg-header-color);
+  display: flex;
+  align-items: center;
+  padding: 20px 120px 20px 100px;
+  color: white;
+}
+
+.logo {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-direction: row;
+  font-size: 20px;
+  margin-right: 30px;
+}
+
+.links {
+  display: flex;
+  gap: 20px;
+  color: var(--light-color);
+}
+
+.user {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-left: auto;
+  gap: 5px;
+}
+
+
+.mainLink {
+  margin-right: 15px;
+}

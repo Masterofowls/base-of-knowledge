@@ -1,0 +1,29 @@
+.LatestPosts {
+  height: 300px;
+  width: 800px;
+  border: 1px black solid;
+}
+
+.LatestPostsHeader {
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 13px;
+}
+
+.name {
+  font: var(--font-l);
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.LatestPostsWrap {
+  border-top: 1px rgba(0,0,0,0.25) solid;
+}
+
+.icon {
+  filter: invert(100%);
+}

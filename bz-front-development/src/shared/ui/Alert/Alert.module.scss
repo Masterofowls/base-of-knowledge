@@ -1,0 +1,10 @@
+.Alert {
+  background-color: rgba(203, 236, 252, 1);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 7px 4px 12px;
+  font: var(--font-s);
+  font-weight: 300;
+}

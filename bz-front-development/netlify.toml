@@ -1,0 +1,6 @@
+[build]
+  base = "bz-front-development"
+  publish = "bz-front-development/dist"
+  command = "npm ci && npm run build"
+
+

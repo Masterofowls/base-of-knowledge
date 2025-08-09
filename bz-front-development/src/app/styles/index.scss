@@ -1,0 +1,26 @@
+@use 'variables/global' as *;
+@use 'reset' as *;
+@use 'editor' as *;
+@use 'variables/uiKit' as *;
+
+.app {
+  font: var(--font-m);
+  background: var(--bg-color);
+  color: var(--primary-color);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  // исправить margin и вообще убрать этот ужас заменив его на компонент контейнера
+  margin: 0 100px;
+}
+
+.page-center-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100vw;
+}

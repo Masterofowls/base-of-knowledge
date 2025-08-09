@@ -1,0 +1,15 @@
+.Footer {
+  height: var(--footer-height);
+  background-color: var(--bg-footer-color);
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  font-size: 20px;
+  color: var(--secondary-color);
+}
+
+.left, .right {
+  margin: 30px;
+}

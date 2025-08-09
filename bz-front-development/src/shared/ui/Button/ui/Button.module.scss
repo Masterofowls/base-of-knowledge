@@ -1,0 +1,43 @@
+.Button {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+  font-size: 16px;
+}
+
+.clear {
+  padding: 0;
+  margin: 0;
+  background: none;
+}
+
+.arrow {
+  display: flex;
+  margin: 0;
+  width: 100%;
+}
+
+.childrenWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+  text-align: left;
+}
+
+.childrenWrapper * {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  color: white;
+}
+
+.arrowIcon {
+  flex-shrink: 0;
+  fill: currentColor;
+  margin: 3px 3px 3px 10px;
+}
