@@ -60,7 +60,7 @@ export default function PostView() {
               <span>{new Date(item.created_at).toLocaleString('ru-RU')}</span>
               {item.authors?.[0] && <span> · {item.authors[0].full_name}</span>}
             </div>
-            <div style={{ lineHeight: 1.75 }} dangerouslySetInnerHTML={{ __html: item.content }} />
+            <div className='article-content' dangerouslySetInnerHTML={{ __html: item.content }} />
           </article>
         )}
       </Container>

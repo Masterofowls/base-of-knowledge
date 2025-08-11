@@ -227,21 +227,18 @@ export default function PostManagement() {
                                     padding: '16px',
                                     backgroundColor: '#fff',
                                     display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
+                                    gap: '16px',
+                                    alignItems: 'flex-start'
                                 }}
                             >
-                                <div style={{ flex: 1 }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                                         <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>{article.title}</h3>
                                         {getStatusBadge(article)}
                                     </div>
-                                    <p style={{ margin: 0, color: '#666', fontSize: '14px', marginBottom: '8px' }}>
-                                        {article.content.length > 150 
-                                            ? `${article.content.substring(0, 150)}...` 
-                                            : article.content
-                                        }
-                                    </p>
+                                    <div style={{ color: '#666', fontSize: '14px', marginBottom: '8px', maxHeight: '4.5em', overflow: 'hidden' }} className='article-content'>
+                                        {article.content}
+                                    </div>
                                     <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#888' }}>
                                         <span>Создан: {formatDate(article.created_at)}</span>
                                         <span>Обновлен: {formatDate(article.updated_at)}</span>
@@ -250,8 +247,7 @@ export default function PostManagement() {
                                         )}
                                     </div>
                                 </div>
-                                
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
                                     <Button
                                         onClick={() => handleEditPost(article.id)}
                                         width='100px'

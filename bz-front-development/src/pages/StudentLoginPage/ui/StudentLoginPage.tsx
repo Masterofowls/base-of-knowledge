@@ -74,7 +74,7 @@ export default function StudentLoginPage() {
     if (loading) {
         return (
             <div className={classNames('page-center-wrapper', {}, [])}>
-                <Container gap="16px" width='513px' direction="column" paddings='24px'>
+            <Container gap="16px" width='min(100%, 420px)' direction="column" paddings='20px'>
                     <p>Загрузка...</p>
                 </Container>
             </div>
@@ -83,9 +83,9 @@ export default function StudentLoginPage() {
 
     return (
         <div className={classNames('page-center-wrapper', {}, [])}>
-            <Container gap="16px" width='513px' direction="column" paddings='24px' footerContentHeight='80px' footer={<span onClick={handleBack} style={{cursor: 'pointer'}}><ArrowIcon width='10px' height='8px'/><p>Назад к выбору входа</p></span>}>
-                <div style={{display: 'flex',flexDirection: 'row', gap: '10px', marginBottom: '5px', fontSize: '24px', fontWeight: '700'}}>
-                    <StudentIcon width='25px' height='25px'/>
+            <Container gap="16px" width='min(100%, 420px)' direction="column" paddings='20px' footerContentHeight='80px' footer={<span onClick={handleBack} style={{cursor: 'pointer'}}><ArrowIcon width='10px' height='8px'/><p>Назад к выбору входа</p></span>}>
+                <div style={{display: 'flex',flexDirection: 'row', gap: '10px', marginBottom: '5px', fontSize: '20px', fontWeight: '700'}}>
+                    <StudentIcon width='22px' height='22px'/>
                     <p>Выберите свою группу</p>
                 </div>
                 <InputSelect 
@@ -103,7 +103,7 @@ export default function StudentLoginPage() {
                     onChange={(option: any) => setSelectedGroup(option)}
                 />
                 <Button 
-                    width='210px' 
+                    width='100%'
                     backgroundColor='rgba(0, 170, 255, 1)' 
                     theme={ThemeButton.ARROW}
                     onClick={handleStudentLogin}

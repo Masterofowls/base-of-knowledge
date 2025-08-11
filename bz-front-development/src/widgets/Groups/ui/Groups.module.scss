@@ -1,15 +1,19 @@
 .Groups {
-  height: 300px;
-  width: 387px;
-  border: 1px black solid;
+  min-height: 260px;
+  width: 100%;
+  max-width: 600px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  background: var(--surface-1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
 }
 
 .GroupsHeader {
-  height: 60px;
+  min-height: 56px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 0 13px;
+  padding: 0 16px;
 }
 
 .name {
@@ -20,5 +24,10 @@
 }
 
 .GroupsWrap {
-  border-top: 1px rgba(0,0,0,0.25) solid;
+  border-top: 1px rgba(0,0,0,0.1) solid;
+  padding: 0 16px;
+}
+
+@media (max-width: 600px) {
+  .Groups { max-width: 100%; border-radius: 0; }
 }

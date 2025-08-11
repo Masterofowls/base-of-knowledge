@@ -26,3 +26,44 @@
   width: 100%;
   padding: 24px 12px;
 }
+
+/* Rich content defaults */
+.article-content {
+  color: var(--primary-color);
+  line-height: 1.75;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.article-content img,
+.article-content video,
+.article-content canvas,
+.article-content svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.article-content iframe {
+  max-width: 100%;
+  width: 100%;
+  aspect-ratio: 16/9;
+}
+
+.article-content table {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+
+.article-content pre,
+.article-content code {
+  white-space: pre-wrap;
+}
+
+.article-content p { margin: 0 0 1em; }
+.article-content blockquote {
+  margin: 0 0 1em;
+  padding-left: 12px;
+  border-left: 3px solid var(--muted);
+}

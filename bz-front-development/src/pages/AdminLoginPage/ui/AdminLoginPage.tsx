@@ -48,17 +48,16 @@ export default function AdminLoginPage() {
 
     return (
         <div className={classNames('page-center-wrapper', {}, [])}>
-            <Container footerContentHeight='65px' firstMargin='5px' footer={<span><span onClick={handleBack} style={{display: 'inline-flex', alignItems: 'center', gap: "5px", flexDirection: 'row', cursor: 'pointer'}}><ArrowIcon width='13px' height='11px' /><p>Назад к выбору входа</p></span><p>Регистрация администратора</p></span>} gap='16px' paddings='25px' width="450px">
-                {/*Сделать компонент, или ещё что-то придумать, пока пусть висит этот хэдер и футер*/}
-                <div style={{display: 'flex',flexDirection: 'row', gap: '10px', marginBottom: '7px', fontSize: '24px', fontWeight: '700'}}>
-                    <AdminIcon width='25px' height='25px'/>
+            <Container footerContentHeight='65px' firstMargin='5px' footer={<span><span onClick={handleBack} style={{display: 'inline-flex', alignItems: 'center', gap: "5px", flexDirection: 'row', cursor: 'pointer'}}><ArrowIcon width='13px' height='11px' /><p>Назад к выбору входа</p></span><p>Регистрация администратора</p></span>} gap='16px' paddings='20px' width="min(100%, 420px)">
+                <div style={{display: 'flex',flexDirection: 'row', gap: '10px', marginBottom: '7px', fontSize: '20px', fontWeight: '700'}}>
+                    <AdminIcon width='22px' height='22px'/>
                     <p>Вход администратора</p>
                 </div>
-                    <Input placeholder='Введите логин' label={<p>Логин</p>} value={email} onChange={(v)=>setEmail(String(v))}/>
-                    <Input type="password" placeholder='Введите пароль' label={<p>Пароль</p>} value={password} onChange={(v)=>setPassword(String(v))}/>
+                <Input placeholder='Введите логин' label={<p>Логин</p>} value={email} onChange={(v)=>setEmail(String(v))}/>
+                <Input type="password" placeholder='Введите пароль' label={<p>Пароль</p>} value={password} onChange={(v)=>setPassword(String(v))}/>
                 <div style={{display:'flex',flexDirection:'column', gap:8}}>
                     {error && <div style={{color:'crimson', fontSize:12}}>{error}</div>}
-                    <Button width='250px' backgroundColor='rgba(228, 74, 119, 1)' theme={ThemeButton.ARROW} onClick={handleLogin} disabled={isLoading}><span>{isLoading ? 'Входим...' : 'Войти как администратор'}</span></Button>
+                    <Button width='100%' backgroundColor='rgba(228, 74, 119, 1)' theme={ThemeButton.ARROW} onClick={handleLogin} disabled={isLoading}><span>{isLoading ? 'Входим...' : 'Войти как администратор'}</span></Button>
                 </div>
             </Container>
         </div>
