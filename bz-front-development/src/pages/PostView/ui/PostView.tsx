@@ -43,7 +43,7 @@ export default function PostView() {
   }
 
   return (
-    <div className='page-center-wrapper'>
+    <div className='page-center-wrapper' style={{ background: 'var(--card-bg)' }}>
       <Container gap='16px' width='min(100%, 900px)' direction='column' paddings='24px'>
         <span onClick={goBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
           <ArrowIcon width='13px' height='11px' />
@@ -54,9 +54,9 @@ export default function PostView() {
         {error && <div style={{ color: '#E44A77' }}>{error}</div>}
 
         {item && !isLoading && !error && (
-          <article>
+          <article style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 16, boxShadow: '0 10px 30px rgba(0,0,0,0.08)', backdropFilter: 'blur(2px)' }}>
             <h1 style={{ marginBottom: 8 }}>{item.title}</h1>
-            <div style={{ color: '#888', fontSize: 14, marginBottom: 16 }}>
+            <div style={{ color: '#9CA3AF', fontSize: 14, marginBottom: 16 }}>
               <span>{new Date(item.created_at).toLocaleString('ru-RU')}</span>
               {item.authors?.[0] && <span> · {item.authors[0].full_name}</span>}
             </div>

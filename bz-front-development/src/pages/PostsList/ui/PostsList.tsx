@@ -57,7 +57,7 @@ export default function PostsList() {
     <div className='page-center-wrapper'>
       <Container gap='16px' width='min(100%, 1000px)' direction='column' paddings='24px' className={cls.list}>
         <h2>Посты</h2>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <Input placeholder='Поиск…' value={query} onChange={setQuery} style={{ flex: '1 1 240px' }} />
           <Button onClick={handleSearch} theme={ThemeButton.ARROW} backgroundColor='#00AAFF' width='140px'>
             <span>Найти</span>
@@ -71,11 +71,11 @@ export default function PostsList() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
             {items.length === 0 && <div style={{ color: '#888' }}>Посты не найдены</div>}
             {items.map(item => (
-              <div key={item.id} style={{ border: '1px solid #e0e0e0', borderRadius: 12, padding: 16, backgroundColor: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.04)' }}>
+              <div key={item.id} style={{ border: '1px solid #1f2937', borderRadius: 14, padding: 16, background: 'rgba(255,255,255,0.02)', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
                 <h3 style={{ marginTop: 0, marginBottom: 8 }}>{item.title}</h3>
-                <p style={{ margin: 0, color: '#666' }}>{item.content.length > 180 ? item.content.slice(0, 180) + '…' : item.content}</p>
+                <p style={{ margin: 0, color: '#9CA3AF' }}>{item.content.length > 180 ? item.content.slice(0, 180) + '…' : item.content}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-                  <small style={{ color: '#888' }}>{new Date(item.created_at).toLocaleDateString('ru-RU')}</small>
+                  <small style={{ color: '#9CA3AF' }}>{new Date(item.created_at).toLocaleDateString('ru-RU')}</small>
                   <Button onClick={() => handleOpen(item.id)} theme={ThemeButton.CLEAR} width='120px' backgroundColor='#7F61DD'>
                     <span>Читать</span>
                   </Button>

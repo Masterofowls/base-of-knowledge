@@ -1,7 +1,7 @@
 // HTTP client for Knowledge Base API
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env?.VITE_API_URL || 'https://kb-backend-astral-e2a00aff.fly.dev';
 
 // Create axios instance
 const http = axios.create({

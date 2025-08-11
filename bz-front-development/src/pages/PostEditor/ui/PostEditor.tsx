@@ -48,6 +48,13 @@ interface PostFormData {
     is_for_staff: boolean;
     is_actual: boolean;
     category_ids: number[];
+    publish_scope?: {
+        baseClass?: 9 | 11;
+        audience?: 'all' | 'city' | 'course';
+        city_id?: number;
+        course?: 1 | 2 | 3;
+        tag?: 'common' | 'important' | 'useful';
+    }
 }
 
 export default function PostEditor() {
@@ -68,6 +75,7 @@ export default function PostEditor() {
     const [topCategories, setTopCategories] = useState<TopCategory[]>([]);
     const [selectedGroups, setSelectedGroups] = useState<any[]>([]);
     const [selectedTopCategories, setSelectedTopCategories] = useState<any[]>([]);
+    const [cities, setCities] = useState<{value:number,label:string}[]>([])
     
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -113,6 +121,10 @@ export default function PostEditor() {
                 label: category.name
             }));
             setTopCategories(topCategoriesOptions);
+
+            // Fetch cities
+            const citiesResponse = await http.get('/api/categories/cities');
+            setCities(citiesResponse.data.map((c:any)=>({value:c.id,label:c.name})))
         } catch (error) {
             console.error('Failed to fetch categories:', error);
             setError('Не удалось загрузить категории');
@@ -337,6 +349,57 @@ export default function PostEditor() {
                             />
                             <span>Актуальный</span>
                         </label>
+                    </div>
+
+                    {/* Publish scope */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8, paddingTop: 8, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+                        <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+                            <label>
+                                <span style={{fontSize:12, color:'var(--secondary-color)'}}>База класса</span>
+                                <select onChange={(e)=>setFormData(prev=>({...prev, publish_scope:{...prev.publish_scope, baseClass: Number(e.target.value) as 9|11}}))} defaultValue="">
+                                    <option value="" disabled>Выберите</option>
+                                    <option value="11">11 класс</option>
+                                    <option value="9">9 класс</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span style={{fontSize:12, color:'var(--secondary-color)'}}>Тип аудитории</span>
+                                <select onChange={(e)=>setFormData(prev=>({...prev, publish_scope:{...prev.publish_scope, audience: e.target.value as any}}))} defaultValue="all">
+                                    <option value="all">Все</option>
+                                    <option value="city">Определенный город</option>
+                                    <option value="course">Определенный курс</option>
+                                </select>
+                            </label>
+                            {formData.publish_scope?.audience === 'city' && (
+                                <label>
+                                    <span style={{fontSize:12, color:'var(--secondary-color)'}}>Город</span>
+                                    <select onChange={(e)=>setFormData(prev=>({...prev, publish_scope:{...prev.publish_scope, city_id: Number(e.target.value)}}))} defaultValue="">
+                                        <option value="" disabled>Выберите город</option>
+                                        {cities.map(c=> (
+                                            <option key={c.value} value={c.value}>{c.label}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                            )}
+                            {formData.publish_scope?.audience === 'course' && (
+                                <label>
+                                    <span style={{fontSize:12, color:'var(--secondary-color)'}}>Курс</span>
+                                    <select onChange={(e)=>setFormData(prev=>({...prev, publish_scope:{...prev.publish_scope, course: Number(e.target.value) as 1|2|3}}))} defaultValue="1">
+                                        <option value="1">1 курс</option>
+                                        <option value="2">2 курс</option>
+                                        <option value="3">3 курс</option>
+                                    </select>
+                                </label>
+                            )}
+                            <label>
+                                <span style={{fontSize:12, color:'var(--secondary-color)'}}>Маркировка</span>
+                                <select onChange={(e)=>setFormData(prev=>({...prev, publish_scope:{...prev.publish_scope, tag: e.target.value as any}}))} defaultValue="common">
+                                    <option value="common">Общая информация</option>
+                                    <option value="important">Важная информация</option>
+                                    <option value="useful">Полезная информация</option>
+                                </select>
+                            </label>
+                        </div>
                     </div>
 
                     {/* Action Buttons */}

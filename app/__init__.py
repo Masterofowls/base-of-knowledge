@@ -25,7 +25,11 @@ def create_app(config_name='development'):
     if config_name == 'development':
         app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'mysql+pymysql://root:password@localhost/knowledge_base')
     else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+        db_url = os.getenv('DATABASE_URL')
+        # Fallback to SQLite if not configured to keep the app responsive in demos
+        if not db_url:
+            db_url = 'sqlite:///data.db'
+        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
@@ -69,6 +73,13 @@ def create_app(config_name='development'):
     app.register_blueprint(categories_bp, url_prefix='/api/categories')
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(media_bp, url_prefix='/api/media')
+
+    # Ensure database tables exist (useful for SQLite/demo deployments)
+    with app.app_context():
+        try:
+            db.create_all()
+        except Exception:
+            pass
 
     @app.route('/')
     def root_status():

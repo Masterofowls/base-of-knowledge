@@ -1,14 +1,76 @@
-:root {
+/* Light theme */
+:root[data-theme='light'] {
   --bg-color: #ffffff;
   --bg-header-color: #7F61DD;
-  --bg-footer-color: rgba(222, 213, 249, 1);
+  --bg-footer-color: rgba(222, 213, 249, 0.6);
 
   --container-margin: 100px;
 
-  --primary-color: black;
-  --secondary-color: rgba(0, 0, 0, 0.5);
-  --light-color: rgba(255, 255, 255, 0.85);
+  --primary-color: #111827;
+  --secondary-color: #4B5563;
+  --light-color: #333333;
 
-  --navbar-height: 56px;
-  --footer-height: 111px;
+  --surface-1: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #eef2f7;
+  --card-bg: #ffffff;
+  --accent: #2563eb;
+  --accent-2: #7F61DD;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --muted: #6b7280;
+
+  --navbar-height: 64px;
+  --footer-height: 140px;
+}
+
+/* Dark theme */
+:root[data-theme='dark'] {
+  --bg-color: #0b1020;
+  --bg-header-color: linear-gradient(135deg, #6a5acd 0%, #7F61DD 50%, #9a7bff 100%);
+  --bg-footer-color: linear-gradient(180deg, rgba(122, 102, 221, 0.2), rgba(0,0,0,0));
+
+  --container-margin: 100px;
+
+  --primary-color: #E5E7EB;
+  --secondary-color: #9CA3AF;
+  --light-color: rgba(255, 255, 255, 0.96);
+
+  --surface-1: #0f172a;
+  --surface-2: #111827;
+  --surface-3: #1f2937;
+  --card-bg: radial-gradient(1200px 400px at 10% -10%, rgba(127,97,221,0.15), transparent 40%),
+              radial-gradient(800px 300px at 90% -20%, rgba(0,170,255,0.1), transparent 50%),
+              #0f172a;
+  --accent: #00AAFF;
+  --accent-2: #7F61DD;
+  --success: #92DA63;
+  --danger: #E44A77;
+  --muted: #9CA3AF;
+
+  --navbar-height: 64px;
+  --footer-height: 140px;
+}
+
+/* Default to light if not set */
+:root:not([data-theme]) {
+  /* mirror light theme vars */
+  --bg-color: #ffffff;
+  --bg-header-color: #7F61DD;
+  --bg-footer-color: rgba(222, 213, 249, 0.6);
+  --container-margin: 100px;
+  --primary-color: #111827;
+  --secondary-color: #4B5563;
+  --light-color: #333333;
+  --surface-1: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #eef2f7;
+  --card-bg: #ffffff;
+  --accent: #2563eb;
+  --accent-2: #7F61DD;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --muted: #6b7280;
+  --navbar-height: 64px;
+  --footer-height: 140px;
 }

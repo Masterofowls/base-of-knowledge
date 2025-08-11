@@ -43,6 +43,14 @@ function Navbar({className}: NavbarProps) {
             </div>
             <div className={cls.user}>
                 <button onClick={() => history.back()} style={{background:'transparent', border:'none', cursor:'pointer', color:'inherit'}}>Назад</button>
+                <button
+                    onClick={() => {
+                        const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
+                        document.documentElement.setAttribute('data-theme', current)
+                        localStorage.setItem('theme', current)
+                    }}
+                    style={{background:'transparent', border:'1px solid rgba(255,255,255,0.4)', borderRadius:6, padding:'4px 8px', cursor:'pointer', color:'inherit'}}
+                >Тема</button>
                 <UserIcon width='10px' height='10px' />
                 <p>admin</p>
                 <ArrowDownIcon width='10px' height='10px' />
