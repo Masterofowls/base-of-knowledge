@@ -21,18 +21,18 @@ export default function ChoiceRolePage() {
 
     return (
         <div className={classNames('page-center-wrapper', {}, [])}>
-            <Container theme={ContainerTheme.CLEAR} paddings='16px' width='min(100%, 960px)' footer={<span><ArrowIcon width='13px' height='11px' /><p>Вернуться на главную</p></span>}>
-                <Container gap="16px" direction="column" paddings='16px' footer={<p>Регистрация администратора</p>}>
+            <Container theme={ContainerTheme.CLEAR} paddings='0' width='min(100%, 960px)' footer={<span><ArrowIcon width='13px' height='11px' /><p>Вернуться на главную</p></span>}>
+                <Container gap="16px" direction="column" paddings='0' footer={<p>Регистрация администратора</p>}>
                     <h2 style={{textAlign:'center'}}>Выберите способ входа</h2>
                     <Container theme={ContainerTheme.CLEAR} direction={"row"} gap="16px">
                         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))', gap:16, width:'100%'}}>
-                            <Container lastMargin="12px" paddings='20px' gap="10px">
+                            <Container lastMargin="12px" paddings='0' gap="10px">
                                 <UserIcon width='55px' height='55px' />
                                 <h3>Сотрудник</h3>
                                 <p style={{textAlign:'center'}}>Выберите свою группу для просмотра материалов</p>
                                 <Button width='100%' theme={ThemeButton.ARROW} backgroundColor='#00AAFF' onClick={handleStudentLogin}><p>Вход сотрудника</p></Button>
                             </Container>
-                            <Container lastMargin="12px" paddings='20px' gap="10px">
+                            <Container lastMargin="12px" paddings='0' gap="10px">
                                 <AdminIcon width='55px' height='55px' />
                                 <h3>Администратор</h3>
                                 <p style={{textAlign:'center'}}>Войдите в административную панель</p>

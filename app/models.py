@@ -191,6 +191,12 @@ class Article(db.Model):
     is_actual = db.Column(db.Boolean, default=False, nullable=False)
     archive_at = db.Column(db.DateTime)
     archived_at = db.Column(db.DateTime)
+    # Publishing scope fields
+    tag = db.Column(db.String(20))  # 'common' | 'important' | 'useful'
+    base_class = db.Column(db.Integer)  # 9 or 11
+    audience = db.Column(db.String(20))  # 'all' | 'city' | 'course'
+    audience_city_id = db.Column(db.Integer, db.ForeignKey('cities.id'))
+    audience_course = db.Column(db.Integer)  # 1-3
     
     # Relationships
     authors = db.relationship('ArticleAuthor', backref='article', lazy=True)

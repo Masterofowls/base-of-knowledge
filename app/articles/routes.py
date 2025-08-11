@@ -19,6 +19,11 @@ def get_articles():
     is_for_staff = request.args.get('is_for_staff', type=bool)
     is_actual = request.args.get('is_actual', type=bool)
     search = request.args.get('search', '').strip()
+    tag = request.args.get('tag', type=str)
+    base_class = request.args.get('base_class', type=int)
+    audience = request.args.get('audience', type=str)
+    audience_city_id = request.args.get('audience_city_id', type=int)
+    audience_course = request.args.get('audience_course', type=int)
     
     # Build query
     query = Article.query
@@ -44,6 +49,16 @@ def get_articles():
     
     if search:
         query = query.filter(Article.title.ilike(f'%{search}%'))
+    if tag:
+        query = query.filter(Article.tag == tag)
+    if base_class:
+        query = query.filter(Article.base_class == base_class)
+    if audience:
+        query = query.filter(Article.audience == audience)
+    if audience_city_id:
+        query = query.filter(Article.audience_city_id == audience_city_id)
+    if audience_course:
+        query = query.filter(Article.audience_course == audience_course)
     
     # Order by creation date (newest first)
     query = query.order_by(Article.created_at.desc())
@@ -108,6 +123,11 @@ def get_articles():
             'is_actual': article.is_actual,
             'archive_at': article.archive_at.isoformat() if article.archive_at else None,
             'archived_at': article.archived_at.isoformat() if article.archived_at else None,
+            'tag': article.tag,
+            'base_class': article.base_class,
+            'audience': article.audience,
+            'audience_city_id': article.audience_city_id,
+            'audience_course': article.audience_course,
             'categories': categories,
             'authors': authors
         }
@@ -228,6 +248,7 @@ def create_article():
     is_for_staff = data.get('is_for_staff', False)
     is_actual = data.get('is_actual', True)
     category_ids = data.get('category_ids', [])
+    publish_scope = data.get('publish_scope') or {}
     
     # Validate title
     if len(title) < 3:
@@ -239,7 +260,12 @@ def create_article():
         content=content,
         is_published=is_published,
         is_for_staff=is_for_staff,
-        is_actual=is_actual
+        is_actual=is_actual,
+        tag=publish_scope.get('tag'),
+        base_class=publish_scope.get('baseClass'),
+        audience=publish_scope.get('audience'),
+        audience_city_id=publish_scope.get('city_id'),
+        audience_course=publish_scope.get('course')
     )
     
     try:
@@ -311,6 +337,13 @@ def update_article(article_id):
     
     if 'is_actual' in data:
         article.is_actual = data['is_actual']
+    if 'publish_scope' in data and isinstance(data['publish_scope'], dict):
+        ps = data['publish_scope']
+        article.tag = ps.get('tag', article.tag)
+        article.base_class = ps.get('baseClass', article.base_class)
+        article.audience = ps.get('audience', article.audience)
+        article.audience_city_id = ps.get('city_id', article.audience_city_id)
+        article.audience_course = ps.get('course', article.audience_course)
     
     if 'category_ids' in data:
         # Remove existing categories

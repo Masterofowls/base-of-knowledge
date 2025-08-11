@@ -16,7 +16,12 @@ interface ArticleListItem {
   is_published: boolean
 }
 
-export default function PostsList() {
+interface PostsListProps {
+  expandAllDefault?: boolean
+  fullscreen?: boolean
+}
+
+export default function PostsList({ expandAllDefault = false }: PostsListProps) {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [items, setItems] = useState<ArticleListItem[]>([])
@@ -29,6 +34,7 @@ export default function PostsList() {
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [page, setPage] = useState(1)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
+  
 
   const pageFromURL = useMemo(() => Number(searchParams.get('page') ?? 1), [searchParams])
   useEffect(() => { setPage(pageFromURL) }, [pageFromURL])
@@ -81,6 +87,32 @@ export default function PostsList() {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
+  function getTagFromContent(html: string): 'important' | 'useful' | 'common' | undefined {
+    const m = html.match(/<!--\s*tag:(important|useful|common)\s*-->/i)
+    if (!m) return undefined
+    return m[1].toLowerCase() as any
+  }
+
+  function stripHtml(html: string): string {
+    const tmp = document.createElement('div')
+    tmp.innerHTML = html
+    return (tmp.textContent || tmp.innerText || '').trim()
+  }
+
+  function handleShare(item: ArticleListItem) {
+    const text = stripHtml(item.content)
+    const shareData: any = { title: item.title, text }
+    if (navigator.share) navigator.share(shareData).catch(()=>{})
+    else navigator.clipboard?.writeText(`${item.title}\n\n${text}`).catch(()=>{})
+  }
+
+  function handleCopy(item: ArticleListItem) {
+    const text = stripHtml(item.content)
+    navigator.clipboard?.writeText(`${item.title}\n\n${text}`).catch(()=>{})
+  }
+
+  
+
   function handleSearch() {
     const next = new URLSearchParams(searchParams)
     if (query) next.set('q', query)
@@ -122,8 +154,11 @@ export default function PostsList() {
             {!isLoading && items.map(item => (
               <Card key={item.id} style={{ background:'rgba(255,255,255,0.02)'}}>
                 <CardContent>
-                  <h3 style={{ marginTop: 0, marginBottom: 8 }}>{item.title}</h3>
-                  {expanded[item.id] ? (
+                  <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
+                    <h3 style={{ marginTop: 0, marginBottom: 8, flex: '1 1 auto' }}>{item.title}</h3>
+                    {(() => { const tag = getTagFromContent(item.content); if (!tag) return null; return <Chip size='small' label={tag==='important'?'Важное':tag==='useful'?'Полезное':'Общее'} color={tag==='important'?'error':tag==='useful'?'success':'default' as any} /> })()}
+                  </div>
+                  {expandAllDefault || expanded[item.id] ? (
                     <div className='article-content' dangerouslySetInnerHTML={{ __html: item.content }} />
                   ) : (
                     <div className='article-content' style={{ color: '#9CA3AF', maxHeight: '6.5em', overflow: 'hidden' }}>
@@ -132,9 +167,15 @@ export default function PostsList() {
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
                     <small style={{ color: '#9CA3AF' }}>{new Date(item.created_at).toLocaleDateString('ru-RU')}</small>
-                    <Button onClick={() => toggleExpand(item.id)} theme={ThemeButton.CLEAR} width='160px' backgroundColor='#7F61DD'>
-                      <span>{expanded[item.id] ? 'Свернуть' : 'Показать полностью'}</span>
-                    </Button>
+                    <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+                      <Button onClick={() => handleShare(item)} theme={ThemeButton.CLEAR} width='90px' backgroundColor='#7F61DD'><span>Поделиться</span></Button>
+                      <Button onClick={() => handleCopy(item)} theme={ThemeButton.CLEAR} width='90px' backgroundColor='#7F61DD'><span>Копировать</span></Button>
+                      {!expandAllDefault && (
+                        <Button onClick={() => toggleExpand(item.id)} theme={ThemeButton.CLEAR} width='160px' backgroundColor='#7F61DD'>
+                          <span>{expanded[item.id] ? 'Свернуть' : 'Показать полностью'}</span>
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

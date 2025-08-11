@@ -27,6 +27,18 @@
   padding: 24px 12px;
 }
 
+/* Normalize primary containers to align to the same width */
+main.container, header .container, footer .container, .container > .container {
+  max-width: 1200px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* Remove stray borders/backgrounds on generic Container primary theme */
+.Container.primary {
+  border-color: rgba(255,255,255,0.06);
+}
+
 /* Rich content defaults */
 .article-content {
   color: var(--primary-color);

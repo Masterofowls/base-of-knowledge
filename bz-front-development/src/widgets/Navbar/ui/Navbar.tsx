@@ -17,6 +17,7 @@ function Navbar({className}: NavbarProps) {
     const [isOpen, setIsOpen] = useState(false)
     return (
         <div className={classNames(cls.Navbar, {}, [className])}>
+            <div className='container' style={{display:'flex', alignItems:'center', width:'100%'}}>
             <div className={classNames(cls.logo, {}, [className])}>
                 <LogoIcon width='30px' height='30px' />
                 <p>Студенческий Портал Хекслет</p>
@@ -54,6 +55,7 @@ function Navbar({className}: NavbarProps) {
                 <UserIcon width='10px' height='10px' />
                 <p>admin</p>
                 <ArrowDownIcon width='10px' height='10px' />
+            </div>
             </div>
         </div>
     );

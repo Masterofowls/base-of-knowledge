@@ -7,9 +7,13 @@ import { Card, CardContent, Tabs, Tab, Divider, Alert, Tooltip, Chip, Avatar, Ba
 
 export default function  MainPage() {
     return (
-        <div style={{maxWidth: '1230px', display: 'flex', flexDirection: 'column'}} className={classNames('container', {}, [])}>
-            <PanelAdmin/>
-            <QuickActionsAdmin/>
+        <main style={{display: 'flex', flexDirection: 'column'}} className={classNames('container', {}, [])}>
+            <div style={{marginTop:16}}>
+              <PanelAdmin/>
+            </div>
+            <div style={{marginTop:16}}>
+              <QuickActionsAdmin/>
+            </div>
             <div style={{display: 'flex', flexDirection: 'row', margin: "45px 0px", gap: '45px', flexWrap:'wrap'}}>
                 <div style={{flex: '1 1 420px', minWidth: 320}}>
                     <Card>
@@ -36,6 +40,6 @@ export default function  MainPage() {
                     </Card>
                 </div>
             </div>
-        </div>
+        </main>
     );
 }
