@@ -9,9 +9,13 @@ export default function  MainPage() {
         <div style={{maxWidth: '1230px', display: 'flex', flexDirection: 'column'}} className={classNames('container', {}, [])}>
             <PanelAdmin/>
             <QuickActionsAdmin/>
-            <div style={{display: 'flex', flexDirection: 'row', margin: "45px 0px", gap: '45px'}}>
-                <LatestPosts/>
-                <Groups/>
+            <div style={{display: 'flex', flexDirection: 'row', margin: "45px 0px", gap: '45px', flexWrap:'wrap'}}>
+                <div style={{flex: '1 1 420px', minWidth: 320}}>
+                    <LatestPosts/>
+                </div>
+                <div style={{flex: '1 1 420px', minWidth: 320}}>
+                    <Groups/>
+                </div>
             </div>
         </div>
     );

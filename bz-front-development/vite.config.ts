@@ -25,5 +25,16 @@ export default defineConfig({
             'pages': path.resolve(__dirname, './src/pages'),
             'shared': path.resolve(__dirname, './src/shared'),
         }
+    },
+    build: {
+        chunkSizeWarningLimit: 1200,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vendor: ['react', 'react-dom', 'react-router-dom'],
+                    quill: ['quill'],
+                },
+            },
+        },
     }
 });

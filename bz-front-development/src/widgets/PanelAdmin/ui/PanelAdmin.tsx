@@ -6,12 +6,23 @@ import StudentsIcon from "shared/assets/icons/users-solid.svg?react";
 import CircleIcon from "shared/assets/icons/circle-check-solid.svg?react";
 import StudentIcon from "shared/assets/icons/Student.svg?react"
 import {InfoCard} from "shared/ui/InfoCard/InfoCard.tsx";
+import {Button} from "shared/ui/Button";
+import {ThemeButton} from "shared/ui/Button/ui/Button.tsx";
+import {useNavigate} from "react-router-dom";
 
 interface PanelAdminProps {
     className?: string
 }
 
 function PanelAdmin({className}: PanelAdminProps) {
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        localStorage.removeItem('jwt_token');
+        localStorage.removeItem('user_role');
+        navigate('/');
+    };
+
     return (
         <div className={classNames(cls.PanelAdmin, {}, [className])}>
             <div className={cls.Heading}>
@@ -19,9 +30,19 @@ function PanelAdmin({className}: PanelAdminProps) {
                     <SpeedmetrIcon className={cls.icon} width='40px' height='40px' />
                     <h1>Панель администратора</h1>
                 </div>
-                <div>
-                    <p>Добро пожаловать, <b>admin</b>!</p>
-                    <p>Роль: Администратор</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div>
+                        <p>Добро пожаловать, <b>admin</b>!</p>
+                        <p>Роль: Администратор</p>
+                    </div>
+                    <Button 
+                        onClick={handleLogout}
+                        width='120px' 
+                        backgroundColor='rgba(228, 74, 119, 1)' 
+                        theme={ThemeButton.CLEAR}
+                    >
+                        <span>Выйти</span>
+                    </Button>
                 </div>
             </div>
             <div className={cls.InfoCards}>

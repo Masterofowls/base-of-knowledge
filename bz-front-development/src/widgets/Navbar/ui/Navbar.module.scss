@@ -4,7 +4,7 @@
   background: var(--bg-header-color);
   display: flex;
   align-items: center;
-  padding: 20px 120px 20px 100px;
+  padding: 16px 24px;
   color: white;
 }
 
@@ -34,4 +34,43 @@
 
 .mainLink {
   margin-right: 15px;
+}
+
+.burger {
+  display: none;
+  margin-left: 16px;
+  cursor: pointer;
+}
+
+.mobileMenu {
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  right: 0;
+  background: var(--bg-header-color);
+  color: var(--light-color);
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.mobileMenu.open {
+  display: flex;
+}
+
+@media (max-width: 1024px) {
+  .Navbar {
+    padding: 12px 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  .links {
+    display: none;
+  }
+  .burger {
+    display: inline-flex;
+  }
 }

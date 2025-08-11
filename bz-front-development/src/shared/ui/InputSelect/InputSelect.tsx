@@ -13,16 +13,18 @@ type InputSelectThemeValue = typeof InputSelectTheme[keyof typeof InputSelectThe
 interface InputSelectProps {
     className?: string;
     theme?: InputSelectThemeValue;
-    options: ({ value: string; label: string })[];
+    options: ({ value: string | number; label: string })[];
     label?: JSX.Element;
     placeholder: string;
     onChange?: (selectedOption: any) => void;
     value?: any;
+    isMulti?: boolean;
+    style?: React.CSSProperties;
 }
 
-export const InputSelect : FC<InputSelectProps> = ({className, placeholder, label, options, theme = InputSelectTheme.PRIMARY, onChange, value, ...otherProps}) => {
+export const InputSelect : FC<InputSelectProps> = ({className, placeholder, label, options, theme = InputSelectTheme.PRIMARY, onChange, value, isMulti, style, ...otherProps}) => {
     return (
-        <div className={classNames(cls.InputDiv, {}, [className, cls[theme]])}>
+        <div className={classNames(cls.InputDiv, {}, [className, cls[theme]])} style={style}>
             {label && <label htmlFor="bread">{label}</label>}
             <Select 
                 className={cls.Select} 
@@ -31,6 +33,7 @@ export const InputSelect : FC<InputSelectProps> = ({className, placeholder, labe
                 options={options} 
                 onChange={onChange}
                 value={value}
+                isMulti={isMulti}
                 {...otherProps}
                     styles={{
                         control: (baseStyles) => ({

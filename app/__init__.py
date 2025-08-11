@@ -18,6 +18,8 @@ bcrypt = Bcrypt()
 
 def create_app(config_name='development'):
     app = Flask(__name__)
+    # Avoid trailing-slash redirects that break CORS preflight
+    app.url_map.strict_slashes = False
     
     # Configuration
     if config_name == 'development':
@@ -34,7 +36,26 @@ def create_app(config_name='development'):
     migrate.init_app(app, db)
     jwt.init_app(app)
     bcrypt.init_app(app)
-    CORS(app)
+
+    # CORS configuration for frontend origins
+    frontend_origin_env = os.getenv('FRONTEND_ORIGIN')
+    default_allowed_origins = [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:5175',
+        'http://localhost:5176',
+        'https://kb-front-astral-f046b152.netlify.app',
+    ]
+    allowed_origins = [frontend_origin_env] if frontend_origin_env else default_allowed_origins
+
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": allowed_origins}},
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"],
+        expose_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    )
     
     # Register blueprints
     from app.auth import auth_bp

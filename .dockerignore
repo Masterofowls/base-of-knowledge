@@ -1,0 +1,57 @@
+# VCS & IDE
+.git
+.gitignore
+.vscode/
+.idea/
+
+# Python env & cache
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Frontend / Node
+node_modules/
+**/node_modules/
+**/.vite/
+**/dist/
+**/.cache/
+**/coverage/
+
+# Exclude entire frontend from backend image
+bz-front-development/
+
+# Netlify / build artifacts
+.netlify/
+**/.netlify/
+
+# Env files
+.env
+.env.*
+
+# Tests & docs not needed in runtime image
+/tests/
+**/__tests__/
+*.md
+FRONTEND_TESTING_SUMMARY.md
+TESTING.md
+TEST_RESULTS.md
+STUDENT_LOGIN_FIX_REPORT.md
+FRONTEND_TEST_RESULTS.md
+FIX_REACT_ERROR_130.md
+DEPLOYMENT.md
+
+# OS junk
+.DS_Store
+

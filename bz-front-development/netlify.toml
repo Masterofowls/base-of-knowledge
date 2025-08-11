@@ -4,3 +4,9 @@
   command = "npm ci && npm run build:ci"
 
 
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+

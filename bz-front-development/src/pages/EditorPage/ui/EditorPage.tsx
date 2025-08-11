@@ -11,15 +11,18 @@ const LocalStorageSaverClass = getLocalStorageSaverClass();
 Quill.register('modules/localStorageSaver', LocalStorageSaverClass, true);
 
 const TOOLBAR_OPTIONS = [
-    ["clean", "bold", "italic", "strike", "underline"],
-    [{size: ['small', false, 'large', 'huge']}],
     [{font: []}],
-    [{header: [1, 2, 3, false]}],
+    [{size: ['small', false, 'large', 'huge']}],
+    ["bold", "italic", "underline", "strike", { 'script': 'sub' }, { 'script': 'super' }],
+    [{header: [1, 2, 3, 4, 5, false]}],
     [{color: []}, {background: []}],
     [{align: []}],
     [{list: "ordered"}, {list: "bullet"}],
+    [{indent: '-1'}, {indent: '+1'}],
+    ["blockquote", "code-block"],
     ["table-better"],
     ["link", "image"],
+    ["clean"],
 ]
 
 export default function EditorPage () {

@@ -86,9 +86,13 @@ export default function StudentDashboard() {
             </div>
 
             {/* Content - Latest Posts and Groups */}
-            <div style={{display: 'flex', flexDirection: 'row', gap: '45px'}}>
-                <LatestPosts/>
-                <Groups/>
+            <div style={{display: 'flex', flexDirection: 'row', gap: '45px', flexWrap:'wrap'}}>
+                <div style={{flex: '1 1 420px', minWidth: 320}}>
+                    <LatestPosts/>
+                </div>
+                <div style={{flex: '1 1 420px', minWidth: 320}}>
+                    <Groups/>
+                </div>
             </div>
         </div>
     );
