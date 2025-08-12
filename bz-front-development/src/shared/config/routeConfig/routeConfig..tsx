@@ -65,7 +65,7 @@ export const routeConfig: Record<AppRouteKeys, RouteProps> = {
     },
     [AppRoutes.ADMINLOGIN]: {
         path: RoutePath[AppRoutes.ADMINLOGIN],
-        element: <AdminLoginPage/>
+        element: <SignInSide/>
     },
     [AppRoutes.ADMINREGISTER]: {
         path: RoutePath[AppRoutes.ADMINREGISTER],
@@ -73,7 +73,7 @@ export const routeConfig: Record<AppRouteKeys, RouteProps> = {
     },
     [AppRoutes.STUDENTLOGIN]: {
         path: RoutePath[AppRoutes.STUDENTLOGIN],
-        element: <StudentLoginPage/>
+        element: <SignInSide/>
     },
     [AppRoutes.ADMIN]: {
         path: RoutePath[AppRoutes.ADMIN],
@@ -101,7 +101,7 @@ export const routeConfig: Record<AppRouteKeys, RouteProps> = {
     },
     [AppRoutes.POSTS_LIST]: {
         path: RoutePath[AppRoutes.POSTS_LIST],
-        element: <PostsList/>
+        element: <Blog/>
     },
     [AppRoutes.POST_VIEW]: {
         path: RoutePath[AppRoutes.POST_VIEW],
