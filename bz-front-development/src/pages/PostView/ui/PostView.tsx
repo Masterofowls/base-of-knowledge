@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import http from 'shared/api/http'
 import { Container } from 'shared/ui/Container/Container.tsx'
 import ArrowIcon from 'shared/assets/icons/ArrrowLeft.svg?react'
+import { Reactions } from 'shared/ui/Reactions'
 
 interface ArticleDetail {
   id: number
@@ -61,6 +62,9 @@ export default function PostView() {
               {item.authors?.[0] && <span> · {item.authors[0].full_name}</span>}
             </div>
             <div className='article-content' dangerouslySetInnerHTML={{ __html: item.content }} />
+            <div style={{ marginTop: 12 }}>
+              <Reactions articleId={item.id} />
+            </div>
           </article>
         )}
       </Container>

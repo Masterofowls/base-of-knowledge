@@ -1,0 +1,22 @@
+.reactionsContainer {
+  margin: 12px 0;
+  padding: 8px 0;
+  border-top: 1px solid var(--border-color, rgba(255,255,255,0.12));
+}
+
+.reactionsList {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.reactionButton {
+  transition: transform .15s ease;
+}
+
+.active {
+  transform: scale(1.05);
+}
+
+

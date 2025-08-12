@@ -7,6 +7,7 @@ import { Button } from 'shared/ui/Button'
 import { ThemeButton } from 'shared/ui/Button/ui/Button.tsx'
 import cls from './PostsList.module.scss'
 import { Autocomplete, TextField, Tabs, Tab, Card, CardContent, Skeleton } from '@mui/material'
+import { Reactions } from 'shared/ui/Reactions'
 
 interface ArticleListItem {
   id: number
@@ -166,6 +167,8 @@ export default function PostsList({ expandAllDefault = false }: PostsListProps) 
                       transition: 'max-height .25s ease',
                     }}
                     dangerouslySetInnerHTML={{ __html: item.content }}
+                  />
+                  <Reactions articleId={item.id} onReactionChange={() => {}}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
                     <small style={{ color: '#9CA3AF' }}>{new Date(item.created_at).toLocaleDateString('ru-RU')}</small>
