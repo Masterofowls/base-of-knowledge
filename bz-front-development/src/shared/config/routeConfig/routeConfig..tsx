@@ -12,6 +12,8 @@ import {PostEditor} from "pages/PostEditor";
 import {GroupManagement} from "pages/GroupManagement";
 import {PostsList} from "pages/PostsList";
 import {PostView} from "pages/PostView";
+import Blog from "../../../../blog/Blog.tsx";
+import SignInSide from "../../../../sign-in-side/SignInSide.tsx";
 
 export const AppRoutes = {
     MAIN: 'main',
@@ -27,7 +29,9 @@ export const AppRoutes = {
     ADMIN_POST_EDIT: 'admin_post_edit',
     ADMIN_GROUPS: 'admin_groups',
     POSTS_LIST: 'posts_list',
-    POST_VIEW: 'post_view'
+    POST_VIEW: 'post_view',
+    BLOG: 'blog',
+    SIGNIN_SIDE: 'signin_side'
 } as const;
 
 type AppRouteKeys = typeof AppRoutes[keyof typeof AppRoutes];
@@ -46,6 +50,8 @@ export const RoutePath: Record<AppRouteKeys, string> = {
     [AppRoutes.ADMIN_GROUPS]: '/admin/groups',
     [AppRoutes.POSTS_LIST]: '/posts',
     [AppRoutes.POST_VIEW]: '/posts/:id',
+    [AppRoutes.BLOG]: '/mui/blog',
+    [AppRoutes.SIGNIN_SIDE]: '/mui/signin',
 }
 
 export const routeConfig: Record<AppRouteKeys, RouteProps> = {
@@ -100,5 +106,13 @@ export const routeConfig: Record<AppRouteKeys, RouteProps> = {
     [AppRoutes.POST_VIEW]: {
         path: RoutePath[AppRoutes.POST_VIEW],
         element: <PostView/>
+    },
+    [AppRoutes.BLOG]: {
+        path: RoutePath[AppRoutes.BLOG],
+        element: <Blog/>
+    },
+    [AppRoutes.SIGNIN_SIDE]: {
+        path: RoutePath[AppRoutes.SIGNIN_SIDE],
+        element: <SignInSide/>
     },
 }
