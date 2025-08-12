@@ -408,6 +408,76 @@ def get_groups():
     
     return jsonify(groups_data), 200
 
+@categories_bp.route('/groups/<int:group_id>', methods=['GET'])
+def get_group(group_id):
+    group = Group.query.get_or_404(group_id)
+    data = {
+        'id': group.id,
+        'display_name': group.display_name,
+        'speciality': {
+            'id': group.speciality.id,
+            'code': group.speciality.code,
+            'name': group.speciality.name
+        } if group.speciality else None,
+        'education_form': {
+            'id': group.education_form.id,
+            'name': group.education_form.name
+        } if group.education_form else None,
+        'admission_year': {
+            'id': group.admission_year.id,
+            'year': group.admission_year.year
+        } if group.admission_year else None,
+        'city': {
+            'id': group.city.id,
+            'name': group.city.name
+        } if group.city else None,
+        'school_class': {
+            'id': group.school_class.id,
+            'name': group.school_class.name
+        } if group.school_class else None,
+        'institution_type_id': group.institution_type_id
+    }
+    return jsonify(data), 200
+
+@categories_bp.route('/groups/seed', methods=['POST'])
+@jwt_required()
+def seed_groups():
+    """Create several demo groups for testing (admin only)."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or user.role.name != 'Администратор':
+        return jsonify({'error': 'Unauthorized'}), 403
+    # pick first available references
+    spec = Speciality.query.first()
+    form = EducationForm.query.first()
+    year = AdmissionYear.query.first()
+    inst = InstitutionType.query.first()
+    city = City.query.first()
+    if not all([spec, form, year, inst]):
+        return jsonify({'error': 'Missing reference data to seed groups'}), 400
+    names = ['ИТ-101', 'ИТ-201', 'Дизайн-301', 'Эконом-102', 'Юр-202']
+    created = 0
+    for name in names:
+        if not Group.query.filter_by(display_name=name).first():
+            g = Group(
+                display_name=name,
+                speciality_id=spec.id,
+                education_form_id=form.id,
+                admission_year_id=year.id,
+                institution_type_id=inst.id,
+                school_class_id=None,
+                city_id=city.id if city else None
+            )
+            db.session.add(g)
+            created += 1
+    try:
+        if created:
+            db.session.commit()
+        return jsonify({'message': f'Seeded {created} groups'}), 200
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to seed groups'}), 500
+
 @categories_bp.route('/groups', methods=['POST'])
 @jwt_required()
 def create_group():
@@ -487,6 +557,40 @@ def create_group():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to create group'}), 500
+
+@categories_bp.route('/groups/<int:group_id>', methods=['PUT'])
+@jwt_required()
+def update_group(group_id):
+    """Update group fields"""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or user.role.name != 'Администратор':
+        return jsonify({'error': 'Unauthorized'}), 403
+    group = Group.query.get_or_404(group_id)
+    data = request.get_json() or {}
+    if 'display_name' in data:
+        name = (data['display_name'] or '').strip()
+        if len(name) < 3:
+            return jsonify({'error': 'Display name must be at least 3 characters long'}), 400
+        group.display_name = name
+    if 'speciality_id' in data:
+        group.speciality_id = data['speciality_id']
+    if 'education_form_id' in data:
+        group.education_form_id = data['education_form_id']
+    if 'admission_year_id' in data:
+        group.admission_year_id = data['admission_year_id']
+    if 'institution_type_id' in data:
+        group.institution_type_id = data['institution_type_id']
+    if 'school_class_id' in data:
+        group.school_class_id = data['school_class_id']
+    if 'city_id' in data:
+        group.city_id = data['city_id']
+    try:
+        db.session.commit()
+        return jsonify({'message':'Group updated'}), 200
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error':'Failed to update group'}), 500
 
 @categories_bp.route('/cities', methods=['GET'])
 def get_cities():

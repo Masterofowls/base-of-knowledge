@@ -12,6 +12,10 @@
   flex-direction: column;
 }
 
+html { scroll-behavior: smooth; }
+
+* { transition: color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease; }
+
 .container {
   margin: 0 auto;
   padding: 0 16px;

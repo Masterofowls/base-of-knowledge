@@ -2,6 +2,7 @@ from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.articles import articles_bp
 from app.models import Article, Category, TopCategory, Subcategory, Group, User, ArticleAuthor, ArticleCategory, ArticleMedia, ArticleMediaLink
+from app.models import ArticleReaction, ReactionEmoji
 from app import db
 from datetime import datetime
 import re
@@ -24,6 +25,9 @@ def get_articles():
     audience = request.args.get('audience', type=str)
     audience_city_id = request.args.get('audience_city_id', type=int)
     audience_course = request.args.get('audience_course', type=int)
+    audience_admission_year_id = request.args.get('audience_admission_year_id', type=int)
+    education_mode = request.args.get('education_mode', type=str)
+    speciality_id = request.args.get('speciality_id', type=int)
     
     # Build query
     query = Article.query
@@ -59,6 +63,12 @@ def get_articles():
         query = query.filter(Article.audience_city_id == audience_city_id)
     if audience_course:
         query = query.filter(Article.audience_course == audience_course)
+    if audience_admission_year_id:
+        query = query.filter(Article.audience_admission_year_id == audience_admission_year_id)
+    if education_mode:
+        query = query.filter(Article.education_mode == education_mode)
+    if speciality_id:
+        query = query.filter(Article.speciality_id == speciality_id)
     
     # Order by creation date (newest first)
     query = query.order_by(Article.created_at.desc())
@@ -128,6 +138,10 @@ def get_articles():
             'audience': article.audience,
             'audience_city_id': article.audience_city_id,
             'audience_course': article.audience_course,
+            'audience_admission_year_id': article.audience_admission_year_id,
+            'audience_courses': article.audience_courses,
+            'education_mode': article.education_mode,
+            'speciality_id': article.speciality_id,
             'categories': categories,
             'authors': authors
         }
@@ -255,6 +269,7 @@ def create_article():
         return jsonify({'error': 'Title must be at least 3 characters long'}), 400
     
     # Create article
+    import json
     article = Article(
         title=title,
         content=content,
@@ -265,8 +280,18 @@ def create_article():
         base_class=publish_scope.get('baseClass'),
         audience=publish_scope.get('audience'),
         audience_city_id=publish_scope.get('city_id'),
-        audience_course=publish_scope.get('course')
+        audience_course=publish_scope.get('course'),
+        audience_admission_year_id=publish_scope.get('admission_year_id')
     )
+    # optional multi-course + mode + speciality
+    courses = publish_scope.get('courses')
+    if isinstance(courses, list):
+        try:
+            article.audience_courses = json.dumps(courses)
+        except Exception:
+            article.audience_courses = None
+    article.education_mode = publish_scope.get('education_mode')
+    article.speciality_id = publish_scope.get('speciality_id')
     
     try:
         db.session.add(article)
@@ -344,6 +369,19 @@ def update_article(article_id):
         article.audience = ps.get('audience', article.audience)
         article.audience_city_id = ps.get('city_id', article.audience_city_id)
         article.audience_course = ps.get('course', article.audience_course)
+        article.audience_admission_year_id = ps.get('admission_year_id', article.audience_admission_year_id)
+        # optional fields
+        import json
+        courses = ps.get('courses')
+        if isinstance(courses, list):
+            try:
+                article.audience_courses = json.dumps(courses)
+            except Exception:
+                pass
+        if 'education_mode' in ps:
+            article.education_mode = ps.get('education_mode')
+        if 'speciality_id' in ps:
+            article.speciality_id = ps.get('speciality_id')
     
     if 'category_ids' in data:
         # Remove existing categories
@@ -469,3 +507,34 @@ def unpublish_article(article_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to unpublish article'}), 500
+
+@articles_bp.route('/<int:article_id>/reactions', methods=['GET'])
+def list_reactions(article_id):
+    article = Article.query.get_or_404(article_id)
+    reactions = ArticleReaction.query.filter_by(article_id=article.id).all()
+    counts = {}
+    for r in reactions:
+        code = r.emoji.code if r.emoji else 'unknown'
+        counts[code] = counts.get(code, 0) + 1
+    return jsonify({'counts': counts}), 200
+
+@articles_bp.route('/<int:article_id>/reactions', methods=['POST'])
+def add_reaction(article_id):
+    article = Article.query.get_or_404(article_id)
+    data = request.get_json() or {}
+    code = (data.get('emoji_code') or '').strip()
+    if not code:
+        return jsonify({'error': 'emoji_code is required'}), 400
+    emoji = ReactionEmoji.query.filter_by(code=code).first()
+    if not emoji:
+        emoji = ReactionEmoji(code=code, emoji=code)
+        db.session.add(emoji)
+        db.session.flush()
+    reaction = ArticleReaction(article_id=article.id, emoji_id=emoji.id)
+    db.session.add(reaction)
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Reaction added'}), 201
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to add reaction'}), 500

@@ -484,6 +484,25 @@ export default function GroupManagement() {
                                         <div><strong>Курс:</strong> {group.school_class.name}</div>
                                     )}
                                 </div>
+                                <div style={{display:'flex', gap:8, marginTop:12}}>
+                                    <Button
+                                        onClick={async ()=>{
+                                            const payload:any = {}
+                                            const name = prompt('Новое название группы', group.display_name)
+                                            if (name && name.trim()) payload.display_name = name.trim()
+                                            if (!Object.keys(payload).length) return
+                                            try {
+                                                await http.put(`/api/categories/groups/${group.id}`, payload)
+                                                fetchData()
+                                            } catch(e){ console.error(e) }
+                                        }}
+                                        width='120px'
+                                        backgroundColor='#7F61DD'
+                                        theme={ThemeButton.CLEAR}
+                                    >
+                                        <span><PenIcon width='12px' height='12px' /></span>
+                                    </Button>
+                                </div>
                             </div>
                         ))}
                     </div>

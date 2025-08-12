@@ -197,6 +197,10 @@ class Article(db.Model):
     audience = db.Column(db.String(20))  # 'all' | 'city' | 'course'
     audience_city_id = db.Column(db.Integer, db.ForeignKey('cities.id'))
     audience_course = db.Column(db.Integer)  # 1-3
+    audience_admission_year_id = db.Column(db.Integer, db.ForeignKey('admission_years.id'))
+    audience_courses = db.Column(db.Text)  # JSON-encoded array of ints [1,2,3]
+    education_mode = db.Column(db.String(20))  # 'full_time' | 'distance'
+    speciality_id = db.Column(db.Integer, db.ForeignKey('specialities.id'))
     
     # Relationships
     authors = db.relationship('ArticleAuthor', backref='article', lazy=True)

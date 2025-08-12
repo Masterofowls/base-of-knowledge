@@ -8,18 +8,26 @@ import '@fontsource/roboto/300.css'
 import '@fontsource/roboto/400.css'
 import '@fontsource/roboto/500.css'
 import '@fontsource/roboto/700.css'
-import {useEffect} from 'react'
+import {useEffect, useState} from 'react'
 
 
 function App() {
+    const [muiMode, setMuiMode] = useState<'light' | 'dark'>(() => (document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'))
+
     useEffect(() => {
         const stored = localStorage.getItem('theme') as 'light' | 'dark' | null
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
         const theme = stored ?? (prefersDark ? 'dark' : 'light')
         document.documentElement.setAttribute('data-theme', theme)
+        setMuiMode(theme)
+        const handler = (e: any) => {
+            const next = e?.detail as 'light' | 'dark'
+            if (next) setMuiMode(next)
+        }
+        window.addEventListener('theme-change', handler as any)
+        return () => window.removeEventListener('theme-change', handler as any)
     }, [])
-    const mode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
-    const theme = createTheme({ palette: { mode } })
+    const theme = createTheme({ palette: { mode: muiMode } })
 
     return (
         <ThemeProvider theme={theme}>

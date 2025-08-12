@@ -158,13 +158,15 @@ export default function PostsList({ expandAllDefault = false }: PostsListProps) 
                     <h3 style={{ marginTop: 0, marginBottom: 8, flex: '1 1 auto' }}>{item.title}</h3>
                     {(() => { const tag = getTagFromContent(item.content); if (!tag) return null; return <Chip size='small' label={tag==='important'?'Важное':tag==='useful'?'Полезное':'Общее'} color={tag==='important'?'error':tag==='useful'?'success':'default' as any} /> })()}
                   </div>
-                  {expandAllDefault || expanded[item.id] ? (
-                    <div className='article-content' dangerouslySetInnerHTML={{ __html: item.content }} />
-                  ) : (
-                    <div className='article-content' style={{ color: '#9CA3AF', maxHeight: '6.5em', overflow: 'hidden' }}>
-                      {item.content}
-                    </div>
-                  )}
+                  <div
+                    className='article-content'
+                    style={{
+                      maxHeight: expandAllDefault || expanded[item.id] ? undefined : '6.5em',
+                      overflow: expandAllDefault || expanded[item.id] ? undefined : 'hidden',
+                      transition: 'max-height .25s ease',
+                    }}
+                    dangerouslySetInnerHTML={{ __html: item.content }}
+                  />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
                     <small style={{ color: '#9CA3AF' }}>{new Date(item.created_at).toLocaleDateString('ru-RU')}</small>
                     <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>

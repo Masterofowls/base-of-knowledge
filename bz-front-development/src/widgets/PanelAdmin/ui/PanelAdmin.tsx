@@ -8,7 +8,9 @@ import StudentIcon from "shared/assets/icons/Student.svg?react"
 import {InfoCard} from "shared/ui/InfoCard/InfoCard.tsx";
 import {Button} from "shared/ui/Button";
 import {ThemeButton} from "shared/ui/Button/ui/Button.tsx";
+import {useEffect, useState} from 'react'
 import {useNavigate} from "react-router-dom";
+import http from 'shared/api/http'
 
 interface PanelAdminProps {
     className?: string
@@ -16,6 +18,20 @@ interface PanelAdminProps {
 
 function PanelAdmin({className}: PanelAdminProps) {
     const navigate = useNavigate();
+    const [stats, setStats] = useState<{ posts:number; published:number; groups:number }>({ posts:0, published:0, groups:0 })
+
+    useEffect(()=>{
+        Promise.all([
+            http.get('/api/articles', { params: { per_page: 1, page: 1 } }),
+            http.get('/api/articles', { params: { is_published: true, per_page: 1, page: 1 } }),
+            http.get('/api/categories/groups')
+        ]).then(([all, pub, groups]) => {
+            const total = all.data?.pagination?.total ?? 0
+            const totalPub = pub.data?.pagination?.total ?? 0
+            const groupsCount = Array.isArray(groups.data) ? groups.data.length : 0
+            setStats({ posts: total, published: totalPub, groups: groupsCount })
+        }).catch(()=>{})
+    },[])
 
     const handleLogout = () => {
         localStorage.removeItem('jwt_token');
@@ -48,14 +64,14 @@ function PanelAdmin({className}: PanelAdminProps) {
             <div className={cls.InfoCards}>
                 <InfoCard className={cls.InfoCardWrap} color='rgba(127, 97, 221, 1)'>
                     <div>
-                        <p>0</p>
+                        <p>{stats.posts}</p>
                         <p>Всего постов</p>
                     </div>
                     <DocumentIcon width='25px' height='33px' />
                 </InfoCard>
                 <InfoCard className={cls.InfoCardWrap} color='rgba(146, 218, 99, 1)'>
                     <div>
-                        <p>154</p>
+                        <p>{stats.groups}</p>
                         <p>Групп</p>
                     </div>
                     <StudentsIcon width='32px' height='26px' />
@@ -69,7 +85,7 @@ function PanelAdmin({className}: PanelAdminProps) {
                 </InfoCard>
                 <InfoCard className={cls.InfoCardWrap} color='rgba(0, 170, 255, 1)'>
                     <div>
-                        <p>0</p>
+                        <p>{stats.published}</p>
                         <p>Опубликовано</p>
                     </div>
                     <CircleIcon width='32px' height='32px' />

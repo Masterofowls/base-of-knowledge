@@ -49,6 +49,7 @@ function Navbar({className}: NavbarProps) {
                         const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
                         document.documentElement.setAttribute('data-theme', current)
                         localStorage.setItem('theme', current)
+                        window.dispatchEvent(new CustomEvent('theme-change', { detail: current }))
                     }}
                     style={{background:'transparent', border:'1px solid rgba(255,255,255,0.4)', borderRadius:6, padding:'4px 8px', cursor:'pointer', color:'inherit'}}
                 >Тема</button>

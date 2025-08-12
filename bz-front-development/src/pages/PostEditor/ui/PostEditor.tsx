@@ -11,6 +11,8 @@ import Quill from 'quill'
 import 'quill/dist/quill.snow.css'
 import ArrowIcon from "shared/assets/icons/ArrrowLeft.svg?react";
 import SaveIcon from "shared/assets/icons/Plus.svg?react";
+import { Accordion, AccordionSummary, AccordionDetails, FormControlLabel, Checkbox, RadioGroup, Radio, Select, MenuItem, InputLabel, FormControl, Chip, Button as MUIButton, Autocomplete, TextField } from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
 interface Category {
     id: number;
@@ -76,6 +78,8 @@ export default function PostEditor() {
     const [selectedGroups, setSelectedGroups] = useState<any[]>([]);
     const [selectedTopCategories, setSelectedTopCategories] = useState<any[]>([]);
     const [cities, setCities] = useState<{value:number,label:string}[]>([])
+    const [admissionYears, setAdmissionYears] = useState<{value:number,label:string}[]>([])
+    const [specialities, setSpecialities] = useState<{value:number,label:string}[]>([])
     
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -125,6 +129,12 @@ export default function PostEditor() {
             // Fetch cities
             const citiesResponse = await http.get('/api/categories/cities');
             setCities(citiesResponse.data.map((c:any)=>({value:c.id,label:c.name})))
+
+            const yearsResponse = await http.get('/api/categories/admission-years')
+            setAdmissionYears(yearsResponse.data.map((y:any)=>({value:y.id,label:String(y.year)})))
+
+            const specsResponse = await http.get('/api/categories/specialities')
+            setSpecialities(specsResponse.data.map((s:any)=>({value:s.id,label:`${s.code} ${s.name}`})))
         } catch (error) {
             console.error('Failed to fetch categories:', error);
             setError('Не удалось загрузить категории');
@@ -350,6 +360,84 @@ export default function PostEditor() {
                             <span>Актуальный</span>
                         </label>
                     </div>
+
+                    {/* Publishing scope (MUI accordions) */}
+                    <Accordion defaultExpanded>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Тип сообщения</AccordionSummary>
+                        <AccordionDetails>
+                            <FormControl fullWidth size='small'>
+                                <InputLabel id='tag-label'>Маркировка</InputLabel>
+                                <Select labelId='tag-label' label='Маркировка' value={formData.publish_scope?.tag || 'common'} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, tag: e.target.value as any}}))}>
+                                    <MenuItem value='common'>Общая</MenuItem>
+                                    <MenuItem value='important'>Важная</MenuItem>
+                                    <MenuItem value='useful'>Полезная</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </AccordionDetails>
+                    </Accordion>
+
+                    {formData.publish_scope?.tag !== 'common' && (
+                        <>
+                        <Accordion>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Аудитория</AccordionSummary>
+                            <AccordionDetails>
+                                <div style={{display:'grid', gridTemplateColumns:'1fr', gap:12}}>
+                                    <FormControl component='fieldset'>
+                                        <RadioGroup row value={formData.publish_scope?.baseClass ?? ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, baseClass: Number(e.target.value) as any}}))}>
+                                            <FormControlLabel value={11} control={<Radio/>} label='База 11'/>
+                                            <FormControlLabel value={9} control={<Radio/>} label='База 9'/>
+                                        </RadioGroup>
+                                    </FormControl>
+                                    <FormControl fullWidth size='small'>
+                                        <InputLabel id='audience-label'>Тип аудитории</InputLabel>
+                                        <Select labelId='audience-label' label='Тип аудитории' value={formData.publish_scope?.audience || 'all'} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, audience: e.target.value as any}}))}>
+                                            <MenuItem value='all'>Для всех</MenuItem>
+                                            <MenuItem value='city'>По городу</MenuItem>
+                                            <MenuItem value='course'>По курсу</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                    {formData.publish_scope?.audience === 'city' && (
+                                        <FormControl fullWidth size='small'>
+                                            <InputLabel id='city-label'>Город</InputLabel>
+                                            <Select labelId='city-label' label='Город' value={formData.publish_scope?.city_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: Number(e.target.value)}}))}>
+                                                {cities.map(c=> <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
+                                            </Select>
+                                        </FormControl>
+                                    )}
+                                    {formData.publish_scope?.audience === 'course' && (
+                                        <Autocomplete multiple options={[1,2,3]} value={(formData.publish_scope as any)?.courses || []} onChange={(_,v)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, courses: v as any}}))} renderInput={(params)=> <TextField {...params} label='Курсы' size='small'/>} />
+                                    )}
+                                    <FormControl fullWidth size='small'>
+                                        <InputLabel id='year-label'>Год поступления</InputLabel>
+                                        <Select labelId='year-label' label='Год поступления' value={formData.publish_scope?.admission_year_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, admission_year_id: Number(e.target.value)}}))}>
+                                            {admissionYears.map(y=> <MenuItem key={y.value} value={y.value}>{y.label}</MenuItem>)}
+                                        </Select>
+                                    </FormControl>
+                                </div>
+                            </AccordionDetails>
+                        </Accordion>
+                        <Accordion>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Формат и профиль</AccordionSummary>
+                            <AccordionDetails>
+                                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
+                                    <FormControl fullWidth size='small'>
+                                        <InputLabel id='mode-label'>Формат</InputLabel>
+                                        <Select labelId='mode-label' label='Формат' value={formData.publish_scope?.education_mode || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, education_mode: e.target.value as any}}))}>
+                                            <MenuItem value='full_time'>Очное</MenuItem>
+                                            <MenuItem value='distance'>Дистанционное</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                    <FormControl fullWidth size='small'>
+                                        <InputLabel id='spec-label'>Профиль специальности</InputLabel>
+                                        <Select labelId='spec-label' label='Профиль специальности' value={formData.publish_scope?.speciality_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, speciality_id: Number(e.target.value)}}))}>
+                                            {specialities.map(s=> <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
+                                        </Select>
+                                    </FormControl>
+                                </div>
+                            </AccordionDetails>
+                        </Accordion>
+                        </>
+                    )}
 
                     {/* Publish scope */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8, paddingTop: 8, borderTop: '1px solid rgba(0,0,0,0.1)' }}>

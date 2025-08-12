@@ -78,6 +78,12 @@ def create_app(config_name='development'):
     with app.app_context():
         try:
             db.create_all()
+            # Run minimal idempotent migrations for Neon/MySQL
+            try:
+                from app.db_migrations import run_startup_migrations
+                run_startup_migrations(db)
+            except Exception:
+                pass
         except Exception:
             pass
 
