@@ -1,7 +1,7 @@
 [build]
   base = "bz-front-development"
   publish = "dist"
-  command = "npm ci && npm run build:ci"
+  command = "npm install --no-audit --no-fund --legacy-peer-deps && npm run build:ci"
 
 
 [[redirects]]

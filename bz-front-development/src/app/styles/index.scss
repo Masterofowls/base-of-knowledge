@@ -14,7 +14,21 @@
 
 html { scroll-behavior: smooth; }
 
-* { transition: color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease; }
+* { transition: color .2s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+
+/* Softer, more rounded UI */
+:root {
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+}
+
+.card, .MuiPaper-root, .MuiCard-root { border-radius: var(--radius-lg) !important; }
+.button, .MuiButton-root { border-radius: 999px !important; }
+.input, .MuiOutlinedInput-root { border-radius: var(--radius-md) !important; }
+
+/* Smoother container rhythm */
+.page-center-wrapper { padding-top: 12px; padding-bottom: 24px; }
 
 .container {
   margin: 0 auto;

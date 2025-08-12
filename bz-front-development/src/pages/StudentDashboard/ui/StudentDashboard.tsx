@@ -1,5 +1,4 @@
 import {classNames} from "shared/lib/classNames/classNames.ts";
-import {LatestPosts} from "widgets/LatestPosts";
 import {Groups} from "widgets/Groups";
 import PostsList from "pages/PostsList/ui/PostsList";
 import { Button } from "shared/ui/Button";
@@ -13,7 +12,7 @@ export default function StudentDashboard() {
         city: string;
         group: string;
     } | null>(null);
-    const [showAllPosts, setShowAllPosts] = useState(false)
+    // Removed modal: inline improved posts view handles expansion
 
     useEffect(() => {
         // Check if user is logged in as student
@@ -90,29 +89,18 @@ export default function StudentDashboard() {
             </div>
 
             {/* Content - Feed on dashboard */}
-            <div style={{display: 'flex', flexDirection: 'row', gap: '45px', flexWrap:'wrap'}}>
-                <div style={{flex: '1 1 600px', minWidth: 320}}>
+            <div style={{display: 'flex', flexDirection: 'row', gap: '24px', flexWrap:'wrap'}}>
+                <div style={{flex: '1 1 680px', minWidth: 320}}>
                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
                         <h2 style={{margin:0}}>Лента</h2>
-                        <Button onClick={()=> setShowAllPosts(true)} theme={ThemeButton.ARROW} width='160px' backgroundColor='#00AAFF'><span>Все посты</span></Button>
                     </div>
-                    <PostsList expandAllDefault />
+                    <PostsList />
                 </div>
-                <div style={{flex: '1 1 320px', minWidth: 280}}>
+                <div style={{flex: '0 1 300px', minWidth: 280}}>
                     <div style={{marginTop:16}}><Groups/></div>
                 </div>
             </div>
-            {showAllPosts && (
-                <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:1000, display:'flex', alignItems:'stretch', justifyContent:'center'}}>
-                    <div className={classNames('container', {}, [])} style={{background:'var(--surface-1)', flex:'1 1 auto', maxWidth:1200, overflow:'auto', padding:'16px'}}>
-                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
-                            <h2 style={{margin:0}}>Все посты</h2>
-                            <Button onClick={()=> setShowAllPosts(false)} theme={ThemeButton.CLEAR} width='120px' backgroundColor='#7F61DD'><span>Закрыть</span></Button>
-                        </div>
-                        <PostsList />
-                    </div>
-                </div>
-            )}
+            {/* Modal "Все посты" removed: posts expand inline */}
         </main>
     );
 }

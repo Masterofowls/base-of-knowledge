@@ -72,7 +72,7 @@ function Navbar({className}: NavbarProps) {
           </Tooltip>
           <Menu id="admin-menu" anchorEl={adminAnchorEl} open={Boolean(adminAnchorEl)} onClose={handleAdminClose} keepMounted>
             <MenuItem onClick={() => { handleAdminClose(); navigate('/admin') }}>Панель</MenuItem>
-            <MenuItem onClick={() => { handleAdminClose(); navigate('/admin/posts') }}>Посты</MenuItem>
+            <MenuItem onClick={() => { handleAdminClose(); navigate('/posts') }}>Посты</MenuItem>
             <MenuItem onClick={handleLogout}>Выйти</MenuItem>
           </Menu>
         </Toolbar>

@@ -1,94 +1,28 @@
 import * as React from 'react';
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Avatar from '@mui/material/Avatar';
 import AvatarGroup from '@mui/material/AvatarGroup';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Pagination from '@mui/material/Pagination';
 import Typography from '@mui/material/Typography';
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Chip from '@mui/material/Chip'
 import { styled } from '@mui/material/styles';
 import NavigateNextRoundedIcon from '@mui/icons-material/NavigateNextRounded';
+import http from 'shared/api/http'
+import { Reactions } from 'shared/ui/Reactions'
 
-const articleInfo = [
-  {
-    tag: 'Engineering',
-    title: 'The future of AI in software engineering',
-    description:
-      'Artificial intelligence is revolutionizing software engineering. Explore how AI-driven tools are enhancing development processes and improving software quality.',
-    authors: [
-      { name: 'Remy Sharp', avatar: '/static/images/avatar/1.jpg' },
-      { name: 'Travis Howard', avatar: '/static/images/avatar/2.jpg' },
-    ],
-  },
-  {
-    tag: 'Product',
-    title: 'Driving growth with user-centric product design',
-    description:
-      'Our user-centric product design approach is driving significant growth. Learn about the strategies we employ to create products that resonate with users.',
-    authors: [{ name: 'Erica Johns', avatar: '/static/images/avatar/6.jpg' }],
-  },
-  {
-    tag: 'Design',
-    title: 'Embracing minimalism in modern design',
-    description:
-      'Minimalism is a key trend in modern design. Discover how our design team incorporates minimalist principles to create clean and impactful user experiences.',
-    authors: [{ name: 'Kate Morrison', avatar: '/static/images/avatar/7.jpg' }],
-  },
-  {
-    tag: 'Company',
-    title: 'Cultivating a culture of innovation',
-    description:
-      'Innovation is at the heart of our company culture. Learn about the initiatives we have in place to foster creativity and drive groundbreaking solutions.',
-    authors: [{ name: 'Cindy Baker', avatar: '/static/images/avatar/3.jpg' }],
-  },
-  {
-    tag: 'Engineering',
-    title: 'Advancing cybersecurity with next-gen solutions',
-    description:
-      'Our next-generation cybersecurity solutions are setting new standards in the industry. Discover how we protect our clients from evolving cyber threats.',
-    authors: [
-      { name: 'Agnes Walker', avatar: '/static/images/avatar/4.jpg' },
-      { name: 'Trevor Henderson', avatar: '/static/images/avatar/5.jpg' },
-    ],
-  },
-  {
-    tag: 'Product',
-    title: 'Enhancing customer experience through innovation',
-    description:
-      'Our innovative approaches are enhancing customer experience. Learn about the new features and improvements that are delighting our users.',
-    authors: [{ name: 'Travis Howard', avatar: '/static/images/avatar/2.jpg' }],
-  },
-  {
-    tag: 'Engineering',
-    title: 'Pioneering sustainable engineering solutions',
-    description:
-      "Learn about our commitment to sustainability and the innovative engineering solutions we're implementing to create a greener future. Discover the impact of our eco-friendly initiatives.",
-    authors: [
-      { name: 'Agnes Walker', avatar: '/static/images/avatar/4.jpg' },
-      { name: 'Trevor Henderson', avatar: '/static/images/avatar/5.jpg' },
-    ],
-  },
-  {
-    tag: 'Product',
-    title: 'Maximizing efficiency with our latest product updates',
-    description:
-      'Our recent product updates are designed to help you maximize efficiency and achieve more. Get a detailed overview of the new features and improvements that can elevate your workflow.',
-    authors: [{ name: 'Travis Howard', avatar: '/static/images/avatar/2.jpg' }],
-  },
-  {
-    tag: 'Design',
-    title: 'Designing for the future: trends and insights',
-    description:
-      'Stay ahead of the curve with the latest design trends and insights. Our design team shares their expertise on creating intuitive and visually stunning user experiences.',
-    authors: [{ name: 'Kate Morrison', avatar: '/static/images/avatar/7.jpg' }],
-  },
-  {
-    tag: 'Company',
-    title: "Our company's journey: milestones and achievements",
-    description:
-      "Take a look at our company's journey and the milestones we've achieved along the way. From humble beginnings to industry leader, discover our story of growth and success.",
-    authors: [{ name: 'Cindy Baker', avatar: '/static/images/avatar/3.jpg' }],
-  },
-];
+interface ApiAuthor { full_name?: string }
+interface ApiArticle {
+  id: number
+  title: string
+  content: string
+  categories?: Array<{ name: string }>
+  authors?: Array<ApiAuthor>
+}
 
 const StyledTypography = styled(Typography)({
   display: '-webkit-box',
@@ -169,9 +103,25 @@ function Author({ authors }: { authors: { name: string; avatar: string }[] }) {
 }
 
 export default function Latest() {
-  const [focusedCardIndex, setFocusedCardIndex] = React.useState<number | null>(
-    null,
-  );
+  const navigate = useNavigate()
+  const [focusedCardIndex, setFocusedCardIndex] = useState<number | null>(null)
+  const [articles, setArticles] = useState<ApiArticle[]>([])
+  const [page, setPage] = useState(1)
+  const pageSize = 8
+  const totalPages = Math.max(1, Math.ceil(articles.length / pageSize))
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+
+  useEffect(() => {
+    let ignore = false
+    async function load() {
+      try {
+        const res = await http.get('/api/articles/')
+        if (!ignore) setArticles(res.data || [])
+      } catch(e) {}
+    }
+    load()
+    return () => { ignore = true }
+  }, [])
 
   const handleFocus = (index: number) => {
     setFocusedCardIndex(index);
@@ -181,51 +131,69 @@ export default function Latest() {
     setFocusedCardIndex(null);
   };
 
+  const items = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return articles.slice(start, start + pageSize)
+  }, [page, articles])
+
   return (
     <div>
       <Typography variant="h2" gutterBottom>
         Latest
       </Typography>
       <Grid container spacing={8} columns={12} sx={{ my: 4 }}>
-        {articleInfo.map((article, index) => (
-          <Grid key={index} size={{ xs: 12, sm: 6 }}>
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: 1,
-                height: '100%',
-              }}
-            >
-              <Typography gutterBottom variant="caption" component="div">
-                {article.tag}
-              </Typography>
-              <TitleTypography
-                gutterBottom
-                variant="h6"
-                onFocus={() => handleFocus(index)}
-                onBlur={handleBlur}
-                tabIndex={0}
-                className={focusedCardIndex === index ? 'Mui-focused' : ''}
-              >
-                {article.title}
-                <NavigateNextRoundedIcon
-                  className="arrow"
-                  sx={{ fontSize: '1rem' }}
-                />
-              </TitleTypography>
-              <StyledTypography variant="body2" color="text.secondary" gutterBottom>
-                {article.description}
-              </StyledTypography>
+        {items.map((article, index) => {
+          const isExpanded = expandedId === article.id
+          const gridSize = isExpanded ? { xs: 12 } : { xs: 12, sm: 6 }
+          const tag = article.categories?.[0]?.name
+          return (
+            <Grid key={article.id} size={gridSize}>
+              <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: isExpanded ? 6 : 1, transition: 'box-shadow .2s ease' }}>
+                <CardContent>
+                  <Box sx={{ display:'flex', alignItems:'center', gap: 1, mb: 1 }}>
+                    {tag && <Chip size="small" label={tag} />}
+                    <Box sx={{ flex: 1 }} />
+                  </Box>
+                  <TitleTypography
+                    gutterBottom
+                    variant="h6"
+                    onFocus={() => handleFocus(index)}
+                    onBlur={handleBlur}
+                    tabIndex={0}
+                    className={focusedCardIndex === index ? 'Mui-focused' : ''}
+                    onClick={() => setExpandedId(isExpanded ? null : article.id)}
+                    sx={{ cursor: 'pointer' }}
+                  >
+                    {article.title}
+                    <NavigateNextRoundedIcon className="arrow" sx={{ fontSize: '1rem' }} />
+                  </TitleTypography>
+                  {isExpanded ? (
+                    <Box
+                      className='article-content'
+                      onClick={() => setExpandedId(null)}
+                      sx={{ cursor: 'default' }}
+                      dangerouslySetInnerHTML={{ __html: article.content }}
+                    />
+                  ) : (
+                    <StyledTypography variant="body2" color="text.secondary" gutterBottom onClick={() => setExpandedId(article.id)} sx={{ cursor: 'pointer' }}>
+                      {article.content?.replace(/<[^>]+>/g,'').slice(0, 220)}
+                    </StyledTypography>
+                  )}
 
-              <Author authors={article.authors} />
-            </Box>
-          </Grid>
-        ))}
+                  <Box sx={{ mt: 1 }}>
+                    <Author authors={(article.authors || []).map(a=>({ name: a.full_name || 'Автор', avatar: '' }))} />
+                  </Box>
+                  <Box sx={{ mt: 1 }}>
+                    <Reactions articleId={article.id} />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          )
+        })}
       </Grid>
       <Box sx={{ display: 'flex', flexDirection: 'row', pt: 4 }}>
-        <Pagination hidePrevButton hideNextButton count={10} boundaryCount={10} />
+        <Pagination page={page} onChange={(_, p)=>setPage(p)} hidePrevButton hideNextButton count={totalPages} boundaryCount={Math.min(10, totalPages)} />
       </Box>
     </div>
   );

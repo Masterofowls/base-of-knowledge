@@ -1,5 +1,7 @@
 import { classNames } from "shared/lib/classNames/classNames.ts";
 import { Container } from "shared/ui/Container/Container.tsx";
+import { DataTable, EmptyState, PropertyList, Property, PropertyLabel, PropertyValue, Banner, BannerContent, BannerTitle, BannerDescription } from '@saas-ui/react'
+import { Box } from '@chakra-ui/react'
 import { Button } from "shared/ui/Button";
 import { ThemeButton } from "shared/ui/Button/ui/Button.tsx";
 import { Input } from "shared/ui/Input/Input.tsx";
@@ -435,11 +437,10 @@ export default function GroupManagement() {
 
                 {/* Groups List */}
                 {groups.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                        <StudentsIcon width='48px' height='48px' style={{ marginBottom: '16px', opacity: 0.5 }} />
-                        <p>Группы не найдены</p>
-                        {searchTerm && <p>Попробуйте изменить поисковый запрос</p>}
-                    </div>
+                    <EmptyState
+                      title="Группы не найдены"
+                      description={searchTerm ? 'Попробуйте изменить поисковый запрос' : 'Создайте первую группу'}
+                    />
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '16px' }}>
                         {groups.map((group) => (
@@ -461,29 +462,44 @@ export default function GroupManagement() {
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#333' }}>
-                                        {group.display_name}
-                                    </h3>
-                                    <StudentsIcon width='20px' height='20px' style={{ color: '#92DA63' }} />
+                                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#333' }}>
+                                      {group.display_name}
+                                  </h3>
+                                  <StudentsIcon width='20px' height='20px' style={{ color: '#92DA63' }} />
                                 </div>
-                                
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '14px', color: '#666' }}>
-                                    {group.speciality && (
-                                        <div><strong>Специальность:</strong> {group.speciality.code} - {group.speciality.name}</div>
-                                    )}
-                                    {group.education_form && (
-                                        <div><strong>Форма обучения:</strong> {group.education_form.name}</div>
-                                    )}
-                                    {group.admission_year && (
-                                        <div><strong>Год поступления:</strong> {group.admission_year.year}</div>
-                                    )}
-                                    {group.city && (
-                                        <div><strong>Город:</strong> {group.city.name}</div>
-                                    )}
-                                    {group.school_class && (
-                                        <div><strong>Курс:</strong> {group.school_class.name}</div>
-                                    )}
-                                </div>
+
+                                <PropertyList spacing={1} style={{ fontSize: 14, color: '#555' }}>
+                                  {group.speciality && (
+                                    <Property>
+                                      <PropertyLabel>Специальность</PropertyLabel>
+                                      <PropertyValue>{group.speciality.code} - {group.speciality.name}</PropertyValue>
+                                    </Property>
+                                  )}
+                                  {group.education_form && (
+                                    <Property>
+                                      <PropertyLabel>Форма обучения</PropertyLabel>
+                                      <PropertyValue>{group.education_form.name}</PropertyValue>
+                                    </Property>
+                                  )}
+                                  {group.admission_year && (
+                                    <Property>
+                                      <PropertyLabel>Год поступления</PropertyLabel>
+                                      <PropertyValue>{group.admission_year.year}</PropertyValue>
+                                    </Property>
+                                  )}
+                                  {group.city && (
+                                    <Property>
+                                      <PropertyLabel>Город</PropertyLabel>
+                                      <PropertyValue>{group.city.name}</PropertyValue>
+                                    </Property>
+                                  )}
+                                  {group.school_class && (
+                                    <Property>
+                                      <PropertyLabel>Курс</PropertyLabel>
+                                      <PropertyValue>{group.school_class.name}</PropertyValue>
+                                    </Property>
+                                  )}
+                                </PropertyList>
                                 <div style={{display:'flex', gap:8, marginTop:12}}>
                                     <Button
                                         onClick={async ()=>{

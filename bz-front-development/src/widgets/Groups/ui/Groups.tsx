@@ -33,7 +33,6 @@ function Groups({className}: GroupsProps) {
                     <div className={cls.name}>
                         <p>Группы</p>
                     </div>
-                    <Button width="137px" className={cls.button} theme={ThemeButton.ARROW} backgroundColor='#92da83'><p>Все группы</p></Button>
                 </div>
                 <div className={cls.GroupsWrap}>
                    {groups.length === 0 && <div style={{color:'#888', fontSize:12}}>Нет групп</div>}

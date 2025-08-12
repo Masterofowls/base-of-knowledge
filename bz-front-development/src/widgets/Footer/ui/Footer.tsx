@@ -6,29 +6,30 @@ import Typography from '@mui/material/Typography'
 import Link from '@mui/material/Link'
 import Divider from '@mui/material/Divider'
 import SchoolIcon from '@mui/icons-material/School'
+import { useTheme } from '@mui/material/styles'
 
 interface FooterProps {
     className?: string
 }
 
 function Footer({className}: FooterProps) {
+  const theme = useTheme()
   return (
-    <footer className={classNames(cls.Footer, {}, [className])}>
+    <footer className={classNames(cls.Footer, {}, [className])} style={{ width:'100%' }}>
       <Divider />
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Box sx={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap: 2, flexWrap:'wrap' }}>
           <Box sx={{ display:'flex', alignItems:'center', gap: 1 }}>
             <SchoolIcon fontSize='small' />
-            <Typography variant='subtitle1' color='text.secondary'>Студенческий Портал Хекслет</Typography>
+            <Typography variant='subtitle1' color='text.secondary'>Студенческий Портал</Typography>
           </Box>
           <Typography variant='body2' color='text.secondary'>
-            © {new Date().getFullYear()} Студенческий Портал Хекслет. Все права защищены.
+            © {new Date().getFullYear()} Все права защищены.
           </Typography>
         </Box>
         <Box sx={{ mt: 1, display:'flex', gap: 2, flexWrap:'wrap' }}>
-          <Link href='/' underline='hover' color='inherit' variant='body2'>Главная</Link>
-          <Link href='/posts' underline='hover' color='inherit' variant='body2'>Посты</Link>
-          <Link href='/choicerole' underline='hover' color='inherit' variant='body2'>Вход</Link>
+          <Link href='/' underline='hover' color={theme.palette.text.primary} variant='body2'>Главная</Link>
+          <Link href='/choicerole' underline='hover' color={theme.palette.text.primary} variant='body2'>Вход</Link>
         </Box>
       </Container>
     </footer>

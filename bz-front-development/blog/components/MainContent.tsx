@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Avatar from '@mui/material/Avatar';
 import AvatarGroup from '@mui/material/AvatarGroup';
 import Box from '@mui/material/Box';
@@ -15,63 +17,18 @@ import OutlinedInput from '@mui/material/OutlinedInput';
 import { styled } from '@mui/material/styles';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import RssFeedRoundedIcon from '@mui/icons-material/RssFeedRounded';
+import http from 'shared/api/http'
+import { Reactions } from 'shared/ui/Reactions'
 
-const cardData = [
-  {
-    img: 'https://picsum.photos/800/450?random=1',
-    tag: 'Engineering',
-    title: 'Revolutionizing software development with cutting-edge tools',
-    description:
-      'Our latest engineering tools are designed to streamline workflows and boost productivity. Discover how these innovations are transforming the software development landscape.',
-    authors: [
-      { name: 'Remy Sharp', avatar: '/static/images/avatar/1.jpg' },
-      { name: 'Travis Howard', avatar: '/static/images/avatar/2.jpg' },
-    ],
-  },
-  {
-    img: 'https://picsum.photos/800/450?random=2',
-    tag: 'Product',
-    title: 'Innovative product features that drive success',
-    description:
-      'Explore the key features of our latest product release that are helping businesses achieve their goals. From user-friendly interfaces to robust functionality, learn why our product stands out.',
-    authors: [{ name: 'Erica Johns', avatar: '/static/images/avatar/6.jpg' }],
-  },
-  {
-    img: 'https://picsum.photos/800/450?random=3',
-    tag: 'Design',
-    title: 'Designing for the future: trends and insights',
-    description:
-      'Stay ahead of the curve with the latest design trends and insights. Our design team shares their expertise on creating intuitive and visually stunning user experiences.',
-    authors: [{ name: 'Kate Morrison', avatar: '/static/images/avatar/7.jpg' }],
-  },
-  {
-    img: 'https://picsum.photos/800/450?random=4',
-    tag: 'Company',
-    title: "Our company's journey: milestones and achievements",
-    description:
-      "Take a look at our company's journey and the milestones we've achieved along the way. From humble beginnings to industry leader, discover our story of growth and success.",
-    authors: [{ name: 'Cindy Baker', avatar: '/static/images/avatar/3.jpg' }],
-  },
-  {
-    img: 'https://picsum.photos/800/450?random=45',
-    tag: 'Engineering',
-    title: 'Pioneering sustainable engineering solutions',
-    description:
-      "Learn about our commitment to sustainability and the innovative engineering solutions we're implementing to create a greener future. Discover the impact of our eco-friendly initiatives.",
-    authors: [
-      { name: 'Agnes Walker', avatar: '/static/images/avatar/4.jpg' },
-      { name: 'Trevor Henderson', avatar: '/static/images/avatar/5.jpg' },
-    ],
-  },
-  {
-    img: 'https://picsum.photos/800/450?random=6',
-    tag: 'Product',
-    title: 'Maximizing efficiency with our latest product updates',
-    description:
-      'Our recent product updates are designed to help you maximize efficiency and achieve more. Get a detailed overview of the new features and improvements that can elevate your workflow.',
-    authors: [{ name: 'Travis Howard', avatar: '/static/images/avatar/2.jpg' }],
-  },
-];
+interface ApiAuthor { full_name?: string }
+interface ApiArticle {
+  id: number
+  title: string
+  content: string
+  categories?: Array<{ name: string }>
+  authors?: Array<ApiAuthor>
+  created_at?: string
+}
 
 const SyledCard = styled(Card)(({ theme }) => ({
   display: 'flex',
@@ -165,9 +122,28 @@ export function Search() {
 }
 
 export default function MainContent() {
-  const [focusedCardIndex, setFocusedCardIndex] = React.useState<number | null>(
-    null,
-  );
+  const navigate = useNavigate()
+  const [focusedCardIndex, setFocusedCardIndex] = useState<number | null>(null)
+  const [articles, setArticles] = useState<ApiArticle[]>([])
+  const [loading, setLoading] = useState<boolean>(false)
+  const [q, setQ] = useState<string>('')
+
+  useEffect(() => {
+    let ignore = false
+    async function load() {
+      setLoading(true)
+      try {
+        const res = await http.get('/api/articles/')
+        if (!ignore) setArticles(res.data || [])
+      } catch(e) {
+        // noop
+      } finally {
+        if (!ignore) setLoading(false)
+      }
+    }
+    load()
+    return () => { ignore = true }
+  }, [])
 
   const handleFocus = (index: number) => {
     setFocusedCardIndex(index);
@@ -177,9 +153,22 @@ export default function MainContent() {
     setFocusedCardIndex(null);
   };
 
-  const handleClick = () => {
-    console.info('You clicked the filter chip.');
-  };
+  function stripHtml(html: string): string {
+    if (!html) return ''
+    const tmp = document.createElement('div')
+    tmp.innerHTML = html
+    return tmp.textContent || tmp.innerText || ''
+  }
+
+  const filtered = useMemo(() => {
+    const query = q.trim().toLowerCase()
+    if (!query) return articles
+    return articles.filter(a => (a.title?.toLowerCase().includes(query) || stripHtml(a.content || '').toLowerCase().includes(query)))
+  }, [articles, q])
+
+  function getArticle(index: number): ApiArticle | null {
+    return filtered[index] ?? null
+  }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -198,7 +187,22 @@ export default function MainContent() {
           overflow: 'auto',
         }}
       >
-        <Search />
+        <FormControl sx={{ width: { xs: '100%', md: '25ch' } }} variant="outlined">
+          <OutlinedInput
+            size="small"
+            id="search"
+            placeholder="Search…"
+            sx={{ flexGrow: 1 }}
+            value={q}
+            onChange={(e)=>setQ(e.target.value)}
+            startAdornment={
+              <InputAdornment position="start" sx={{ color: 'text.primary' }}>
+                <SearchRoundedIcon fontSize="small" />
+              </InputAdornment>
+            }
+            inputProps={{ 'aria-label': 'search' }}
+          />
+        </FormControl>
         <IconButton size="small" aria-label="RSS feed">
           <RssFeedRoundedIcon />
         </IconButton>
@@ -222,43 +226,7 @@ export default function MainContent() {
             overflow: 'auto',
           }}
         >
-          <Chip onClick={handleClick} size="medium" label="All categories" />
-          <Chip
-            onClick={handleClick}
-            size="medium"
-            label="Company"
-            sx={{
-              backgroundColor: 'transparent',
-              border: 'none',
-            }}
-          />
-          <Chip
-            onClick={handleClick}
-            size="medium"
-            label="Product"
-            sx={{
-              backgroundColor: 'transparent',
-              border: 'none',
-            }}
-          />
-          <Chip
-            onClick={handleClick}
-            size="medium"
-            label="Design"
-            sx={{
-              backgroundColor: 'transparent',
-              border: 'none',
-            }}
-          />
-          <Chip
-            onClick={handleClick}
-            size="medium"
-            label="Engineering"
-            sx={{
-              backgroundColor: 'transparent',
-              border: 'none',
-            }}
-          />
+          <Chip size="medium" label="All posts" />
         </Box>
         <Box
           sx={{
@@ -269,7 +237,22 @@ export default function MainContent() {
             overflow: 'auto',
           }}
         >
-          <Search />
+          <FormControl sx={{ width: { xs: '100%', md: '25ch' } }} variant="outlined">
+            <OutlinedInput
+              size="small"
+              id="search-desktop"
+              placeholder="Search…"
+              sx={{ flexGrow: 1 }}
+              value={q}
+              onChange={(e)=>setQ(e.target.value)}
+              startAdornment={
+                <InputAdornment position="start" sx={{ color: 'text.primary' }}>
+                  <SearchRoundedIcon fontSize="small" />
+                </InputAdornment>
+              }
+              inputProps={{ 'aria-label': 'search' }}
+            />
+          </FormControl>
           <IconButton size="small" aria-label="RSS feed">
             <RssFeedRoundedIcon />
           </IconButton>
@@ -283,11 +266,12 @@ export default function MainContent() {
             onBlur={handleBlur}
             tabIndex={0}
             className={focusedCardIndex === 0 ? 'Mui-focused' : ''}
+            onClick={()=>{ const a = getArticle(0); if (a) navigate(`/posts/${a.id}`) }}
           >
             <CardMedia
               component="img"
               alt="green iguana"
-              image={cardData[0].img}
+              image={`https://picsum.photos/800/450?random=${(getArticle(0)?.id ?? 1) % 50}`}
               sx={{
                 aspectRatio: '16 / 9',
                 borderBottom: '1px solid',
@@ -296,16 +280,17 @@ export default function MainContent() {
             />
             <SyledCardContent>
               <Typography gutterBottom variant="caption" component="div">
-                {cardData[0].tag}
+                {(getArticle(0)?.categories?.[0]?.name) || 'Новость'}
               </Typography>
               <Typography gutterBottom variant="h6" component="div">
-                {cardData[0].title}
+                {getArticle(0)?.title ?? '—'}
               </Typography>
               <StyledTypography variant="body2" color="text.secondary" gutterBottom>
-                {cardData[0].description}
+                {stripHtml(getArticle(0)?.content || '').slice(0, 160)}
               </StyledTypography>
             </SyledCardContent>
-            <Author authors={cardData[0].authors} />
+            {getArticle(0) && <Author authors={(getArticle(0)?.authors || []).map(a=>({ name: a.full_name || 'Автор', avatar: '' }))} />}
+            {getArticle(0) && <Box sx={{ px: 2, pb: 2 }}><Reactions articleId={getArticle(0)!.id} /></Box>}
           </SyledCard>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -315,11 +300,12 @@ export default function MainContent() {
             onBlur={handleBlur}
             tabIndex={0}
             className={focusedCardIndex === 1 ? 'Mui-focused' : ''}
+            onClick={()=>{ const a = getArticle(1); if (a) navigate(`/posts/${a.id}`) }}
           >
             <CardMedia
               component="img"
               alt="green iguana"
-              image={cardData[1].img}
+              image={`https://picsum.photos/800/450?random=${(getArticle(1)?.id ?? 2) % 50}`}
               aspect-ratio="16 / 9"
               sx={{
                 borderBottom: '1px solid',
@@ -328,16 +314,17 @@ export default function MainContent() {
             />
             <SyledCardContent>
               <Typography gutterBottom variant="caption" component="div">
-                {cardData[1].tag}
+                {(getArticle(1)?.categories?.[0]?.name) || 'Новость'}
               </Typography>
               <Typography gutterBottom variant="h6" component="div">
-                {cardData[1].title}
+                {getArticle(1)?.title ?? '—'}
               </Typography>
               <StyledTypography variant="body2" color="text.secondary" gutterBottom>
-                {cardData[1].description}
+                {stripHtml(getArticle(1)?.content || '').slice(0, 160)}
               </StyledTypography>
             </SyledCardContent>
-            <Author authors={cardData[1].authors} />
+            {getArticle(1) && <Author authors={(getArticle(1)?.authors || []).map(a=>({ name: a.full_name || 'Автор', avatar: '' }))} />}
+            {getArticle(1) && <Box sx={{ px: 2, pb: 2 }}><Reactions articleId={getArticle(1)!.id} /></Box>}
           </SyledCard>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -348,11 +335,12 @@ export default function MainContent() {
             tabIndex={0}
             className={focusedCardIndex === 2 ? 'Mui-focused' : ''}
             sx={{ height: '100%' }}
+            onClick={()=>{ const a = getArticle(2); if (a) navigate(`/posts/${a.id}`) }}
           >
             <CardMedia
               component="img"
               alt="green iguana"
-              image={cardData[2].img}
+              image={`https://picsum.photos/800/450?random=${(getArticle(2)?.id ?? 3) % 50}`}
               sx={{
                 height: { sm: 'auto', md: '50%' },
                 aspectRatio: { sm: '16 / 9', md: '' },
@@ -360,16 +348,17 @@ export default function MainContent() {
             />
             <SyledCardContent>
               <Typography gutterBottom variant="caption" component="div">
-                {cardData[2].tag}
+                {(getArticle(2)?.categories?.[0]?.name) || 'Новость'}
               </Typography>
               <Typography gutterBottom variant="h6" component="div">
-                {cardData[2].title}
+                {getArticle(2)?.title ?? '—'}
               </Typography>
               <StyledTypography variant="body2" color="text.secondary" gutterBottom>
-                {cardData[2].description}
+                {stripHtml(getArticle(2)?.content || '').slice(0, 160)}
               </StyledTypography>
             </SyledCardContent>
-            <Author authors={cardData[2].authors} />
+            {getArticle(2) && <Author authors={(getArticle(2)?.authors || []).map(a=>({ name: a.full_name || 'Автор', avatar: '' }))} />}
+            {getArticle(2) && <Box sx={{ px: 2, pb: 2 }}><Reactions articleId={getArticle(2)!.id} /></Box>}
           </SyledCard>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -383,6 +372,7 @@ export default function MainContent() {
               tabIndex={0}
               className={focusedCardIndex === 3 ? 'Mui-focused' : ''}
               sx={{ height: '100%' }}
+              onClick={()=>{ const a = getArticle(3); if (a) navigate(`/posts/${a.id}`) }}
             >
               <SyledCardContent
                 sx={{
@@ -394,21 +384,18 @@ export default function MainContent() {
               >
                 <div>
                   <Typography gutterBottom variant="caption" component="div">
-                    {cardData[3].tag}
+                    {(getArticle(3)?.categories?.[0]?.name) || 'Новость'}
                   </Typography>
                   <Typography gutterBottom variant="h6" component="div">
-                    {cardData[3].title}
+                    {getArticle(3)?.title ?? '—'}
                   </Typography>
-                  <StyledTypography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    {cardData[3].description}
+                  <StyledTypography variant="body2" color="text.secondary" gutterBottom>
+                    {stripHtml(getArticle(3)?.content || '').slice(0, 160)}
                   </StyledTypography>
                 </div>
               </SyledCardContent>
-              <Author authors={cardData[3].authors} />
+              {getArticle(3) && <Author authors={(getArticle(3)?.authors || []).map(a=>({ name: a.full_name || 'Автор', avatar: '' }))} />}
+              {getArticle(3) && <Box sx={{ px: 2, pb: 2 }}><Reactions articleId={getArticle(3)!.id} /></Box>}
             </SyledCard>
             <SyledCard
               variant="outlined"
@@ -417,6 +404,7 @@ export default function MainContent() {
               tabIndex={0}
               className={focusedCardIndex === 4 ? 'Mui-focused' : ''}
               sx={{ height: '100%' }}
+              onClick={()=>{ const a = getArticle(4); if (a) navigate(`/posts/${a.id}`) }}
             >
               <SyledCardContent
                 sx={{
@@ -428,21 +416,18 @@ export default function MainContent() {
               >
                 <div>
                   <Typography gutterBottom variant="caption" component="div">
-                    {cardData[4].tag}
+                    {(getArticle(4)?.categories?.[0]?.name) || 'Новость'}
                   </Typography>
                   <Typography gutterBottom variant="h6" component="div">
-                    {cardData[4].title}
+                    {getArticle(4)?.title ?? '—'}
                   </Typography>
-                  <StyledTypography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    {cardData[4].description}
+                  <StyledTypography variant="body2" color="text.secondary" gutterBottom>
+                    {stripHtml(getArticle(4)?.content || '').slice(0, 160)}
                   </StyledTypography>
                 </div>
               </SyledCardContent>
-              <Author authors={cardData[4].authors} />
+              {getArticle(4) && <Author authors={(getArticle(4)?.authors || []).map(a=>({ name: a.full_name || 'Автор', avatar: '' }))} />}
+              {getArticle(4) && <Box sx={{ px: 2, pb: 2 }}><Reactions articleId={getArticle(4)!.id} /></Box>}
             </SyledCard>
           </Box>
         </Grid>
@@ -454,11 +439,12 @@ export default function MainContent() {
             tabIndex={0}
             className={focusedCardIndex === 5 ? 'Mui-focused' : ''}
             sx={{ height: '100%' }}
+            onClick={()=>{ const a = getArticle(5); if (a) navigate(`/posts/${a.id}`) }}
           >
             <CardMedia
               component="img"
               alt="green iguana"
-              image={cardData[5].img}
+              image={`https://picsum.photos/800/450?random=${(getArticle(5)?.id ?? 5) % 50}`}
               sx={{
                 height: { sm: 'auto', md: '50%' },
                 aspectRatio: { sm: '16 / 9', md: '' },
@@ -466,16 +452,17 @@ export default function MainContent() {
             />
             <SyledCardContent>
               <Typography gutterBottom variant="caption" component="div">
-                {cardData[5].tag}
+                {(getArticle(5)?.categories?.[0]?.name) || 'Новость'}
               </Typography>
               <Typography gutterBottom variant="h6" component="div">
-                {cardData[5].title}
+                {getArticle(5)?.title ?? '—'}
               </Typography>
               <StyledTypography variant="body2" color="text.secondary" gutterBottom>
-                {cardData[5].description}
+                {stripHtml(getArticle(5)?.content || '').slice(0, 160)}
               </StyledTypography>
             </SyledCardContent>
-            <Author authors={cardData[5].authors} />
+            {getArticle(5) && <Author authors={(getArticle(5)?.authors || []).map(a=>({ name: a.full_name || 'Автор', avatar: '' }))} />}
+            {getArticle(5) && <Box sx={{ px: 2, pb: 2 }}><Reactions articleId={getArticle(5)!.id} /></Box>}
           </SyledCard>
         </Grid>
       </Grid>

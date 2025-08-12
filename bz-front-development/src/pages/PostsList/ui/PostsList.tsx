@@ -166,6 +166,7 @@ export default function PostsList({ expandAllDefault = false }: PostsListProps) 
                       overflow: expandAllDefault || expanded[item.id] ? undefined : 'hidden',
                       transition: 'max-height .25s ease',
                     }}
+                    onClick={()=> toggleExpand(item.id)}
                     dangerouslySetInnerHTML={{ __html: item.content }}
                   />
                   <Reactions articleId={item.id} onReactionChange={() => {}}
@@ -175,11 +176,7 @@ export default function PostsList({ expandAllDefault = false }: PostsListProps) 
                     <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
                       <Button onClick={() => handleShare(item)} theme={ThemeButton.CLEAR} width='90px' backgroundColor='#7F61DD'><span>Поделиться</span></Button>
                       <Button onClick={() => handleCopy(item)} theme={ThemeButton.CLEAR} width='90px' backgroundColor='#7F61DD'><span>Копировать</span></Button>
-                      {!expandAllDefault && (
-                        <Button onClick={() => toggleExpand(item.id)} theme={ThemeButton.CLEAR} width='160px' backgroundColor='#7F61DD'>
-                          <span>{expanded[item.id] ? 'Свернуть' : 'Показать полностью'}</span>
-                        </Button>
-                      )}
+                      {/* Removed explicit show-all button. Clicking title/content toggles expansion inline. */}
                     </div>
                   </div>
                 </CardContent>

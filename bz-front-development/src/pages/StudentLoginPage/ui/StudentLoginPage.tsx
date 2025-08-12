@@ -1,21 +1,23 @@
-import {classNames} from "shared/lib/classNames/classNames.ts";
-import {Container} from "shared/ui/Container/Container.tsx";
-import {ThemeButton} from "shared/ui/Button/ui/Button.tsx";
-import {Button} from "shared/ui/Button";
-import {InputSelect} from "shared/ui/InputSelect/InputSelect.tsx";
-import {Alert} from "shared/ui/Alert/Alert.tsx";
-import StudentIcon from "shared/assets/icons/UserFace.svg?react"
-import ArrowIcon from "shared/assets/icons/ArrrowLeft.svg?react"
-import {useEffect, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import http from "shared/api/http";
+import Container from '@mui/material/Container'
+import Paper from '@mui/material/Paper'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import Alert from '@mui/material/Alert'
+import Autocomplete from '@mui/material/Autocomplete'
+import TextField from '@mui/material/TextField'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import SchoolIcon from '@mui/icons-material/School'
 
 export default function StudentLoginPage() {
     const navigate = useNavigate();
-    const [cities, setCities] = useState([]);
-    const [groups, setGroups] = useState([]);
-    const [selectedCity, setSelectedCity] = useState(null);
-    const [selectedGroup, setSelectedGroup] = useState(null);
+    const [cities, setCities] = useState<Array<{label:string, value:number}>>([]);
+    const [groups, setGroups] = useState<Array<{label:string, value:number}>>([]);
+    const [selectedCity, setSelectedCity] = useState<{label:string, value:number} | null>(null);
+    const [selectedGroup, setSelectedGroup] = useState<{label:string, value:number} | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -49,9 +51,7 @@ export default function StudentLoginPage() {
         fetchData();
     }, []);
 
-    const handleBack = () => {
-        navigate('/');
-    };
+    const handleBack = () => navigate('/');
 
     const handleStudentLogin = () => {
         if (!selectedCity || !selectedGroup) {
@@ -71,47 +71,40 @@ export default function StudentLoginPage() {
         // Navigate to student dashboard
         navigate('/student');
     };
-    if (loading) {
-        return (
-            <div className={classNames('page-center-wrapper', {}, [])}>
-            <Container gap="16px" width='min(100%, 420px)' direction="column" paddings='20px'>
-                    <p>Загрузка...</p>
-                </Container>
-            </div>
-        );
-    }
+    if (loading) return <Container maxWidth="sm" sx={{ display:'grid', placeItems:'center', minHeight:'calc(100dvh - 140px)' }}><Typography>Загрузка...</Typography></Container>
 
     return (
-        <div className={classNames('page-center-wrapper', {}, [])}>
-            <Container gap="16px" width='min(100%, 420px)' direction="column" paddings='20px' footerContentHeight='80px' footer={<span onClick={handleBack} style={{cursor: 'pointer'}}><ArrowIcon width='10px' height='8px'/><p>Назад к выбору входа</p></span>}>
-                <div style={{display: 'flex',flexDirection: 'row', gap: '10px', marginBottom: '5px', fontSize: '20px', fontWeight: '700'}}>
-                    <StudentIcon width='22px' height='22px'/>
-                    <p>Выберите свою группу</p>
-                </div>
-                <InputSelect 
-                    placeholder='Выберите город' 
-                    label={<p>Город</p>} 
-                    options={cities}
-                    value={selectedCity}
-                    onChange={(option: any) => setSelectedCity(option)} 
-                />
-                <InputSelect 
-                    placeholder='Выберите группу' 
-                    label={<p>Группа</p>} 
-                    options={groups}
-                    value={selectedGroup}
-                    onChange={(option: any) => setSelectedGroup(option)}
-                />
-                <Button 
-                    width='100%'
-                    backgroundColor='rgba(0, 170, 255, 1)' 
-                    theme={ThemeButton.ARROW}
-                    onClick={handleStudentLogin}
-                >
-                    <span>Войти как студент</span>
-                </Button>
-                <Alert>Примечание: Данные студентов не сохраняются в базе данных. Вход осуществляется только через выбор группы для просмотра материалов.</Alert>
-            </Container>
-        </div>
+      <Container maxWidth="sm" sx={{ display:'grid', placeItems:'center', minHeight:'calc(100dvh - 140px)' }}>
+        <Paper elevation={3} sx={{ p:3, width:'100%', borderRadius:3 }}>
+          <Box sx={{ display:'flex', alignItems:'center', gap:1, mb:2 }}>
+            <SchoolIcon color="primary"/>
+            <Typography variant="h6" fontWeight={700}>Выберите свою группу</Typography>
+          </Box>
+          <Autocomplete
+            options={cities}
+            value={selectedCity}
+            onChange={(_, v)=>setSelectedCity(v)}
+            disablePortal
+            autoHighlight
+            getOptionLabel={o=>o?.label ?? ''}
+            renderInput={(params) => <TextField {...params} label="Город" placeholder="Выберите город"/>}
+            sx={{ mb:2 }}
+          />
+          <Autocomplete
+            options={groups}
+            value={selectedGroup}
+            onChange={(_, v)=>setSelectedGroup(v)}
+            disablePortal
+            autoHighlight
+            getOptionLabel={o=>o?.label ?? ''}
+            renderInput={(params) => <TextField {...params} label="Группа" placeholder="Выберите группу"/>}
+          />
+          <Box sx={{ display:'flex', gap:1, mt:2 }}>
+            <Button onClick={handleBack} startIcon={<ArrowBackIcon/>} variant="outlined" color="inherit">Назад</Button>
+            <Button onClick={handleStudentLogin} variant="contained" sx={{ ml:'auto' }}>Войти</Button>
+          </Box>
+          <Alert sx={{ mt:2 }} severity="info">Данные студентов не сохраняются в базе. Вход осуществляется через выбор группы для просмотра материалов.</Alert>
+        </Paper>
+      </Container>
     );
 }

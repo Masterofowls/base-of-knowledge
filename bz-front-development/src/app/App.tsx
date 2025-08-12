@@ -1,9 +1,11 @@
 import './styles/index.scss'
 import {AppRouter} from "app/providers/router";
-import {Navbar} from "widgets/Navbar";
+// import {Navbar} from "widgets/Navbar";
+import SaasShell from 'shared/saas/SaasShell'
 import {classNames} from "shared/lib/classNames/classNames";
 import {Footer} from "widgets/Footer";
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material'
+import { SaasProvider } from '@saas-ui/react'
 import '@fontsource/roboto/300.css'
 import '@fontsource/roboto/400.css'
 import '@fontsource/roboto/500.css'
@@ -30,14 +32,17 @@ function App() {
     const theme = createTheme({ palette: { mode: muiMode } })
 
     return (
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <div className={classNames('app', {}, [])}>
-                <Navbar/>
-                <AppRouter/>
-                <Footer/>
-            </div>
-        </ThemeProvider>
+        <SaasProvider>
+            <ThemeProvider theme={theme}>
+                <CssBaseline />
+                <div className={classNames('app', {}, [])}>
+                    <SaasShell>
+                        <AppRouter/>
+                    </SaasShell>
+                    <Footer/>
+                </div>
+            </ThemeProvider>
+        </SaasProvider>
 )
 }
 
