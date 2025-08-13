@@ -15,6 +15,7 @@ def run_startup_migrations(db):
             statements = [
                 "CREATE EXTENSION IF NOT EXISTS unaccent",
                 "CREATE EXTENSION IF NOT EXISTS pg_trgm",
+                "ALTER TABLE articles ADD COLUMN IF NOT EXISTS views_count INTEGER DEFAULT 0",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS tag VARCHAR(20)",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS base_class INTEGER",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS audience VARCHAR(20)",
@@ -23,6 +24,7 @@ def run_startup_migrations(db):
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS audience_admission_year_id INTEGER",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS audience_courses TEXT",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_mode VARCHAR(20)",
+                "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_form_id INTEGER",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS speciality_id INTEGER",
             ]
             for stmt in statements:
@@ -74,6 +76,7 @@ def run_startup_migrations(db):
 
         elif dialect == 'mysql':  # MySQL 8+
             statements = [
+                "ALTER TABLE articles ADD COLUMN IF NOT EXISTS views_count INT DEFAULT 0",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS tag VARCHAR(20)",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS base_class INT",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS audience VARCHAR(20)",
@@ -82,6 +85,7 @@ def run_startup_migrations(db):
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS audience_admission_year_id INT",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS audience_courses TEXT",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_mode VARCHAR(20)",
+                "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_form_id INT",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS speciality_id INT",
             ]
             for stmt in statements:

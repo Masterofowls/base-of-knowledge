@@ -6,9 +6,8 @@ import {useNavigate} from 'react-router-dom';
 export default function StudentDashboard() {
     const navigate = useNavigate();
     const [studentInfo, setStudentInfo] = useState<{
-        city: string;
+        city?: string;
         group: string;
-        baseClass?: string;
         course?: string;
     } | null>(null);
     // Removed modal: inline improved posts view handles expansion
@@ -18,19 +17,17 @@ export default function StudentDashboard() {
         const userRole = localStorage.getItem('user_role');
         const studentCity = localStorage.getItem('student_city');
         const studentGroup = localStorage.getItem('student_group');
-        const baseClass = localStorage.getItem('student_base_class');
         const course = localStorage.getItem('student_course');
 
-        if (userRole !== 'student' || !studentCity || !studentGroup || !baseClass || !course) {
+        if (userRole !== 'student' || !studentGroup) {
             // Redirect to choice page if not properly logged in as student
             navigate('/');
             return;
         }
 
         setStudentInfo({
-            city: studentCity,
+            city: studentCity || undefined,
             group: studentGroup,
-            baseClass: baseClass,
             course: course
         });
     }, [navigate]);

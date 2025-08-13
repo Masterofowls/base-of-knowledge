@@ -26,6 +26,11 @@ def get_articles():
     date_to = request.args.get('date_to', type=str)
     # Remove separate message type control, keep only category/tag if needed
     tag = request.args.get('tag', type=str)
+    # Core targeting is institution type + education form (+ speciality)
+    institution_type_id = request.args.get('institution_type_id', type=int)
+    education_form_id = request.args.get('education_form_id', type=int)
+    speciality_id = request.args.get('speciality_id', type=int)
+    # Legacy/optional
     base_class = request.args.get('base_class', type=int)
     audience = request.args.get('audience', type=str)
     audience_city_id = request.args.get('audience_city_id', type=int)
@@ -83,6 +88,12 @@ def get_articles():
             pass
     if tag:
         query = query.filter(Article.tag == tag)
+    if institution_type_id:
+        query = query.filter(Article.speciality.has(Speciality.institution_type_id == institution_type_id))
+    if education_form_id:
+        query = query.filter(Article.education_form_id == education_form_id)
+    if speciality_id:
+        query = query.filter(Article.speciality_id == speciality_id)
     if base_class:
         query = query.filter(Article.base_class == base_class)
     if audience:
@@ -105,11 +116,9 @@ def get_articles():
             and_(Article.audience.isnot(None), Article.audience != 'all')
         )
 
-    # If city filter is provided, prioritize city-only audience (requested behavior)
+    # If city filter is provided, prioritize city-only audience
     if audience_city_id and not any([audience_course, audience_admission_year_id, speciality_id]):
-        query = query.filter(
-            or_(Article.audience == 'city', Article.audience == 'all')
-        )
+        query = query.filter(or_(Article.audience == 'city', Article.audience == 'all'))
 
     # Sorting
     sort_map = {
@@ -211,6 +220,18 @@ def get_article(article_id):
     """Get a specific article by ID"""
     article = Article.query.get_or_404(article_id)
     
+    # Increment views metric (anonymous allowed)
+    try:
+        from app.models import ArticleView
+        view = ArticleView(article_id=article.id, user_id=None)
+        db.session.add(view)
+        # in-place counter to avoid heavy count()
+        if hasattr(article, 'views_count'):
+            article.views_count = (article.views_count or 0) + 1
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
     # Get categories
     categories = []
     for article_category in article.categories:
@@ -278,7 +299,8 @@ def get_article(article_id):
         'archived_at': article.archived_at.isoformat() if article.archived_at else None,
         'categories': categories,
         'authors': authors,
-        'media': media
+        'media': media,
+        'views_count': getattr(article, 'views_count', None)
     }
     
     return jsonify(article_data), 200
@@ -329,9 +351,9 @@ def create_article():
         is_published=is_published,
         is_for_staff=is_for_staff,
         is_actual=is_actual,
-        tag=publish_scope.get('tag'),
-        base_class=publish_scope.get('baseClass'),
-        audience=('all' if publish_scope.get('publish_for_all') else publish_scope.get('audience')),
+        tag=None,
+        base_class=None,
+        audience=('all' if publish_scope.get('publish_for_all') else None),
         audience_city_id=publish_scope.get('city_id'),
         audience_course=publish_scope.get('course'),
         audience_admission_year_id=publish_scope.get('admission_year_id')
@@ -349,6 +371,8 @@ def create_article():
         article.education_mode = ru_mode_map[edu_mode]
     else:
         article.education_mode = edu_mode
+    # Core: institution type via speciality, education_form_id, speciality_id
+    article.education_form_id = publish_scope.get('education_form_id')
     article.speciality_id = publish_scope.get('speciality_id')
     
     try:
@@ -422,9 +446,12 @@ def update_article(article_id):
         article.is_actual = data['is_actual']
     if 'publish_scope' in data and isinstance(data['publish_scope'], dict):
         ps = data['publish_scope']
-        article.tag = ps.get('tag', article.tag)
-        article.base_class = ps.get('baseClass', article.base_class)
-        article.audience = ('all' if ps.get('publish_for_all') else ps.get('audience', article.audience))
+        # Cleaned scope: publish_for_all OR targeted by form/speciality (optional city/course/year)
+        article.tag = None
+        article.base_class = None
+        article.audience = ('all' if ps.get('publish_for_all') else None)
+        article.education_form_id = ps.get('education_form_id', article.education_form_id)
+        article.speciality_id = ps.get('speciality_id', article.speciality_id)
         article.audience_city_id = ps.get('city_id', article.audience_city_id)
         article.audience_course = ps.get('course', article.audience_course)
         article.audience_admission_year_id = ps.get('admission_year_id', article.audience_admission_year_id)
@@ -444,8 +471,6 @@ def update_article(article_id):
             }
             val = ps.get('education_mode')
             article.education_mode = ru_mode_map.get(val, val)
-        if 'speciality_id' in ps:
-            article.speciality_id = ps.get('speciality_id')
     
     if 'category_ids' in data:
         # Remove existing categories
@@ -582,6 +607,21 @@ def list_reactions(article_id):
         counts[code] = counts.get(code, 0) + 1
     return jsonify({'counts': counts}), 200
 
+@articles_bp.route('/metrics/overview', methods=['GET'])
+@jwt_required()
+def metrics_overview():
+    """Simple metrics for editors/admins: total articles, published, views sum.
+    Only for roles: Администратор, Редактор.
+    """
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or user.role.name not in ['Администратор', 'Редактор']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    total = Article.query.count()
+    published = Article.query.filter_by(is_published=True).count()
+    views = db.session.execute(db.text("SELECT COALESCE(SUM(views_count),0) FROM articles")).scalar() or 0
+    return jsonify({'total_articles': total, 'published_articles': published, 'total_views': int(views)}), 200
+
 @articles_bp.route('/<int:article_id>/reactions', methods=['POST'])
 def add_reaction(article_id):
     article = Article.query.get_or_404(article_id)
@@ -602,6 +642,108 @@ def add_reaction(article_id):
     except Exception:
         db.session.rollback()
         return jsonify({'error': 'Failed to add reaction'}), 500
+
+@articles_bp.route('/<int:article_id>/publish-for-all', methods=['POST'])
+@jwt_required()
+def publish_for_all(article_id):
+    """Set article audience to 'all' (publish for everyone)."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    article = Article.query.get_or_404(article_id)
+    is_author = any(author.user_id == user.id for author in article.authors)
+    is_admin_or_editor = user.role.name in ['Администратор', 'Редактор']
+    if not is_author and not is_admin_or_editor:
+        return jsonify({'error': 'Unauthorized'}), 403
+    article.audience = 'all'
+    article.audience_city_id = None
+    article.audience_course = None
+    article.audience_admission_year_id = None
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Audience set to all'}), 200
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to set audience'}), 500
+
+@articles_bp.route('/student-feed', methods=['GET'])
+def student_feed():
+    """Return feed tailored for a student group context.
+    Query: group_id (required), course (optional), page/per_page
+    Includes articles with audience='all' or targeted entries matching student's context.
+    """
+    from sqlalchemy import and_
+    group_id = request.args.get('group_id', type=int)
+    course = request.args.get('course', type=int)
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    if not group_id:
+        return jsonify({'error': 'group_id is required'}), 400
+    group = Group.query.get_or_404(group_id)
+
+    # Resolve context
+    speciality_id = getattr(group, 'speciality_id', None)
+    admission_year_id = getattr(group, 'admission_year_id', None)
+    city_id = getattr(group, 'city_id', None)
+    base_class = getattr(group, 'base_class', None)
+    edu_mode = None
+    education_form_id = getattr(group, 'education_form_id', None)
+
+    query = Article.query.filter(Article.is_published.is_(True))
+
+    # Targeting logic: allow audience 'all', or match targeted dimension
+    conds = [Article.audience == 'all']
+    if city_id:
+        conds.append(and_(Article.audience == 'city', Article.audience_city_id == city_id))
+    if course:
+        conds.append(and_(Article.audience == 'course', Article.audience_course == course))
+    query = query.filter(or_(*conds))
+
+    # Additional constraints: if article specified a field, it must match; None means general and should pass
+    if base_class is not None:
+        query = query.filter(or_(Article.base_class.is_(None), Article.base_class == base_class))
+    if speciality_id is not None:
+        query = query.filter(or_(Article.speciality_id.is_(None), Article.speciality_id == speciality_id))
+    if education_form_id is not None:
+        query = query.filter(or_(Article.education_form_id.is_(None), Article.education_form_id == education_form_id))
+    if admission_year_id is not None:
+        query = query.filter(or_(Article.audience_admission_year_id.is_(None), Article.audience_admission_year_id == admission_year_id))
+    if edu_mode is not None:
+        query = query.filter(or_(Article.education_mode.is_(None), Article.education_mode == edu_mode))
+
+    # Sort newest first
+    query = query.order_by(desc(Article.created_at))
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    items = []
+    for article in pagination.items:
+        categories = []
+        for ac in article.categories:
+            c = ac.category
+            categories.append({'id': c.id})
+        authors = [{'id': a.user.id, 'full_name': a.user.full_name, 'email': a.user.email} for a in article.authors]
+        items.append({
+            'id': article.id,
+            'title': article.title,
+            'content': article.content,
+            'created_at': article.created_at.isoformat(),
+            'updated_at': article.updated_at.isoformat(),
+            'is_published': article.is_published,
+            'categories': categories,
+            'authors': authors,
+        })
+    return jsonify({
+        'articles': items,
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'has_next': pagination.has_next,
+            'has_prev': pagination.has_prev,
+        }
+    }), 200
 
 @articles_bp.route('/bulk', methods=['POST'])
 @jwt_required()

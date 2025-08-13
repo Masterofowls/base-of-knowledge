@@ -191,6 +191,8 @@ class Article(db.Model):
     is_actual = db.Column(db.Boolean, default=False, nullable=False)
     archive_at = db.Column(db.DateTime)
     archived_at = db.Column(db.DateTime)
+    # Metrics
+    views_count = db.Column(db.Integer, default=0)
     # Publishing scope fields
     tag = db.Column(db.String(20))  # 'common' | 'important' | 'useful'
     base_class = db.Column(db.Integer)  # 9 or 11
@@ -200,6 +202,7 @@ class Article(db.Model):
     audience_admission_year_id = db.Column(db.Integer, db.ForeignKey('admission_years.id'))
     audience_courses = db.Column(db.Text)  # JSON-encoded array of ints [1,2,3]
     education_mode = db.Column(db.String(20))  # 'full_time' | 'distance'
+    education_form_id = db.Column(db.Integer, db.ForeignKey('education_forms.id'))
     speciality_id = db.Column(db.Integer, db.ForeignKey('specialities.id'))
     
     # Relationships
@@ -207,6 +210,14 @@ class Article(db.Model):
     categories = db.relationship('ArticleCategory', backref='article', lazy=True)
     media_links = db.relationship('ArticleMediaLink', backref='article', lazy=True)
     reactions = db.relationship('ArticleReaction', backref='article', lazy=True)
+
+class ArticleView(db.Model):
+    __tablename__ = 'article_views'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    article_id = db.Column(db.Integer, db.ForeignKey('articles.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 class ArticleReaction(db.Model):
     __tablename__ = 'article_reactions'

@@ -50,19 +50,33 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     if (!opts.append) setIsLoading(true)
     if (opts.append) setIsLoadingMore(true)
     setError(null)
-    // Audience filters from localStorage
-    const cityId = localStorage.getItem('student_city_id')
+    // Audience filters from localStorage (student context)
+    const groupId = localStorage.getItem('student_group_id')
     const course = localStorage.getItem('student_course')
     const baseClass = localStorage.getItem('student_base_class')
     const strict = localStorage.getItem('strict_audience') === '1'
-    const params: any = { page: targetPage, per_page: 10, is_published: true, search: query || undefined, sort_by: 'created_at', sort_dir: 'desc', strict_audience: strict }
-    if (cityId) params.audience_city_id = Number(cityId)
-    if (course) params.audience_course = Number(course)
-    if (baseClass) params.base_class = Number(baseClass)
+    const isStudent = (localStorage.getItem('user_role') || '').toLowerCase() === 'student'
+
+    // Choose endpoint based on role and presence of required params
+    const endpoint = isStudent && groupId ? '/api/articles/student-feed' : '/api/articles'
+
+    // Common params
+    const params: any = { page: targetPage, per_page: 10, search: query || undefined, sort_by: 'created_at', sort_dir: 'desc' }
+    if (!isStudent || !groupId) {
+      params.is_published = true
+      params.strict_audience = strict
+      if (course) params.audience_course = Number(course)
+      if (baseClass) params.base_class = Number(baseClass)
+    } else {
+      if (groupId) params.group_id = Number(groupId)
+      if (course) params.course = Number(course)
+      if (baseClass) params.base_class = Number(baseClass)
+    }
+
     http
-      .get('/api/articles', { params, signal: controller.signal as any })
+      .get(endpoint, { params, signal: controller.signal as any })
       .then(res => {
-        const list = res.data?.articles ?? []
+        const list = res.data?.articles ?? res.data ?? []
         const next = opts.append ? [...items, ...list] : list
         setItems(next)
         setHasNext(Boolean(res.data?.pagination?.has_next))

@@ -19,11 +19,9 @@ export default function StudentLoginPage() {
     const navigate = useNavigate();
     const [cities, setCities] = useState<Array<{label:string, value:number}>>([]);
     const [groups, setGroups] = useState<Array<{label:string, value:number}>>([]);
-    const [baseClasses, setBaseClasses] = useState<Array<{label:string, value:number}>>([])
     const [courses, setCourses] = useState<Array<{label:string, value:number}>>([])
     const [selectedCity, setSelectedCity] = useState<{label:string, value:number} | null>(null);
     const [selectedGroup, setSelectedGroup] = useState<{label:string, value:number} | null>(null);
-    const [selectedBaseClass, setSelectedBaseClass] = useState<{label:string, value:number} | null>(null)
     const [selectedCourse, setSelectedCourse] = useState<{label:string, value:number} | null>(null)
     const [loading, setLoading] = useState(true);
 
@@ -43,10 +41,6 @@ export default function StudentLoginPage() {
                 }));
                 setGroups(groupsOptions);
 
-                // Fetch base classes (9/11)
-                const baseResp = await http.get('/api/categories/base-classes')
-                setBaseClasses((baseResp.data as number[]).map((n:number)=>({ value: n, label: String(n) })))
-
                 // Fetch courses (1..4)
                 const courseResp = await http.get('/api/categories/courses', { params: { max: 4 } })
                 setCourses((courseResp.data as number[]).map((n:number)=>({ value: n, label: String(n) })))
@@ -64,8 +58,8 @@ export default function StudentLoginPage() {
     const handleBack = () => navigate('/');
 
     const handleStudentLogin = () => {
-        if (!selectedGroup || !selectedBaseClass || !selectedCourse) {
-            alert('Пожалуйста, выберите группу, базу (9/11) и курс');
+        if (!selectedGroup) {
+            alert('Пожалуйста, выберите группу');
             return;
         }
         
@@ -77,13 +71,11 @@ export default function StudentLoginPage() {
         localStorage.setItem('student_group', groupName);
         localStorage.setItem('student_group_id', String(selectedGroup.value));
         // Auto-fill from group metadata when available
-        const baseClass = meta?.base_class ?? selectedBaseClass.value
         const admissionYearId = meta?.admission_year?.id
         const institutionTypeId = meta?.institution_type_id
         const educationFormId = meta?.education_form?.id
 
-        localStorage.setItem('student_base_class', String(baseClass))
-        localStorage.setItem('student_course', String(selectedCourse.value))
+        if (selectedCourse) localStorage.setItem('student_course', String(selectedCourse.value))
         if (admissionYearId) localStorage.setItem('student_admission_year_id', String(admissionYearId))
         if (institutionTypeId) localStorage.setItem('student_institution_type_id', String(institutionTypeId))
         if (educationFormId) localStorage.setItem('student_education_form_id', String(educationFormId))
@@ -120,18 +112,7 @@ export default function StudentLoginPage() {
               {selectedGroup.meta.institution_type_id === 3 && (<Box sx={{display:'flex',alignItems:'center',gap:1}}><DomainIcon fontSize='small'/> <span>Тип: Вуз. Класс не применяется. Используются профиль/форма/год.</span></Box>)}
             </Alert>
           )}
-          {(!selectedGroup?.meta?.institution_type_id || selectedGroup?.meta?.institution_type_id === 1) && (
-            <Autocomplete
-              options={baseClasses}
-              value={selectedBaseClass}
-              onChange={(_, v)=>setSelectedBaseClass(v)}
-              disablePortal
-              autoHighlight
-              getOptionLabel={o=>o?.label ?? ''}
-              renderInput={(params) => <TextField {...params} label="База (9 или 11)" placeholder="Выберите базу"/>}
-              sx={{ mt:2 }}
-            />
-          )}
+          {/* base selection removed */}
           <Autocomplete
             options={courses}
             value={selectedCourse}

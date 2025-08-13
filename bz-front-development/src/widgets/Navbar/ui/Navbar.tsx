@@ -84,7 +84,7 @@ function Navbar({className}: NavbarProps) {
             {/* remove public posts link */}
             <AppLink onClick={()=>setIsOpen(false)} theme={AppLinkTheme.SECONDARY} to={'/choicerole'}>Страница входа</AppLink>
             <AppLink onClick={()=>setIsOpen(false)} theme={AppLinkTheme.SECONDARY} to={'/adminlogin'}>АдминЛог</AppLink>
-            <AppLink onClick={()=>setIsOpen(false)} theme={AppLinkTheme.SECONDARY} to={'/adminregistration'}>АдминРег</AppLink>
+            {/* admin registration removed by requirements */}
             <AppLink onClick={()=>setIsOpen(false)} theme={AppLinkTheme.SECONDARY} to={'/studentlogin'}>СтудЛог</AppLink>
           </div>
         )}
