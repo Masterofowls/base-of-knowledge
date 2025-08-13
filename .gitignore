@@ -1,4 +1,5 @@
 # Local Netlify folder
+# Local Netlify folder
 .netlify
 /bz-front-development/node_modules
 # Logs
@@ -25,3 +26,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python caches
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Frontend build artifacts
+/bz-front-development/dist
+/bz-front-development/.netlify
+/TESTING.md
+/TEST_RESULTS.md
+/STUDENT_LOGIN_FIX_REPORT.md
+/FRONTEND_TESTING_SUMMARY.md
+/FIX_REACT_ERROR_130.md
+/DEPLOYMENT.md
+/create_admin.py
+/tests
+/.venv
