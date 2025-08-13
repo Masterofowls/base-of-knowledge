@@ -36,6 +36,22 @@ html { scroll-behavior: smooth; }
   max-width: 1200px;
 }
 
+/* Dashboard dark theme palette resembling requested style */
+body[data-theme='dark'], html[data-theme='dark'] {
+  --bg-app: #1e1e1e;
+  --bg-card: #171717;
+  --bg-muted: #2d2d2d;
+  --border-muted: #2e2e2e;
+  --text-muted: #a1a0a0;
+}
+
+body { background-color: var(--bg-app, var(--bg-color)); }
+.bg-card { background-color: var(--bg-card); }
+.icon-background { background: var(--bg-muted); }
+.sidebar-separator-top { border-bottom: 1px solid var(--border-muted); }
+.sidebar-separator-bottom { border-top: 1px solid var(--border-muted); }
+.text-premium-yellow { color: #f7b91c; }
+
 .page-center-wrapper {
   display: flex;
   justify-content: center;

@@ -5,9 +5,10 @@ import {LatestPosts} from "widgets/LatestPosts";
 import {Groups} from "widgets/Groups";
 import http from 'shared/api/http'
 import { useEffect, useState } from 'react'
-import { Card, CardContent, Divider, Alert, Tooltip, Chip, Avatar, Badge, Container, Box, Grid, Typography, Stack } from '@mui/material'
+import { Card, CardContent, Divider, Alert, Tooltip, Chip, Avatar, Badge, Container, Box, Grid, Typography, Stack, TextField, InputAdornment } from '@mui/material'
 import ArticleIcon from '@mui/icons-material/Article'
 import GroupIcon from '@mui/icons-material/Groups'
+import SearchIcon from '@mui/icons-material/Search'
 
 export default function  MainPage() {
   const [postCount, setPostCount] = useState<number | null>(null)
@@ -35,6 +36,34 @@ export default function  MainPage() {
   return (
     <main>
       <Container maxWidth="lg" sx={{ py: 3 }}>
+        {/* Top header area inspired by requested dashboard */}
+        <Grid container spacing={2} alignItems="flex-end" sx={{ mb: 2 }}>
+          <Grid item xs={12} md={8}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h4" fontWeight={800} color="text.primary">Здравствуйте</Typography>
+              <Box sx={{ ml: 1, display: 'inline-flex', alignItems: 'center', px: 1.5, py: 0.5, bgcolor: 'background.paper', borderRadius: 2 }} className="bg-card">
+                <Typography variant="caption" fontWeight={700} className="text-premium-yellow">PREMIUM</Typography>
+              </Box>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: .5 }}>
+              {new Date().toLocaleDateString('ru-RU', { month: 'long', day: '2-digit' })}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Поиск"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+        </Grid>
         {/* Hero summary */}
         <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: 3 }}>
           <CardContent>

@@ -13,6 +13,8 @@ def run_startup_migrations(db):
     with engine.begin() as conn:
         if dialect == 'postgresql':
             statements = [
+                "CREATE EXTENSION IF NOT EXISTS unaccent",
+                "CREATE EXTENSION IF NOT EXISTS pg_trgm",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS tag VARCHAR(20)",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS base_class INTEGER",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS audience VARCHAR(20)",
@@ -25,7 +27,45 @@ def run_startup_migrations(db):
             ]
             for stmt in statements:
                 conn.execute(text(stmt))
-            # Optional FK can be added if needed; skipping to keep idempotent
+            # FTS GIN index for title+content (russian); fallback to 'simple' if russian not available
+            try:
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS idx_articles_fts ON articles USING GIN (to_tsvector('russian', coalesce(title,'') || ' ' || coalesce(content,'')))"
+                ))
+            except Exception:
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS idx_articles_fts ON articles USING GIN (to_tsvector('simple', coalesce(title,'') || ' ' || coalesce(content,'')))"
+                ))
+            # Helpful btree indexes
+            for idx_stmt in [
+                "CREATE INDEX IF NOT EXISTS idx_articles_created_at ON articles (created_at DESC)",
+                "CREATE INDEX IF NOT EXISTS idx_articles_tag ON articles (tag)",
+                "CREATE INDEX IF NOT EXISTS idx_articles_audience ON articles (audience)",
+                "CREATE INDEX IF NOT EXISTS idx_articles_base_class ON articles (base_class)",
+                "CREATE INDEX IF NOT EXISTS idx_articles_city ON articles (audience_city_id)",
+                "CREATE INDEX IF NOT EXISTS idx_articles_course ON articles (audience_course)"
+            ]:
+                try:
+                    conn.execute(text(idx_stmt))
+                except Exception:
+                    pass
+            # Add archive flag and audit table for groups
+            try:
+                conn.execute(text("ALTER TABLE groupss ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE"))
+            except Exception:
+                pass
+            conn.execute(text(
+                """
+                CREATE TABLE IF NOT EXISTS group_audit_logs (
+                  id SERIAL PRIMARY KEY,
+                  group_id INTEGER,
+                  user_id INTEGER,
+                  action VARCHAR(50) NOT NULL,
+                  details TEXT,
+                  created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+                )
+                """
+            ))
 
         elif dialect == 'mysql':  # MySQL 8+
             statements = [
@@ -41,6 +81,23 @@ def run_startup_migrations(db):
             ]
             for stmt in statements:
                 conn.execute(text(stmt))
+            # Add archive flag and audit table for groups (MySQL)
+            try:
+                conn.execute(text("ALTER TABLE groupss ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE"))
+            except Exception:
+                pass
+            conn.execute(text(
+                """
+                CREATE TABLE IF NOT EXISTS group_audit_logs (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  group_id INT,
+                  user_id INT,
+                  action VARCHAR(50) NOT NULL,
+                  details TEXT,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            ))
         else:
             # Fallback: attempt generic ADD COLUMN, ignore if exists
             try:

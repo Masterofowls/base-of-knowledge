@@ -1,8 +1,5 @@
 import {classNames} from "shared/lib/classNames/classNames.ts";
-import {Groups} from "widgets/Groups";
 import PostsList from "pages/PostsList/ui/PostsList";
-import { Button } from "shared/ui/Button";
-import { ThemeButton } from "shared/ui/Button/ui/Button";
 import {useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 
@@ -11,6 +8,8 @@ export default function StudentDashboard() {
     const [studentInfo, setStudentInfo] = useState<{
         city: string;
         group: string;
+        baseClass?: string;
+        course?: string;
     } | null>(null);
     // Removed modal: inline improved posts view handles expansion
 
@@ -19,8 +18,10 @@ export default function StudentDashboard() {
         const userRole = localStorage.getItem('user_role');
         const studentCity = localStorage.getItem('student_city');
         const studentGroup = localStorage.getItem('student_group');
+        const baseClass = localStorage.getItem('student_base_class');
+        const course = localStorage.getItem('student_course');
 
-        if (userRole !== 'student' || !studentCity || !studentGroup) {
+        if (userRole !== 'student' || !studentCity || !studentGroup || !baseClass || !course) {
             // Redirect to choice page if not properly logged in as student
             navigate('/');
             return;
@@ -28,7 +29,9 @@ export default function StudentDashboard() {
 
         setStudentInfo({
             city: studentCity,
-            group: studentGroup
+            group: studentGroup,
+            baseClass: baseClass,
+            course: course
         });
     }, [navigate]);
 
@@ -44,63 +47,33 @@ export default function StudentDashboard() {
 
     return (
         <main style={{display: 'flex', flexDirection: 'column'}} className={classNames('container', {}, [])}>
-            {/* Student Header */}
+            {/* Header */}
             <div style={{
                 display: 'flex', 
                 flexDirection: 'column', 
-                padding: '20px',
-                background: '#f8f9fa',
-                borderRadius: '8px',
-                marginBottom: '20px'
+                padding: '16px',
+                background: 'var(--bg-card, #f8f9fa)',
+                borderRadius: '12px',
+                marginBottom: '16px',
+                border: '1px solid var(--border-muted, rgba(0,0,0,0.06))'
             }}>
-                <h1 style={{margin: 0, fontSize: '24px', fontWeight: '700', color: '#333'}}>
-                    Дашборд студента
+                <h1 style={{margin: 0, fontSize: '22px', fontWeight: 800}}>
+                    Лента студента
                 </h1>
-                <div style={{marginTop: '10px', fontSize: '16px', color: '#666'}}>
-                    <p style={{margin: '5px 0'}}>
-                        <strong>Город:</strong> {studentInfo.city}
-                    </p>
-                    <p style={{margin: '5px 0'}}>
-                        <strong>Группа:</strong> {studentInfo.group}
-                    </p>
+                <div style={{marginTop: 6, fontSize: '14px', opacity: .8}}>
+                    <span style={{marginRight: 12}}><strong>Город:</strong> {studentInfo.city}</span>
+                    <span><strong>Группа:</strong> {studentInfo.group}</span>
+                    <span style={{marginLeft: 12}}><strong>База:</strong> {studentInfo.baseClass}</span>
+                    <span style={{marginLeft: 12}}><strong>Курс:</strong> {studentInfo.course}</span>
                 </div>
-                
-                {/* Logout button */}
-                <button 
-                    onClick={() => {
-                        localStorage.removeItem('user_role');
-                        localStorage.removeItem('student_city');
-                        localStorage.removeItem('student_group');
-                        navigate('/');
-                    }}
-                    style={{
-                        alignSelf: 'flex-end',
-                        marginTop: '10px',
-                        padding: '8px 16px',
-                        backgroundColor: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    Выйти
-                </button>
             </div>
 
-            {/* Content - Feed on dashboard */}
-            <div style={{display: 'flex', flexDirection: 'row', gap: '24px', flexWrap:'wrap'}}>
-                <div style={{flex: '1 1 680px', minWidth: 320}}>
-                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
-                        <h2 style={{margin:0}}>Лента</h2>
-                    </div>
-                    <PostsList />
-                </div>
-                <div style={{flex: '0 1 300px', minWidth: 280}}>
-                    <div style={{marginTop:16}}><Groups/></div>
+            {/* Feed only, full available width */}
+            <div style={{display:'flex', justifyContent:'center', width:'100%'}}>
+                <div style={{flex: 1, maxWidth: 900}}>
+                    <PostsList fullscreen />
                 </div>
             </div>
-            {/* Modal "Все посты" removed: posts expand inline */}
         </main>
     );
 }

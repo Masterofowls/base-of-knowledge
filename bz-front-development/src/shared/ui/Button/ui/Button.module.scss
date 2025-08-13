@@ -6,12 +6,14 @@
   border: none;
   outline: none;
   font-size: 16px;
+  color: var(--primary-color);
 }
 
 .clear {
   padding: 0;
   margin: 0;
   background: none;
+  color: var(--primary-color);
 }
 
 .arrow {
@@ -33,7 +35,7 @@
   flex-direction: row;
   align-items: center;
   gap: 9px;
-  color: white;
+  color: var(--primary-color);
 }
 
 .arrowIcon {

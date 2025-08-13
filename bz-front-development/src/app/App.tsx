@@ -10,6 +10,10 @@ import '@fontsource/roboto/300.css'
 import '@fontsource/roboto/400.css'
 import '@fontsource/roboto/500.css'
 import '@fontsource/roboto/700.css'
+import '@fontsource/nunito/300.css'
+import '@fontsource/nunito/400.css'
+import '@fontsource/nunito/600.css'
+import '@fontsource/nunito/700.css'
 import {useEffect, useState} from 'react'
 
 
@@ -29,7 +33,11 @@ function App() {
         window.addEventListener('theme-change', handler as any)
         return () => window.removeEventListener('theme-change', handler as any)
     }, [])
-    const theme = createTheme({ palette: { mode: muiMode } })
+    const theme = createTheme({
+        palette: { mode: muiMode },
+        typography: { fontFamily: ['Nunito', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'].join(',') },
+        shape: { borderRadius: 12 },
+    })
 
     return (
         <SaasProvider>

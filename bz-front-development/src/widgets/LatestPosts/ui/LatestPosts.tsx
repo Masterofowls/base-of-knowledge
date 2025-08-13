@@ -37,12 +37,12 @@ function LatestPosts({className}: LatestPostsProps) {
                     <DocumentIcon height="20px" width="15px" className={cls.icon}/>
                     <p>Последние посты</p>
                 </div>
-                <Button width='130px' className={cls.button} theme={ThemeButton.ARROW} backgroundColor='#00AAFF' onClick={() => navigate('/posts')}><p>Все посты</p></Button>
+                {/* removed global posts route button */}
             </div>
             <div className={cls.LatestPostsWrap}>
                 {items.length === 0 && <div style={{color:'#888', fontSize:12}}>Нет постов</div>}
                 {items.map(item => (
-                    <div key={item.id} style={{padding:'8px 0', borderBottom:'1px solid #eee', cursor:'pointer'}} onClick={() => navigate(`/posts/${item.id}`)}>
+                    <div key={item.id} style={{padding:'8px 0', borderBottom:'1px solid #eee', cursor:'pointer'}} onClick={() => navigate(`/admin/post/${item.id}`)}>
                         <div style={{fontSize:14}}>{item.title}</div>
                     </div>
                 ))}

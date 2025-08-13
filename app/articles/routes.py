@@ -3,9 +3,11 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.articles import articles_bp
 from app.models import Article, Category, TopCategory, Subcategory, Group, User, ArticleAuthor, ArticleCategory, ArticleMedia, ArticleMediaLink
 from app.models import ArticleReaction, ReactionEmoji
+from app.models import City, Speciality, Group  # for bulk
 from app import db
 from datetime import datetime
 import re
+from sqlalchemy import or_, asc, desc
 
 @articles_bp.route('/', methods=['GET'])
 def get_articles():
@@ -20,6 +22,8 @@ def get_articles():
     is_for_staff = request.args.get('is_for_staff', type=bool)
     is_actual = request.args.get('is_actual', type=bool)
     search = request.args.get('search', '').strip()
+    date_from = request.args.get('date_from', type=str)
+    date_to = request.args.get('date_to', type=str)
     tag = request.args.get('tag', type=str)
     base_class = request.args.get('base_class', type=int)
     audience = request.args.get('audience', type=str)
@@ -29,6 +33,11 @@ def get_articles():
     education_mode = request.args.get('education_mode', type=str)
     speciality_id = request.args.get('speciality_id', type=int)
     
+    # Sorting and audience options
+    sort_by = request.args.get('sort_by', default='created_at', type=str)
+    sort_dir = request.args.get('sort_dir', default='desc', type=str)
+    strict_audience = request.args.get('strict_audience', default=False, type=bool)
+
     # Build query
     query = Article.query
     
@@ -52,7 +61,25 @@ def get_articles():
         query = query.filter(Article.is_actual == is_actual)
     
     if search:
-        query = query.filter(Article.title.ilike(f'%{search}%'))
+        like = f"%{search}%"
+        query = query.filter(
+            or_(
+                Article.title.ilike(like),
+                Article.content.ilike(like),
+                Article.tag.ilike(like)
+            )
+        )
+    # Date range
+    if date_from:
+        try:
+            query = query.filter(Article.created_at >= datetime.fromisoformat(date_from))
+        except Exception:
+            pass
+    if date_to:
+        try:
+            query = query.filter(Article.created_at <= datetime.fromisoformat(date_to))
+        except Exception:
+            pass
     if tag:
         query = query.filter(Article.tag == tag)
     if base_class:
@@ -70,8 +97,21 @@ def get_articles():
     if speciality_id:
         query = query.filter(Article.speciality_id == speciality_id)
     
-    # Order by creation date (newest first)
-    query = query.order_by(Article.created_at.desc())
+    # Enforce strict audience if requested (exclude fully general posts)
+    if strict_audience:
+        from sqlalchemy import and_
+        query = query.filter(
+            and_(Article.audience.isnot(None), Article.audience != 'all')
+        )
+
+    # Sorting
+    sort_map = {
+        'created_at': Article.created_at,
+        'updated_at': Article.updated_at,
+        'title': Article.title
+    }
+    sort_column = sort_map.get(sort_by, Article.created_at)
+    query = query.order_by(desc(sort_column) if sort_dir.lower() == 'desc' else asc(sort_column))
     
     # Paginate
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -538,3 +578,110 @@ def add_reaction(article_id):
     except Exception:
         db.session.rollback()
         return jsonify({'error': 'Failed to add reaction'}), 500
+
+@articles_bp.route('/bulk', methods=['POST'])
+@jwt_required()
+def create_articles_bulk():
+    """Create multiple articles across selected dimensions.
+    Expected payload:
+    {
+      "base_article": { title, content, is_published, is_for_staff, is_actual, category_ids: [], publish_scope: { tag, baseClass, audience, city_id, course, admission_year_id, courses, education_mode, speciality_id } },
+      "bulk": {
+        "all_cities": bool,
+        "all_specialities": bool,
+        "all_education_modes": bool,
+        "all_groups": bool,
+        "audience_all": bool
+      }
+    }
+    """
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    payload = request.get_json() or {}
+    base_article = payload.get('base_article') or {}
+    bulk = payload.get('bulk') or {}
+
+    # Validate minimal fields
+    title = (base_article.get('title') or '').strip()
+    content = base_article.get('content')
+    if len(title) < 3 or not content:
+        return jsonify({'error': 'Invalid title or content'}), 400
+
+    category_ids = base_article.get('category_ids') or []
+    publish_scope = base_article.get('publish_scope') or {}
+
+    # Resolve lists per dimension
+    cities = [publish_scope.get('city_id')] if publish_scope.get('city_id') else []
+    if bulk.get('all_cities'):
+        cities = [c.id for c in City.query.all()]
+
+    specialities = [publish_scope.get('speciality_id')] if publish_scope.get('speciality_id') else []
+    if bulk.get('all_specialities'):
+        specialities = [s.id for s in Speciality.query.all()]
+
+    education_modes = [publish_scope.get('education_mode')] if publish_scope.get('education_mode') else []
+    if bulk.get('all_education_modes'):
+        education_modes = ['full_time', 'distance']
+
+    groups = []
+    # categories carry group ids implicitly; allow explicit bulk on all groups
+    if bulk.get('all_groups'):
+        groups = [g.id for g in Group.query.all()]
+
+    # Fallbacks to create at least one when list empty and not audience_all
+    if bulk.get('audience_all'):
+        # Single article targeting everyone
+        cities = [None]
+        specialities = [None]
+        education_modes = [None]
+        groups = [None]
+    else:
+        if not cities:
+            cities = [publish_scope.get('city_id')] if publish_scope.get('city_id') else [None]
+        if not specialities:
+            specialities = [publish_scope.get('speciality_id')] if publish_scope.get('speciality_id') else [None]
+        if not education_modes:
+            education_modes = [publish_scope.get('education_mode')] if publish_scope.get('education_mode') else [None]
+        if not groups:
+            groups = [None]
+
+    created = 0
+    try:
+        for city_id in cities:
+            for spec_id in specialities:
+                for mode in education_modes:
+                    for group_id in groups:
+                        art = Article(
+                            title=title,
+                            content=content,
+                            is_published=bool(base_article.get('is_published', False)),
+                            is_for_staff=bool(base_article.get('is_for_staff', False)),
+                            is_actual=bool(base_article.get('is_actual', True)),
+                            tag=publish_scope.get('tag'),
+                            base_class=publish_scope.get('baseClass'),
+                            audience='all' if bulk.get('audience_all') else (publish_scope.get('audience') or 'all'),
+                            audience_city_id=city_id,
+                            audience_course=publish_scope.get('course'),
+                            audience_admission_year_id=publish_scope.get('admission_year_id'),
+                        )
+                        art.education_mode = mode
+                        art.speciality_id = spec_id
+                        db.session.add(art)
+                        db.session.flush()
+                        # author
+                        db.session.add(ArticleAuthor(article_id=art.id, user_id=user.id))
+                        # attach categories
+                        for cid in category_ids:
+                            db.session.add(ArticleCategory(article_id=art.id, category_id=cid))
+                        # attach group category if explicit
+                        if group_id:
+                            db.session.add(ArticleCategory(article_id=art.id, category_id=group_id))
+                        created += 1
+        db.session.commit()
+        return jsonify({'message': f'Created {created} articles'}), 201
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Bulk create failed'}), 500

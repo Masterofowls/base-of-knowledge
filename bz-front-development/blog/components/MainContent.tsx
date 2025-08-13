@@ -266,7 +266,7 @@ export default function MainContent() {
             onBlur={handleBlur}
             tabIndex={0}
             className={focusedCardIndex === 0 ? 'Mui-focused' : ''}
-            onClick={()=>{ const a = getArticle(0); if (a) navigate(`/posts/${a.id}`) }}
+            onClick={()=>{ const a = getArticle(0); if (a) navigate(`/admin/post/${a.id}`) }}
           >
             <CardMedia
               component="img"
@@ -300,7 +300,7 @@ export default function MainContent() {
             onBlur={handleBlur}
             tabIndex={0}
             className={focusedCardIndex === 1 ? 'Mui-focused' : ''}
-            onClick={()=>{ const a = getArticle(1); if (a) navigate(`/posts/${a.id}`) }}
+            onClick={()=>{ const a = getArticle(1); if (a) navigate(`/admin/post/${a.id}`) }}
           >
             <CardMedia
               component="img"
@@ -335,7 +335,7 @@ export default function MainContent() {
             tabIndex={0}
             className={focusedCardIndex === 2 ? 'Mui-focused' : ''}
             sx={{ height: '100%' }}
-            onClick={()=>{ const a = getArticle(2); if (a) navigate(`/posts/${a.id}`) }}
+            onClick={()=>{ const a = getArticle(2); if (a) navigate(`/admin/post/${a.id}`) }}
           >
             <CardMedia
               component="img"
@@ -372,7 +372,7 @@ export default function MainContent() {
               tabIndex={0}
               className={focusedCardIndex === 3 ? 'Mui-focused' : ''}
               sx={{ height: '100%' }}
-              onClick={()=>{ const a = getArticle(3); if (a) navigate(`/posts/${a.id}`) }}
+              onClick={()=>{ const a = getArticle(3); if (a) navigate(`/admin/post/${a.id}`) }}
             >
               <SyledCardContent
                 sx={{
@@ -404,7 +404,7 @@ export default function MainContent() {
               tabIndex={0}
               className={focusedCardIndex === 4 ? 'Mui-focused' : ''}
               sx={{ height: '100%' }}
-              onClick={()=>{ const a = getArticle(4); if (a) navigate(`/posts/${a.id}`) }}
+              onClick={()=>{ const a = getArticle(4); if (a) navigate(`/admin/post/${a.id}`) }}
             >
               <SyledCardContent
                 sx={{
@@ -439,7 +439,7 @@ export default function MainContent() {
             tabIndex={0}
             className={focusedCardIndex === 5 ? 'Mui-focused' : ''}
             sx={{ height: '100%' }}
-            onClick={()=>{ const a = getArticle(5); if (a) navigate(`/posts/${a.id}`) }}
+            onClick={()=>{ const a = getArticle(5); if (a) navigate(`/admin/post/${a.id}`) }}
           >
             <CardMedia
               component="img"

@@ -18,11 +18,13 @@ export default function SaasShell({ children }: SaasShellProps) {
     if (location.pathname !== path) navigate(path)
   }
 
+  const hideSidebar = location.pathname === '/adminlogin' || location.pathname === '/studentlogin' || location.pathname === '/choicerole'
+
   return (
     <AppShell
       navbar={<SaasNavbar />}
       contentProps={{ px: 0 }}
-      sidebar={
+      sidebar={ hideSidebar ? undefined : (
         <Sidebar>
           <SidebarSection>
             <NavItem onClick={()=>go('/')}>Главная</NavItem>
@@ -30,7 +32,7 @@ export default function SaasShell({ children }: SaasShellProps) {
             <NavItem onClick={()=>go('/choicerole')}>Вход</NavItem>
           </SidebarSection>
         </Sidebar>
-      }
+      )}
     >
       <div style={{ width:'100%', maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
         {children}

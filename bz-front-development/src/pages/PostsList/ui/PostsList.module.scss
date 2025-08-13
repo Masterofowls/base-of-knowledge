@@ -1,5 +1,8 @@
 .list {
   width: 100%;
+  h2 { margin: 0 0 16px; color: var(--primary-color, inherit); }
+  :global(.MuiTab-root) { color: var(--primary-color, inherit); opacity: .9; }
+  :global(.MuiTabs-indicator) { background: currentColor; }
 }
 
 

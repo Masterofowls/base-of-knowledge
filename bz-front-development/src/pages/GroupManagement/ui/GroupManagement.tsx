@@ -518,6 +518,20 @@ export default function GroupManagement() {
                                     >
                                         <span><PenIcon width='12px' height='12px' /></span>
                                     </Button>
+                                    <Button
+                                        onClick={async ()=>{
+                                            if (!confirm('Удалить группу?')) return
+                                            try {
+                                                await http.delete(`/api/categories/groups/${group.id}`)
+                                                fetchData()
+                                            } catch(e){ console.error(e) }
+                                        }}
+                                        width='120px'
+                                        backgroundColor='#E44A77'
+                                        theme={ThemeButton.CLEAR}
+                                    >
+                                        <span>Удалить</span>
+                                    </Button>
                                 </div>
                             </div>
                         ))}

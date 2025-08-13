@@ -33,8 +33,10 @@ export default function AdminLoginPage() {
             
             if (response.data?.access_token) {
                 localStorage.setItem('jwt_token', response.data.access_token);
-                localStorage.setItem('user_role', response.data.user?.role || 'admin');
-                navigate('/admin');
+                const roleName = (response.data.user?.role || '').toLowerCase()
+                const normalizedRole = roleName.includes('администратор') || roleName === 'admin' ? 'admin' : roleName
+                localStorage.setItem('user_role', normalizedRole || 'admin');
+                navigate('/admin', { replace: true });
             }
         } catch (e: any) {
             if (e.response?.status === 401) {

@@ -55,6 +55,10 @@ interface PostFormData {
         audience?: 'all' | 'city' | 'course';
         city_id?: number;
         course?: 1 | 2 | 3;
+        courses?: number[];
+        admission_year_id?: number;
+        education_mode?: 'full_time' | 'distance';
+        speciality_id?: number;
         tag?: 'common' | 'important' | 'useful';
     }
 }
@@ -82,6 +86,7 @@ export default function PostEditor() {
     const [specialities, setSpecialities] = useState<{value:number,label:string}[]>([])
     
     const [loading, setLoading] = useState(false);
+    const [bulk, setBulk] = useState<{ all_cities?: boolean; all_specialities?: boolean; all_education_modes?: boolean; all_groups?: boolean; audience_all?: boolean }>({})
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const editorRef = useRef<HTMLDivElement | null>(null)
@@ -223,7 +228,12 @@ export default function PostEditor() {
             if (isEditing) {
                 await http.put(`/api/articles/${id}`, postData);
             } else {
-                await http.post('/api/articles', postData);
+                // if any bulk option enabled, hit bulk endpoint
+                if (bulk.all_cities || bulk.all_specialities || bulk.all_education_modes || bulk.all_groups || bulk.audience_all) {
+                    await http.post('/api/articles/bulk', { base_article: postData, bulk })
+                } else {
+                    await http.post('/api/articles', postData);
+                }
             }
 
             navigate('/admin/posts');
@@ -389,6 +399,19 @@ export default function PostEditor() {
                                         </RadioGroup>
                                     </FormControl>
                                     <FormControl fullWidth size='small'>
+                                        <InputLabel id='spec-label-2'>Профиль специальности</InputLabel>
+                                        <Select labelId='spec-label-2' label='Профиль специальности' value={formData.publish_scope?.speciality_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, speciality_id: Number(e.target.value)}}))}>
+                                            {specialities.map(s=> <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
+                                        </Select>
+                                    </FormControl>
+                                    <FormControl fullWidth size='small'>
+                                        <InputLabel id='mode-label-2'>Формат</InputLabel>
+                                        <Select labelId='mode-label-2' label='Формат' value={formData.publish_scope?.education_mode || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, education_mode: e.target.value as any}}))}>
+                                            <MenuItem value='full_time'>Очное</MenuItem>
+                                            <MenuItem value='distance'>Дистанционное</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                    <FormControl fullWidth size='small'>
                                         <InputLabel id='audience-label'>Тип аудитории</InputLabel>
                                         <Select labelId='audience-label' label='Тип аудитории' value={formData.publish_scope?.audience || 'all'} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, audience: e.target.value as any}}))}>
                                             <MenuItem value='all'>Для всех</MenuItem>
@@ -421,17 +444,10 @@ export default function PostEditor() {
                             <AccordionDetails>
                                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
                                     <FormControl fullWidth size='small'>
-                                        <InputLabel id='mode-label'>Формат</InputLabel>
-                                        <Select labelId='mode-label' label='Формат' value={formData.publish_scope?.education_mode || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, education_mode: e.target.value as any}}))}>
-                                            <MenuItem value='full_time'>Очное</MenuItem>
-                                            <MenuItem value='distance'>Дистанционное</MenuItem>
-                                        </Select>
+                                        <FormControlLabel control={<Checkbox checked={!!bulk.all_education_modes} onChange={(e)=> setBulk(prev=>({...prev, all_education_modes: e.target.checked}))}/>} label='Для всех форм обучения' />
                                     </FormControl>
                                     <FormControl fullWidth size='small'>
-                                        <InputLabel id='spec-label'>Профиль специальности</InputLabel>
-                                        <Select labelId='spec-label' label='Профиль специальности' value={formData.publish_scope?.speciality_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, speciality_id: Number(e.target.value)}}))}>
-                                            {specialities.map(s=> <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
-                                        </Select>
+                                        <FormControlLabel control={<Checkbox checked={!!bulk.all_specialities} onChange={(e)=> setBulk(prev=>({...prev, all_specialities: e.target.checked}))}/>} label='Для всех профилей' />
                                     </FormControl>
                                 </div>
                             </AccordionDetails>
@@ -439,7 +455,7 @@ export default function PostEditor() {
                         </>
                     )}
 
-                    {/* Publish scope */}
+                    {/* Publish scope - массовые флаги */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8, paddingTop: 8, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
                         <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
                             <label>
@@ -487,6 +503,9 @@ export default function PostEditor() {
                                     <option value="useful">Полезная информация</option>
                                 </select>
                             </label>
+                            <FormControlLabel control={<Checkbox checked={!!bulk.audience_all} onChange={(e)=> setBulk(prev=>({...prev, audience_all: e.target.checked}))}/>} label='Опубликовать для всех' />
+                            <FormControlLabel control={<Checkbox checked={!!bulk.all_cities} onChange={(e)=> setBulk(prev=>({...prev, all_cities: e.target.checked}))}/>} label='Для всех городов' />
+                            <FormControlLabel control={<Checkbox checked={!!bulk.all_groups} onChange={(e)=> setBulk(prev=>({...prev, all_groups: e.target.checked}))}/>} label='Для всех групп' />
                         </div>
                     </div>
 

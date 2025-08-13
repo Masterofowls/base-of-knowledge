@@ -16,8 +16,12 @@ export default function StudentLoginPage() {
     const navigate = useNavigate();
     const [cities, setCities] = useState<Array<{label:string, value:number}>>([]);
     const [groups, setGroups] = useState<Array<{label:string, value:number}>>([]);
+    const [baseClasses, setBaseClasses] = useState<Array<{label:string, value:number}>>([])
+    const [courses, setCourses] = useState<Array<{label:string, value:number}>>([])
     const [selectedCity, setSelectedCity] = useState<{label:string, value:number} | null>(null);
     const [selectedGroup, setSelectedGroup] = useState<{label:string, value:number} | null>(null);
+    const [selectedBaseClass, setSelectedBaseClass] = useState<{label:string, value:number} | null>(null)
+    const [selectedCourse, setSelectedCourse] = useState<{label:string, value:number} | null>(null)
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -40,6 +44,14 @@ export default function StudentLoginPage() {
                     label: group.display_name
                 }));
                 setGroups(groupsOptions);
+
+                // Fetch base classes (9/11)
+                const baseResp = await http.get('/api/categories/base-classes')
+                setBaseClasses((baseResp.data as number[]).map((n:number)=>({ value: n, label: String(n) })))
+
+                // Fetch courses (1..4)
+                const courseResp = await http.get('/api/categories/courses', { params: { max: 4 } })
+                setCourses((courseResp.data as number[]).map((n:number)=>({ value: n, label: String(n) })))
                 
             } catch (error) {
                 console.error('Failed to fetch data:', error);
@@ -54,8 +66,8 @@ export default function StudentLoginPage() {
     const handleBack = () => navigate('/');
 
     const handleStudentLogin = () => {
-        if (!selectedCity || !selectedGroup) {
-            alert('Пожалуйста, выберите город и группу');
+        if (!selectedCity || !selectedGroup || !selectedBaseClass || !selectedCourse) {
+            alert('Пожалуйста, выберите город, группу, базу (9/11) и курс');
             return;
         }
         
@@ -65,7 +77,11 @@ export default function StudentLoginPage() {
         const groupName = typeof selectedGroup === 'object' && selectedGroup?.label ? selectedGroup.label : selectedGroup;
         
         localStorage.setItem('student_city', cityName);
+        localStorage.setItem('student_city_id', String(selectedCity.value));
         localStorage.setItem('student_group', groupName);
+        localStorage.setItem('student_group_id', String(selectedGroup.value));
+        localStorage.setItem('student_base_class', String(selectedBaseClass.value))
+        localStorage.setItem('student_course', String(selectedCourse.value))
         localStorage.setItem('user_role', 'student');
         
         // Navigate to student dashboard
@@ -98,6 +114,26 @@ export default function StudentLoginPage() {
             autoHighlight
             getOptionLabel={o=>o?.label ?? ''}
             renderInput={(params) => <TextField {...params} label="Группа" placeholder="Выберите группу"/>}
+          />
+          <Autocomplete
+            options={baseClasses}
+            value={selectedBaseClass}
+            onChange={(_, v)=>setSelectedBaseClass(v)}
+            disablePortal
+            autoHighlight
+            getOptionLabel={o=>o?.label ?? ''}
+            renderInput={(params) => <TextField {...params} label="База (9 или 11)" placeholder="Выберите базу"/>}
+            sx={{ mt:2 }}
+          />
+          <Autocomplete
+            options={courses}
+            value={selectedCourse}
+            onChange={(_, v)=>setSelectedCourse(v)}
+            disablePortal
+            autoHighlight
+            getOptionLabel={o=>o?.label ?? ''}
+            renderInput={(params) => <TextField {...params} label="Курс" placeholder="Выберите курс"/>}
+            sx={{ mt:2 }}
           />
           <Box sx={{ display:'flex', gap:1, mt:2 }}>
             <Button onClick={handleBack} startIcon={<ArrowBackIcon/>} variant="outlined" color="inherit">Назад</Button>

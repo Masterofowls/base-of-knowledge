@@ -49,7 +49,7 @@ function Navbar({className}: NavbarProps) {
           <div style={{ flex: 1 }} />
           <div style={{ display:'none', gap:8, alignItems:'center', flexWrap:'wrap' }} className={cls.linksDesktop}>
             <AppLink theme={AppLinkTheme.SECONDARY} className={cls.mainLink} to={'/'}><DashboardIcon sx={{ fontSize: 16, mr: .5 }} /> Главная</AppLink>
-            <AppLink theme={AppLinkTheme.SECONDARY} to={'/posts'}><ArticleIcon sx={{ fontSize: 16, mr: .5 }} /> Посты</AppLink>
+            {/* remove public posts link */}
             <AppLink theme={AppLinkTheme.SECONDARY} to={'/choicerole'}><LoginIcon sx={{ fontSize: 16, mr: .5 }} /> Вход</AppLink>
             <AppLink theme={AppLinkTheme.SECONDARY} to={'/adminlogin'}><AdminPanelSettingsIcon sx={{ fontSize: 16, mr: .5 }} /> Админ</AppLink>
           </div>
@@ -72,7 +72,7 @@ function Navbar({className}: NavbarProps) {
           </Tooltip>
           <Menu id="admin-menu" anchorEl={adminAnchorEl} open={Boolean(adminAnchorEl)} onClose={handleAdminClose} keepMounted>
             <MenuItem onClick={() => { handleAdminClose(); navigate('/admin') }}>Панель</MenuItem>
-            <MenuItem onClick={() => { handleAdminClose(); navigate('/posts') }}>Посты</MenuItem>
+            {/* remove public posts link */}
             <MenuItem onClick={handleLogout}>Выйти</MenuItem>
           </Menu>
         </Toolbar>
@@ -81,7 +81,7 @@ function Navbar({className}: NavbarProps) {
         {isOpen && (
           <div className={classNames(cls.mobileMenu, { [cls.open]: isOpen }, [])} style={{ padding: 12, borderTop: '1px solid var(--border-color)' }}>
             <AppLink onClick={()=>setIsOpen(false)} theme={AppLinkTheme.SECONDARY} className={cls.mainLink} to={'/'}>Главная</AppLink>
-            <AppLink onClick={()=>setIsOpen(false)} theme={AppLinkTheme.SECONDARY} to={'/posts'}>Посты</AppLink>
+            {/* remove public posts link */}
             <AppLink onClick={()=>setIsOpen(false)} theme={AppLinkTheme.SECONDARY} to={'/choicerole'}>Страница входа</AppLink>
             <AppLink onClick={()=>setIsOpen(false)} theme={AppLinkTheme.SECONDARY} to={'/adminlogin'}>АдминЛог</AppLink>
             <AppLink onClick={()=>setIsOpen(false)} theme={AppLinkTheme.SECONDARY} to={'/adminregistration'}>АдминРег</AppLink>

@@ -48,8 +48,8 @@ export const RoutePath: Record<AppRouteKeys, string> = {
     [AppRoutes.ADMIN_POST_CREATE]: '/admin/post/create',
     [AppRoutes.ADMIN_POST_EDIT]: '/admin/post/edit/:id',
     [AppRoutes.ADMIN_GROUPS]: '/admin/groups',
-    [AppRoutes.POSTS_LIST]: '/posts',
-    [AppRoutes.POST_VIEW]: '/posts/:id',
+    [AppRoutes.POSTS_LIST]: '/admin/posts',
+    [AppRoutes.POST_VIEW]: '/admin/post/:id',
     [AppRoutes.BLOG]: '/mui/blog',
     [AppRoutes.SIGNIN_SIDE]: '/mui/signin',
 }

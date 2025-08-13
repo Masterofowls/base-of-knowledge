@@ -357,6 +357,7 @@ def get_groups():
     education_form_id = request.args.get('education_form_id', type=int)
     admission_year_id = request.args.get('admission_year_id', type=int)
     city_id = request.args.get('city_id', type=int)
+    search = (request.args.get('search') or '').strip()
     
     query = Group.query
     
@@ -375,7 +376,18 @@ def get_groups():
     if city_id:
         query = query.filter_by(city_id=city_id)
     
-    groups = query.all()
+    if search:
+        # Basic ilike search by display_name or speciality code/name
+        from sqlalchemy import or_
+        query = query.join(Speciality, isouter=True).filter(
+            or_(
+                Group.display_name.ilike(f"%{search}%"),
+                Speciality.code.ilike(f"%{search}%"),
+                Speciality.name.ilike(f"%{search}%")
+            )
+        )
+
+    groups = query.order_by(Group.display_name.asc()).all()
     
     groups_data = []
     for group in groups:
@@ -407,6 +419,23 @@ def get_groups():
         groups_data.append(group_data)
     
     return jsonify(groups_data), 200
+
+@categories_bp.route('/groups/<int:group_id>', methods=['DELETE'])
+@jwt_required()
+def delete_group(group_id):
+    """Delete a group (admin only)"""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or user.role.name != 'Администратор':
+        return jsonify({'error': 'Unauthorized'}), 403
+    group = Group.query.get_or_404(group_id)
+    try:
+        db.session.delete(group)
+        db.session.commit()
+        return jsonify({'message': 'Group deleted successfully'}), 200
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete group'}), 500
 
 @categories_bp.route('/groups/<int:group_id>', methods=['GET'])
 def get_group(group_id):
@@ -706,3 +735,20 @@ def get_institution_types():
         })
     
     return jsonify(institution_types_data), 200
+
+# Aux endpoints to support student login fields
+@categories_bp.route('/base-classes', methods=['GET'])
+def get_base_classes():
+    """Return available base classes for admission (9 or 11)."""
+    return jsonify([9, 11]), 200
+
+@categories_bp.route('/courses', methods=['GET'])
+def get_courses():
+    """Return available course numbers. Optional ?max= param (default 4)."""
+    try:
+        max_val = int(request.args.get('max') or 4)
+    except Exception:
+        max_val = 4
+    if max_val < 1:
+        max_val = 1
+    return jsonify(list(range(1, max_val + 1))), 200
