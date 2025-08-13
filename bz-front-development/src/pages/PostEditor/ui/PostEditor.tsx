@@ -373,14 +373,13 @@ export default function PostEditor() {
 
                     {/* Publishing scope (MUI accordions) */}
                     <Accordion defaultExpanded>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Тип сообщения</AccordionSummary>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Категория просмотра</AccordionSummary>
                         <AccordionDetails>
                             <FormControl fullWidth size='small'>
-                                <InputLabel id='tag-label'>Маркировка</InputLabel>
-                                <Select labelId='tag-label' label='Маркировка' value={formData.publish_scope?.tag || 'common'} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, tag: e.target.value as any}}))}>
+                                <InputLabel id='tag-label'>Категория</InputLabel>
+                                <Select labelId='tag-label' label='Категория' value={formData.publish_scope?.tag || 'common'} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, tag: e.target.value as any}}))}>
                                     <MenuItem value='common'>Общая</MenuItem>
-                                    <MenuItem value='important'>Важная</MenuItem>
-                                    <MenuItem value='useful'>Полезная</MenuItem>
+                                    <MenuItem value='useful'>Учебная</MenuItem>
                                 </Select>
                             </FormControl>
                         </AccordionDetails>
@@ -440,14 +439,14 @@ export default function PostEditor() {
                             </AccordionDetails>
                         </Accordion>
                         <Accordion>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Формат и профиль</AccordionSummary>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Опубликовать для всех</AccordionSummary>
                             <AccordionDetails>
                                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
                                     <FormControl fullWidth size='small'>
-                                        <FormControlLabel control={<Checkbox checked={!!bulk.all_education_modes} onChange={(e)=> setBulk(prev=>({...prev, all_education_modes: e.target.checked}))}/>} label='Для всех форм обучения' />
+                                        <FormControlLabel control={<Checkbox checked={!!bulk.all_education_modes} onChange={(e)=> setBulk(prev=>({...prev, all_education_modes: e.target.checked}))}/>} label='Все форматы' />
                                     </FormControl>
                                     <FormControl fullWidth size='small'>
-                                        <FormControlLabel control={<Checkbox checked={!!bulk.all_specialities} onChange={(e)=> setBulk(prev=>({...prev, all_specialities: e.target.checked}))}/>} label='Для всех профилей' />
+                                        <FormControlLabel control={<Checkbox checked={!!bulk.all_specialities} onChange={(e)=> setBulk(prev=>({...prev, all_specialities: e.target.checked}))}/>} label='Все специальности' />
                                     </FormControl>
                                 </div>
                             </AccordionDetails>
@@ -467,9 +466,9 @@ export default function PostEditor() {
                                 </select>
                             </label>
                             <label>
-                                <span style={{fontSize:12, color:'var(--secondary-color)'}}>Тип аудитории</span>
+                                <span style={{fontSize:12, color:'var(--secondary-color)'}}>Аудитория</span>
                                 <select onChange={(e)=>setFormData(prev=>({...prev, publish_scope:{...prev.publish_scope, audience: e.target.value as any}}))} defaultValue="all">
-                                    <option value="all">Все</option>
+                                    <option value="all">Опубликовать для всех</option>
                                     <option value="city">Определенный город</option>
                                     <option value="course">Определенный курс</option>
                                 </select>
@@ -496,14 +495,13 @@ export default function PostEditor() {
                                 </label>
                             )}
                             <label>
-                                <span style={{fontSize:12, color:'var(--secondary-color)'}}>Маркировка</span>
+                                <span style={{fontSize:12, color:'var(--secondary-color)'}}>Категория</span>
                                 <select onChange={(e)=>setFormData(prev=>({...prev, publish_scope:{...prev.publish_scope, tag: e.target.value as any}}))} defaultValue="common">
-                                    <option value="common">Общая информация</option>
-                                    <option value="important">Важная информация</option>
-                                    <option value="useful">Полезная информация</option>
+                                    <option value="common">Общая</option>
+                                    <option value="useful">Учебная</option>
                                 </select>
                             </label>
-                            <FormControlLabel control={<Checkbox checked={!!bulk.audience_all} onChange={(e)=> setBulk(prev=>({...prev, audience_all: e.target.checked}))}/>} label='Опубликовать для всех' />
+                            <FormControlLabel control={<Checkbox checked={!!bulk.audience_all} onChange={(e)=> setBulk(prev=>({...prev, audience_all: e.target.checked}))}/>} label='Показать всем' />
                             <FormControlLabel control={<Checkbox checked={!!bulk.all_cities} onChange={(e)=> setBulk(prev=>({...prev, all_cities: e.target.checked}))}/>} label='Для всех городов' />
                             <FormControlLabel control={<Checkbox checked={!!bulk.all_groups} onChange={(e)=> setBulk(prev=>({...prev, all_groups: e.target.checked}))}/>} label='Для всех групп' />
                         </div>

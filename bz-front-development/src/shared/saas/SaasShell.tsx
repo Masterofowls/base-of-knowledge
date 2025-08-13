@@ -3,7 +3,7 @@
 
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { AppShell, Sidebar, SidebarSection, NavItem } from '@saas-ui/react'
+import { AppShell } from '@saas-ui/react'
 import SaasNavbar from './SaasNavbar'
 
 interface SaasShellProps {
@@ -18,21 +18,12 @@ export default function SaasShell({ children }: SaasShellProps) {
     if (location.pathname !== path) navigate(path)
   }
 
-  const hideSidebar = location.pathname === '/adminlogin' || location.pathname === '/studentlogin' || location.pathname === '/choicerole'
+  const hideSidebar = true
 
   return (
     <AppShell
       navbar={<SaasNavbar />}
       contentProps={{ px: 0 }}
-      sidebar={ hideSidebar ? undefined : (
-        <Sidebar>
-          <SidebarSection>
-            <NavItem onClick={()=>go('/')}>Главная</NavItem>
-            <NavItem onClick={()=>go('/admin/groups')}>Группы</NavItem>
-            <NavItem onClick={()=>go('/choicerole')}>Вход</NavItem>
-          </SidebarSection>
-        </Sidebar>
-      )}
     >
       <div style={{ width:'100%', maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
         {children}

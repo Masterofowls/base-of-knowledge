@@ -10,6 +10,9 @@ import Alert from '@mui/material/Alert'
 import Autocomplete from '@mui/material/Autocomplete'
 import TextField from '@mui/material/TextField'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import SchoolIcon2 from '@mui/icons-material/School'
+import ApartmentIcon from '@mui/icons-material/Apartment'
+import DomainIcon from '@mui/icons-material/Domain'
 import SchoolIcon from '@mui/icons-material/School'
 
 export default function StudentLoginPage() {
@@ -29,19 +32,14 @@ export default function StudentLoginPage() {
             try {
                 setLoading(true);
                 
-                // Fetch cities
-                const citiesResponse = await http.get('/api/categories/cities');
-                const citiesOptions = citiesResponse.data.map((city: any) => ({
-                    value: city.id,
-                    label: city.name
-                }));
-                setCities(citiesOptions);
+                // No city selection: groups will be chosen directly
 
-                // Fetch groups
+                // Fetch groups with enriched metadata
                 const groupsResponse = await http.get('/api/categories/groups');
                 const groupsOptions = groupsResponse.data.map((group: any) => ({
                     value: group.id,
-                    label: group.display_name
+                    label: group.display_name,
+                    meta: group
                 }));
                 setGroups(groupsOptions);
 
@@ -66,23 +64,32 @@ export default function StudentLoginPage() {
     const handleBack = () => navigate('/');
 
     const handleStudentLogin = () => {
-        if (!selectedCity || !selectedGroup || !selectedBaseClass || !selectedCourse) {
-            alert('Пожалуйста, выберите город, группу, базу (9/11) и курс');
+        if (!selectedGroup || !selectedBaseClass || !selectedCourse) {
+            alert('Пожалуйста, выберите группу, базу (9/11) и курс');
             return;
         }
         
         // Store selection in localStorage for student session
         // selectedCity and selectedGroup are objects from react-select {value, label}
-        const cityName = typeof selectedCity === 'object' && selectedCity?.label ? selectedCity.label : selectedCity;
         const groupName = typeof selectedGroup === 'object' && selectedGroup?.label ? selectedGroup.label : selectedGroup;
+        const meta = (selectedGroup as any)?.meta
         
-        localStorage.setItem('student_city', cityName);
-        localStorage.setItem('student_city_id', String(selectedCity.value));
         localStorage.setItem('student_group', groupName);
         localStorage.setItem('student_group_id', String(selectedGroup.value));
-        localStorage.setItem('student_base_class', String(selectedBaseClass.value))
+        // Auto-fill from group metadata when available
+        const baseClass = meta?.base_class ?? selectedBaseClass.value
+        const admissionYearId = meta?.admission_year?.id
+        const institutionTypeId = meta?.institution_type_id
+        const educationFormId = meta?.education_form?.id
+
+        localStorage.setItem('student_base_class', String(baseClass))
         localStorage.setItem('student_course', String(selectedCourse.value))
+        if (admissionYearId) localStorage.setItem('student_admission_year_id', String(admissionYearId))
+        if (institutionTypeId) localStorage.setItem('student_institution_type_id', String(institutionTypeId))
+        if (educationFormId) localStorage.setItem('student_education_form_id', String(educationFormId))
         localStorage.setItem('user_role', 'student');
+        // flag for audience filtering
+        localStorage.setItem('strict_audience', '1')
         
         // Navigate to student dashboard
         navigate('/student');
@@ -96,16 +103,7 @@ export default function StudentLoginPage() {
             <SchoolIcon color="primary"/>
             <Typography variant="h6" fontWeight={700}>Выберите свою группу</Typography>
           </Box>
-          <Autocomplete
-            options={cities}
-            value={selectedCity}
-            onChange={(_, v)=>setSelectedCity(v)}
-            disablePortal
-            autoHighlight
-            getOptionLabel={o=>o?.label ?? ''}
-            renderInput={(params) => <TextField {...params} label="Город" placeholder="Выберите город"/>}
-            sx={{ mb:2 }}
-          />
+          {/* City selection removed */}
           <Autocomplete
             options={groups}
             value={selectedGroup}
@@ -115,16 +113,25 @@ export default function StudentLoginPage() {
             getOptionLabel={o=>o?.label ?? ''}
             renderInput={(params) => <TextField {...params} label="Группа" placeholder="Выберите группу"/>}
           />
-          <Autocomplete
-            options={baseClasses}
-            value={selectedBaseClass}
-            onChange={(_, v)=>setSelectedBaseClass(v)}
-            disablePortal
-            autoHighlight
-            getOptionLabel={o=>o?.label ?? ''}
-            renderInput={(params) => <TextField {...params} label="База (9 или 11)" placeholder="Выберите базу"/>}
-            sx={{ mt:2 }}
-          />
+          {selectedGroup?.meta?.institution_type_id && (
+            <Alert severity="info" sx={{ mt:1 }}>
+              {selectedGroup.meta.institution_type_id === 1 && (<Box sx={{display:'flex',alignItems:'center',gap:1}}><SchoolIcon2 fontSize='small'/> <span>Тип: Школа. Доступен выбор класса. Прочие категории скрыты.</span></Box>)}
+              {selectedGroup.meta.institution_type_id === 2 && (<Box sx={{display:'flex',alignItems:'center',gap:1}}><ApartmentIcon fontSize='small'/> <span>Тип: Колледж. Класс не применяется. Используются профиль/форма/год.</span></Box>)}
+              {selectedGroup.meta.institution_type_id === 3 && (<Box sx={{display:'flex',alignItems:'center',gap:1}}><DomainIcon fontSize='small'/> <span>Тип: Вуз. Класс не применяется. Используются профиль/форма/год.</span></Box>)}
+            </Alert>
+          )}
+          {(!selectedGroup?.meta?.institution_type_id || selectedGroup?.meta?.institution_type_id === 1) && (
+            <Autocomplete
+              options={baseClasses}
+              value={selectedBaseClass}
+              onChange={(_, v)=>setSelectedBaseClass(v)}
+              disablePortal
+              autoHighlight
+              getOptionLabel={o=>o?.label ?? ''}
+              renderInput={(params) => <TextField {...params} label="База (9 или 11)" placeholder="Выберите базу"/>}
+              sx={{ mt:2 }}
+            />
+          )}
           <Autocomplete
             options={courses}
             value={selectedCourse}

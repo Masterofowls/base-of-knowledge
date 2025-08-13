@@ -54,6 +54,11 @@ def run_startup_migrations(db):
                 conn.execute(text("ALTER TABLE groupss ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE"))
             except Exception:
                 pass
+            # Add base_class to groups (9 or 11)
+            try:
+                conn.execute(text("ALTER TABLE groupss ADD COLUMN IF NOT EXISTS base_class INTEGER"))
+            except Exception:
+                pass
             conn.execute(text(
                 """
                 CREATE TABLE IF NOT EXISTS group_audit_logs (
@@ -84,6 +89,10 @@ def run_startup_migrations(db):
             # Add archive flag and audit table for groups (MySQL)
             try:
                 conn.execute(text("ALTER TABLE groupss ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE"))
+            except Exception:
+                pass
+            try:
+                conn.execute(text("ALTER TABLE groupss ADD COLUMN IF NOT EXISTS base_class INT"))
             except Exception:
                 pass
             conn.execute(text(
@@ -118,5 +127,9 @@ def run_startup_migrations(db):
                     conn.execute(text(col_stmt))
                 except Exception:
                     pass
+            try:
+                conn.execute(text("ALTER TABLE groupss ADD COLUMN base_class INTEGER"))
+            except Exception:
+                pass
 
 

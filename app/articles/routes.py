@@ -24,6 +24,7 @@ def get_articles():
     search = request.args.get('search', '').strip()
     date_from = request.args.get('date_from', type=str)
     date_to = request.args.get('date_to', type=str)
+    # Remove separate message type control, keep only category/tag if needed
     tag = request.args.get('tag', type=str)
     base_class = request.args.get('base_class', type=int)
     audience = request.args.get('audience', type=str)
@@ -102,6 +103,12 @@ def get_articles():
         from sqlalchemy import and_
         query = query.filter(
             and_(Article.audience.isnot(None), Article.audience != 'all')
+        )
+
+    # If city filter is provided, prioritize city-only audience (requested behavior)
+    if audience_city_id and not any([audience_course, audience_admission_year_id, speciality_id]):
+        query = query.filter(
+            or_(Article.audience == 'city', Article.audience == 'all')
         )
 
     # Sorting
@@ -310,6 +317,12 @@ def create_article():
     
     # Create article
     import json
+    # Map RU education forms to internal codes if posted as text
+    ru_mode_map = {
+        'Очное': 'full_time',
+        'Заочное': 'distance',
+        'Очно-заочное': 'mixed'
+    }
     article = Article(
         title=title,
         content=content,
@@ -318,7 +331,7 @@ def create_article():
         is_actual=is_actual,
         tag=publish_scope.get('tag'),
         base_class=publish_scope.get('baseClass'),
-        audience=publish_scope.get('audience'),
+        audience=('all' if publish_scope.get('publish_for_all') else publish_scope.get('audience')),
         audience_city_id=publish_scope.get('city_id'),
         audience_course=publish_scope.get('course'),
         audience_admission_year_id=publish_scope.get('admission_year_id')
@@ -330,7 +343,12 @@ def create_article():
             article.audience_courses = json.dumps(courses)
         except Exception:
             article.audience_courses = None
-    article.education_mode = publish_scope.get('education_mode')
+    # Allow RU labels
+    edu_mode = publish_scope.get('education_mode')
+    if isinstance(edu_mode, str) and edu_mode in ru_mode_map:
+        article.education_mode = ru_mode_map[edu_mode]
+    else:
+        article.education_mode = edu_mode
     article.speciality_id = publish_scope.get('speciality_id')
     
     try:
@@ -406,7 +424,7 @@ def update_article(article_id):
         ps = data['publish_scope']
         article.tag = ps.get('tag', article.tag)
         article.base_class = ps.get('baseClass', article.base_class)
-        article.audience = ps.get('audience', article.audience)
+        article.audience = ('all' if ps.get('publish_for_all') else ps.get('audience', article.audience))
         article.audience_city_id = ps.get('city_id', article.audience_city_id)
         article.audience_course = ps.get('course', article.audience_course)
         article.audience_admission_year_id = ps.get('admission_year_id', article.audience_admission_year_id)
@@ -419,7 +437,13 @@ def update_article(article_id):
             except Exception:
                 pass
         if 'education_mode' in ps:
-            article.education_mode = ps.get('education_mode')
+            ru_mode_map = {
+                'Очное': 'full_time',
+                'Заочное': 'distance',
+                'Очно-заочное': 'mixed'
+            }
+            val = ps.get('education_mode')
+            article.education_mode = ru_mode_map.get(val, val)
         if 'speciality_id' in ps:
             article.speciality_id = ps.get('speciality_id')
     

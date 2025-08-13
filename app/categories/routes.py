@@ -1,4 +1,4 @@
-from flask import request, jsonify
+from flask import request, jsonify, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.categories import categories_bp
 from app.models import TopCategory, Subcategory, Category, Group, InstitutionType, Speciality, EducationForm, AdmissionYear, City, SchoolClass, User
@@ -351,30 +351,36 @@ def delete_subcategory(subcategory_id):
 
 @categories_bp.route('/groups', methods=['GET'])
 def get_groups():
-    """Get groups with filtering options"""
+    """Get groups with filtering options.
+    Rules:
+    - If city is selected, keep only the city filter (ignore other criteria).
+    - School classes appear only when institution is a school (handled on client, but API supports filtering by school_class_id if provided).
+    - Group as last optional criteria (query already supports it via exact filters when provided).
+    """
     institution_type_id = request.args.get('institution_type_id', type=int)
     speciality_id = request.args.get('speciality_id', type=int)
     education_form_id = request.args.get('education_form_id', type=int)
     admission_year_id = request.args.get('admission_year_id', type=int)
     city_id = request.args.get('city_id', type=int)
     search = (request.args.get('search') or '').strip()
+    school_class_id = request.args.get('school_class_id', type=int)
     
     query = Group.query
     
-    if institution_type_id:
-        query = query.filter_by(institution_type_id=institution_type_id)
-    
-    if speciality_id:
-        query = query.filter_by(speciality_id=speciality_id)
-    
-    if education_form_id:
-        query = query.filter_by(education_form_id=education_form_id)
-    
-    if admission_year_id:
-        query = query.filter_by(admission_year_id=admission_year_id)
-    
+    # If city chosen, prioritize only city filter
     if city_id:
         query = query.filter_by(city_id=city_id)
+    else:
+        if institution_type_id:
+            query = query.filter_by(institution_type_id=institution_type_id)
+        if speciality_id:
+            query = query.filter_by(speciality_id=speciality_id)
+        if education_form_id:
+            query = query.filter_by(education_form_id=education_form_id)
+        if admission_year_id:
+            query = query.filter_by(admission_year_id=admission_year_id)
+        if school_class_id:
+            query = query.filter_by(school_class_id=school_class_id)
     
     if search:
         # Basic ilike search by display_name or speciality code/name
@@ -411,6 +417,8 @@ def get_groups():
                 'id': group.city.id,
                 'name': group.city.name
             } if group.city else None,
+            'base_class': getattr(group, 'base_class', None),
+            'institution_type_id': group.institution_type_id,
             'school_class': {
                 'id': group.school_class.id,
                 'name': group.school_class.name
@@ -429,6 +437,10 @@ def delete_group(group_id):
     if not user or user.role.name != 'Администратор':
         return jsonify({'error': 'Unauthorized'}), 403
     group = Group.query.get_or_404(group_id)
+    # Prevent deletion if there are linked categories
+    linked = Category.query.filter_by(group_id=group.id).first()
+    if linked:
+        return jsonify({'error': 'Group has linked categories, archive or merge before deleting'}), 409
     try:
         db.session.delete(group)
         db.session.commit()
@@ -464,9 +476,127 @@ def get_group(group_id):
             'id': group.school_class.id,
             'name': group.school_class.name
         } if group.school_class else None,
-        'institution_type_id': group.institution_type_id
+        'institution_type_id': group.institution_type_id,
+        'base_class': getattr(group, 'base_class', None)
     }
     return jsonify(data), 200
+
+@categories_bp.route('/groups/import', methods=['POST'])
+@jwt_required()
+def import_groups_csv():
+    """Import groups from CSV. Columns: display_name,speciality_id,education_form_id,admission_year_id,institution_type_id,school_class_id,city_id"""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or user.role.name != 'Администратор':
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.get_json() or {}
+    csv_text = (data.get('csv') or '').strip()
+    if not csv_text:
+        return jsonify({'error': 'csv is required'}), 400
+    import csv, io
+    reader = csv.DictReader(io.StringIO(csv_text))
+    created = 0
+    skipped = 0
+    for row in reader:
+        name = (row.get('display_name') or '').strip()
+        if not name:
+            skipped += 1
+            continue
+        if Group.query.filter_by(display_name=name).first():
+            skipped += 1
+            continue
+        g = Group(
+            display_name=name,
+            speciality_id=int(row['speciality_id']) if row.get('speciality_id') else None,
+            education_form_id=int(row['education_form_id']) if row.get('education_form_id') else None,
+            admission_year_id=int(row['admission_year_id']) if row.get('admission_year_id') else None,
+            institution_type_id=int(row['institution_type_id']) if row.get('institution_type_id') else None,
+            school_class_id=int(row['school_class_id']) if row.get('school_class_id') else None,
+            city_id=int(row['city_id']) if row.get('city_id') else None,
+        )
+        db.session.add(g)
+        created += 1
+    try:
+        if created:
+            db.session.commit()
+        return jsonify({'created': created, 'skipped': skipped}), 200
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Import failed'}), 500
+
+@categories_bp.route('/groups/export', methods=['GET'])
+@jwt_required()
+def export_groups_csv():
+    """Export groups to CSV."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or user.role.name != 'Администратор':
+        return jsonify({'error': 'Unauthorized'}), 403
+    import csv, io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['display_name','speciality_id','education_form_id','admission_year_id','institution_type_id','school_class_id','city_id','base_class'])
+    for g in Group.query.order_by(Group.display_name.asc()).all():
+        writer.writerow([g.display_name, g.speciality_id, g.education_form_id, g.admission_year_id, g.institution_type_id, g.school_class_id, g.city_id, getattr(g, 'base_class', None)])
+    csv_data = output.getvalue()
+    return Response(csv_data, mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=groups.csv'})
+
+@categories_bp.route('/groups/merge', methods=['POST'])
+@jwt_required()
+def merge_groups():
+    """Merge source_group_id into target_group_id and archive the source group."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or user.role.name != 'Администратор':
+        return jsonify({'error': 'Unauthorized'}), 403
+    payload = request.get_json() or {}
+    src_id = payload.get('source_group_id')
+    tgt_id = payload.get('target_group_id')
+    if not src_id or not tgt_id or src_id == tgt_id:
+        return jsonify({'error': 'Invalid group ids'}), 400
+    src = Group.query.get_or_404(src_id)
+    tgt = Group.query.get_or_404(tgt_id)
+    try:
+        # reattach categories from src to target
+        Category.query.filter_by(group_id=src.id).update({Category.group_id: tgt.id})
+        # archive source
+        if hasattr(src, 'is_archived'):
+            setattr(src, 'is_archived', True)
+        db.session.add(src)
+        # audit log
+        try:
+            db.session.execute(db.text("INSERT INTO group_audit_logs (group_id,user_id,action,details) VALUES (:gid,:uid,'merge',:d)"),
+                               {'gid': src.id, 'uid': user.id, 'd': f'merged into {tgt.id}'})
+        except Exception:
+            pass
+        db.session.commit()
+        return jsonify({'message': 'Merged and archived source group'}), 200
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Merge failed'}), 500
+
+@categories_bp.route('/groups/<int:group_id>/archive', methods=['POST'])
+@jwt_required()
+def archive_group(group_id):
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or user.role.name != 'Администратор':
+        return jsonify({'error': 'Unauthorized'}), 403
+    grp = Group.query.get_or_404(group_id)
+    try:
+        if hasattr(grp, 'is_archived'):
+            setattr(grp, 'is_archived', True)
+            db.session.add(grp)
+        try:
+            db.session.execute(db.text("INSERT INTO group_audit_logs (group_id,user_id,action,details) VALUES (:gid,:uid,'archive',NULL)"),
+                               {'gid': grp.id, 'uid': user.id})
+        except Exception:
+            pass
+        db.session.commit()
+        return jsonify({'message': 'Archived'}), 200
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Archive failed'}), 500
 
 @categories_bp.route('/groups/seed', methods=['POST'])
 @jwt_required()
@@ -534,6 +664,7 @@ def create_group():
     institution_type_id = data['institution_type_id']
     school_class_id = data.get('school_class_id')
     city_id = data.get('city_id')
+    base_class = data.get('base_class')
     
     # Validate display name
     if len(display_name) < 3:
@@ -572,6 +703,11 @@ def create_group():
         school_class_id=school_class_id,
         city_id=city_id
     )
+    if hasattr(group, 'base_class') and base_class is not None:
+        try:
+            group.base_class = int(base_class)
+        except Exception:
+            pass
     
     try:
         db.session.add(group)
@@ -614,6 +750,11 @@ def update_group(group_id):
         group.school_class_id = data['school_class_id']
     if 'city_id' in data:
         group.city_id = data['city_id']
+    if 'base_class' in data and hasattr(group, 'base_class'):
+        try:
+            group.base_class = int(data['base_class']) if data['base_class'] is not None else None
+        except Exception:
+            pass
     try:
         db.session.commit()
         return jsonify({'message':'Group updated'}), 200
@@ -735,6 +876,72 @@ def get_institution_types():
         })
     
     return jsonify(institution_types_data), 200
+
+# Aggregated audience dictionaries with "all-*" helpers
+@categories_bp.route('/audience/options', methods=['GET'])
+def get_audience_options():
+    """Return audience dictionaries including optional institution filtering.
+    Query: ?institution_type_id=ID to scope forms/specialities/years/classes.
+    Includes special "all" sentinel options for front-ends.
+    """
+    institution_type_id = request.args.get('institution_type_id', type=int)
+
+    # Cities
+    cities = City.query.order_by(City.name).all()
+    cities_data = [{'id': None, 'name': 'Все города'}] + [
+        {'id': c.id, 'name': c.name} for c in cities
+    ]
+
+    # Education forms (map to ru labels)
+    forms_query = EducationForm.query
+    if institution_type_id:
+        forms_query = forms_query.filter_by(institution_type_id=institution_type_id)
+    forms = forms_query.order_by(EducationForm.name).all()
+    default_forms = [
+        {'id': -1, 'name': 'Очное'},
+        {'id': -2, 'name': 'Заочное'},
+        {'id': -3, 'name': 'Очно-заочное'},
+    ]
+    forms_data = [{'id': None, 'name': 'Все форматы'}]
+    if forms:
+        forms_data += [{'id': f.id, 'name': f.name} for f in forms]
+    else:
+        forms_data += default_forms
+
+    # Specialities
+    specs_query = Speciality.query
+    if institution_type_id:
+        specs_query = specs_query.filter_by(institution_type_id=institution_type_id)
+    specs = specs_query.order_by(Speciality.name).all()
+    specs_data = [{'id': None, 'code': '*', 'name': 'Все специальности'}] + [
+        {'id': s.id, 'code': s.code, 'name': s.name} for s in specs
+    ]
+
+    # Admission years
+    years_query = AdmissionYear.query
+    if institution_type_id:
+        years_query = years_query.filter_by(institution_type_id=institution_type_id)
+    years = years_query.order_by(AdmissionYear.year.desc()).all()
+    years_data = [{'id': None, 'year': 0, 'label': 'Все годы поступления'}] + [
+        {'id': y.id, 'year': y.year, 'label': str(y.year)} for y in years
+    ]
+
+    # School classes visible only for schools
+    classes_query = SchoolClass.query
+    if institution_type_id:
+        classes_query = classes_query.filter_by(institution_type_id=institution_type_id)
+    classes = classes_query.order_by(SchoolClass.name).all()
+    classes_data = [{'id': None, 'name': 'Все классы'}] + [
+        {'id': cl.id, 'name': cl.name} for cl in classes
+    ]
+
+    return jsonify({
+        'cities': cities_data,
+        'education_forms': forms_data,
+        'specialities': specs_data,
+        'admission_years': years_data,
+        'school_classes': classes_data,
+    }), 200
 
 # Aux endpoints to support student login fields
 @categories_bp.route('/base-classes', methods=['GET'])

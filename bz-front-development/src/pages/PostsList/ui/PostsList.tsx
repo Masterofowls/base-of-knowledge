@@ -6,7 +6,7 @@ import { Input } from 'shared/ui/Input/Input.tsx'
 import { Button } from 'shared/ui/Button'
 import { ThemeButton } from 'shared/ui/Button/ui/Button.tsx'
 import cls from './PostsList.module.scss'
-import { Autocomplete, TextField, Tabs, Tab, Card, CardContent, Skeleton, IconButton, Chip, Tooltip, Fab } from '@mui/material'
+import { Autocomplete, TextField, Tabs, Tab, Card, CardContent, Skeleton, IconButton, Tooltip, Fab } from '@mui/material'
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder'
 import WhatshotIcon from '@mui/icons-material/Whatshot'
 import ThumbUpOffAltIcon from '@mui/icons-material/ThumbUpOffAlt'
@@ -54,7 +54,8 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     const cityId = localStorage.getItem('student_city_id')
     const course = localStorage.getItem('student_course')
     const baseClass = localStorage.getItem('student_base_class')
-    const params: any = { page: targetPage, per_page: 10, is_published: true, search: query || undefined, sort_by: 'created_at', sort_dir: 'desc', strict_audience: true }
+    const strict = localStorage.getItem('strict_audience') === '1'
+    const params: any = { page: targetPage, per_page: 10, is_published: true, search: query || undefined, sort_by: 'created_at', sort_dir: 'desc', strict_audience: strict }
     if (cityId) params.audience_city_id = Number(cityId)
     if (course) params.audience_course = Number(course)
     if (baseClass) params.base_class = Number(baseClass)
@@ -107,7 +108,11 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   }, [])
 
   function toggleExpand(id: number) {
-    setExpanded(prev => ({ ...prev, [id]: !prev[id] }))
+    setExpanded(prev => {
+      const next = { ...prev, [id]: !prev[id] }
+      if (next[id]) loadReactionsFor([id])
+      return next
+    })
   }
 
   function getAvatarColor(seed: number): string {
@@ -132,11 +137,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     } catch(e) { console.error(e) }
   }
 
-  function getTagFromContent(html: string): 'important' | 'useful' | 'common' | undefined {
-    const m = html.match(/<!--\s*tag:(important|useful|common)\s*-->/i)
-    if (!m) return undefined
-    return m[1].toLowerCase() as any
-  }
+  // removed tag-based chips per new requirements
 
   function stripHtml(html: string): string {
     const tmp = document.createElement('div')
@@ -167,14 +168,22 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   }
 
   const containerWidth = fullscreen ? 'min(100%, 900px)' : 'min(100%, 1000px)'
+  const filtered = items.filter((it) => {
+    if (tab === 0) return true
+    const cats: any[] = (it as any).categories || []
+    const names = cats.map(c => c?.top_category?.name?.toLowerCase?.() || '')
+    if (tab === 1) return names.some(n => n.includes('общ')) // Общая
+    if (tab === 2) return names.some(n => n.includes('учеб')) // Учебная
+    return true
+  })
   return (
     <div className='page-center-wrapper' style={{ paddingTop: 0 }}>
       <Container gap='0' width={containerWidth} direction='column' paddings='0' className={cls.list}>
         {/* Header tools removed; search lives in header */}
         <Tabs value={tab} onChange={(_,v)=>setTab(v)} sx={{ px: 2, borderBottom: '1px solid var(--border-muted, rgba(0,0,0,0.08))' }}>
           <Tab label="Все" />
-          <Tab label="Важные" />
-          <Tab label="Полезные" />
+          <Tab label="Общая" />
+          <Tab label="Учебная" />
         </Tabs>
 
         {/* Feed */}
@@ -183,8 +192,8 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
 
         {!isLoading && !error && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 0 }}>
-            {!isLoading && items.length === 0 && <div style={{ color: '#888', padding: 16 }}>Посты не найдены</div>}
-            {!isLoading && items.map(item => (
+            {!isLoading && filtered.length === 0 && <div style={{ color: '#888', padding: 16 }}>Посты не найдены</div>}
+            {!isLoading && filtered.map(item => (
               <div key={item.id} style={{
                 borderBottom: '1px solid var(--border-muted, rgba(0,0,0,0.08))',
                 padding: '12px 16px',
@@ -196,19 +205,25 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
                 <div>
                   <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
                     <h3 style={{ margin: 0, fontSize: 16, lineHeight: 1.3, flex: '1 1 auto', cursor:'pointer' }} onClick={()=> toggleExpand(item.id)}>{item.title}</h3>
-                    {(() => { const tag = getTagFromContent(item.content); if (!tag) return null; return <Chip size='small' label={tag==='important'?'Важное':tag==='useful'?'Полезное':'Общее'} color={tag==='important'?'error':tag==='useful'?'success':'default' as any} /> })()}
                   </div>
                   <div
                     className='article-content'
                     style={{
                       marginTop: 6,
-                      maxHeight: undefined,
-                      overflow: 'visible',
+                      maxHeight: expanded[item.id] ? undefined : 160,
+                      overflow: expanded[item.id] ? 'visible' : 'hidden',
                       cursor: 'auto'
                     }}
                     onClick={()=> toggleExpand(item.id)}
                     dangerouslySetInnerHTML={{ __html: item.content }}
                   />
+                  {!expanded[item.id] && (
+                    <div style={{ marginTop: 6 }}>
+                      <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>toggleExpand(item.id)}>
+                        <span>Показать полностью</span>
+                      </Button>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
                     <small style={{ opacity: .6 }}>{new Date(item.created_at).toLocaleDateString('ru-RU')}</small>
                     <div style={{display:'flex', gap:16, alignItems:'center'}}>
