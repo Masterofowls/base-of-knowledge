@@ -139,6 +139,25 @@ docker exec kb-api sh -c 'FLASK_APP=wsgi.py flask db upgrade'
 
 По умолчанию сервер слушает `0.0.0.0:8080` (см. `Dockerfile`).
 
+### Docker Compose (PostgreSQL) — локально и на сервере
+
+В репозитории добавлен `deploy/docker-compose.yml` для поднятия PostgreSQL.
+
+Шаги:
+```bash
+cd deploy
+cp env.example .env   # создайте .env со своими значениями
+# Отредактируйте .env: POSTGRES_PASSWORD
+
+docker compose up -d
+docker compose ps
+```
+
+DSN для backend (на том же сервере):
+```
+postgresql+psycopg2://<POSTGRES_USER>:<POSTGRES_PASSWORD>@127.0.0.1:5432/<POSTGRES_DB>
+```
+
 ## Подключение фронтенда к бэкенду
 
 Локальная разработка (Vite): укажите URL backend API в переменной `VITE_API_URL`.
