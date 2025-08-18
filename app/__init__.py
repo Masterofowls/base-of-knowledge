@@ -21,12 +21,14 @@ def create_app(config_name='development'):
     # Avoid trailing-slash redirects that break CORS preflight
     app.url_map.strict_slashes = False
     
-    # Configuration
+    # Конфигурация
     if config_name == 'development':
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'mysql+pymysql://root:password@localhost/knowledge_base')
+        # PostgreSQL по умолчанию (локально). Можно переопределить через переменную окружения DATABASE_URL
+        # Формат: postgresql+psycopg2://user:password@host:port/dbname
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql+psycopg2://postgres:password@localhost/knowledge_base')
     else:
         db_url = os.getenv('DATABASE_URL')
-        # Fallback to SQLite if not configured to keep the app responsive in demos
+        # Резерв: если нет DATABASE_URL — используем SQLite для локального демо
         if not db_url:
             db_url = 'sqlite:///data.db'
         app.config['SQLALCHEMY_DATABASE_URI'] = db_url
