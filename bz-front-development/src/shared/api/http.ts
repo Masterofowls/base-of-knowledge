@@ -1,7 +1,8 @@
 // HTTP client for Knowledge Base API
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env?.VITE_API_URL || 'https://kb-backend-astral-e2a00aff.fly.dev';
+// Normalize base URL. In production we use "/api" and proxy it via Nginx to backend.
+const API_BASE_URL = (import.meta.env?.VITE_API_URL || 'https://kb-backend-astral-e2a00aff.fly.dev').replace(/\/+$/, '');
 
 // Create axios instance
 const http = axios.create({
@@ -14,6 +15,15 @@ const http = axios.create({
 // Request interceptor to add JWT token
 http.interceptors.request.use(
   (config) => {
+    // Avoid double "/api/api/..." when baseURL already contains "/api"
+    try {
+      const baseEndsWithApi = /(^|\/)api$/i.test(API_BASE_URL);
+      if (baseEndsWithApi && typeof config.url === 'string') {
+        // strip leading /api from request url
+        config.url = config.url.replace(/^\/?api\/+/, '/');
+      }
+    } catch (_) {}
+
     const token = localStorage.getItem('jwt_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

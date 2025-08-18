@@ -1,5 +1,5 @@
 # Система базы знаний
-
+ DSN backend - postgresql+psycopg2://kb_user:change_me_strong@127.0.0.1:5432/knowledge_base
 
 ## Возможности
 
