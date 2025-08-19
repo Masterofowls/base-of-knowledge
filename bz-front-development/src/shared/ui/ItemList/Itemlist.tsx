@@ -1,5 +1,5 @@
 import {classNames} from "shared/lib/classNames/classNames";
-import cls from './Itemlist.module.scss'
+import cls from './ItemList.module.scss'
 import type {FC, PropsWithChildren} from "react";
 
 export const ItemlistTheme = {
