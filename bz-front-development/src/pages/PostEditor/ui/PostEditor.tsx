@@ -83,6 +83,12 @@ export default function PostEditor() {
     const [specialities, setSpecialities] = useState<{value:number,label:string,institution_type_id?:number}[]>([])
     const [educationForms, setEducationForms] = useState<{value:number,label:string}[]>([])
     const [courseOptions, setCourseOptions] = useState<{value:number,label:string}[]>([])
+
+    // Institution & School class controls
+    const [institutionTypes, setInstitutionTypes] = useState<{value:number,label:string,name:string}[]>([])
+    const [selectedInstitution, setSelectedInstitution] = useState<{value:number,label:string,name:string} | null>(null)
+    const [schoolClasses, setSchoolClasses] = useState<{value:number,label:string}[]>([])
+    const [selectedSchoolClass, setSelectedSchoolClass] = useState<{value:number,label:string} | null>(null)
     
     const [loading, setLoading] = useState(false);
     const [bulk, setBulk] = useState<{ all_cities?: boolean; all_specialities?: boolean; all_education_modes?: boolean; all_groups?: boolean; audience_all?: boolean }>({})
@@ -130,6 +136,10 @@ export default function PostEditor() {
             }));
             setTopCategories(topCategoriesOptions);
 
+            // Fetch institution types
+            const instResp = await http.get('/api/categories/institution-types')
+            setInstitutionTypes(instResp.data.map((i:any)=>({ value:i.id, label:i.name, name:i.name })))
+
             // Fetch cities
             const citiesResponse = await http.get('/api/categories/cities');
             setCities(citiesResponse.data.map((c:any)=>({value:c.id,label:c.name})))
@@ -150,6 +160,31 @@ export default function PostEditor() {
             setError('Не удалось загрузить категории');
         }
     };
+
+    // Load dependent dictionaries when institution changes
+    useEffect(() => {
+        const run = async () => {
+            if (!selectedInstitution) return
+            try {
+                const instId = selectedInstitution.value
+                const specsResponse = await http.get('/api/categories/specialities', { params: { institution_type_id: instId } })
+                setSpecialities(specsResponse.data.map((s:any)=>({value:s.id,label:`${s.code} ${s.name}`, institution_type_id: s.institution_type_id})))
+                const formsResponse = await http.get('/api/categories/education-forms', { params: { institution_type_id: instId } })
+                setEducationForms(formsResponse.data.map((f:any)=>({value:f.id,label:f.name})))
+                const yearsResponse = await http.get('/api/categories/admission-years', { params: { institution_type_id: instId } })
+                setAdmissionYears(yearsResponse.data.map((y:any)=>({value:y.id,label:String(y.year)})))
+                const classesResponse = await http.get('/api/categories/school-classes', { params: { institution_type_id: instId } })
+                setSchoolClasses(classesResponse.data.map((cl:any)=>({ value:cl.id, label:cl.name })))
+                setSelectedSchoolClass(null)
+                // If switched to school — course is not applicable
+                if (selectedInstitution.name.toLowerCase()==='школа') {
+                    setFormData(prev=> ({...prev, publish_scope: { ...(prev.publish_scope||{}), course: undefined }}))
+                }
+            } catch {}
+        }
+        run()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedInstitution])
 
     const fetchArticle = async () => {
         if (!id) return;
@@ -219,8 +254,10 @@ export default function PostEditor() {
         if (!ps.publish_for_all) {
             const hasCity = !!ps.city_id
             const hasCourse = typeof ps.course === 'number' && !Number.isNaN(ps.course)
-            if (!hasCity && !hasCourse) {
-                setError('Укажите аудиторию: Город или Курс, либо выберите "Для всех"')
+            const isSchool = selectedInstitution?.name?.toLowerCase() === 'школа'
+            const hasStudyDetail = isSchool || !!ps.speciality_id || !!ps.education_form_id || !!ps.admission_year_id || !!selectedSchoolClass
+            if (!hasCity && !(hasCourse || hasStudyDetail)) {
+                setError('Укажите аудиторию: Город или Учебная информация (курс/класс/профиль/форма/год), либо выберите "Для всех"')
                 return
             }
         }
@@ -235,10 +272,20 @@ export default function PostEditor() {
                 ...selectedTopCategories.map(cat => cat.value)
             ];
 
+            // augment publish_scope with institution and school_class if selected
+            const augmentedScope = { ...(formData.publish_scope||{}) }
+            if (selectedInstitution) {
+                augmentedScope.institution_type_id = selectedInstitution.value
+            }
+            if (selectedSchoolClass) {
+                augmentedScope.school_class_id = selectedSchoolClass.value
+            }
+
             const postData = {
                 ...formData,
                 content: html,
-                category_ids: categoryIds
+                category_ids: categoryIds,
+                publish_scope: augmentedScope
             };
 
             if (isEditing) {
