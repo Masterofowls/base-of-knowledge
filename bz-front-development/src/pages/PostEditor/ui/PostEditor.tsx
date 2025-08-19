@@ -214,6 +214,17 @@ export default function PostEditor() {
             return;
         }
 
+        // Audience validation per rules
+        const ps = formData.publish_scope || {}
+        if (!ps.publish_for_all) {
+            const hasCity = !!ps.city_id
+            const hasCourse = typeof ps.course === 'number' && !Number.isNaN(ps.course)
+            if (!hasCity && !hasCourse) {
+                setError('Укажите аудиторию: Город или Курс, либо выберите "Для всех"')
+                return
+            }
+        }
+
         try {
             setSaving(true);
             setError(null);
