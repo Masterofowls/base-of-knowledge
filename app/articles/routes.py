@@ -2,6 +2,7 @@ from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.articles import articles_bp
 from app.models import Article, Category, TopCategory, Subcategory, Group, User, ArticleAuthor, ArticleCategory, ArticleMedia, ArticleMediaLink
+from app.models import SchoolClass
 from app.models import ArticleReaction, ReactionEmoji
 from app.models import City, Speciality, Group  # for bulk
 from app import db
@@ -383,6 +384,23 @@ def create_article():
     # Core: institution type via speciality, education_form_id, speciality_id
     article.education_form_id = publish_scope.get('education_form_id')
     article.speciality_id = publish_scope.get('speciality_id')
+
+    # School case: set base_class by selected class (or explicit base_class)
+    # Accept either publish_scope.school_class_id or publish_scope.base_class (9/11)
+    base_class = None
+    sc_id = publish_scope.get('school_class_id')
+    if sc_id:
+        sc = SchoolClass.query.get(sc_id)
+        try:
+            base_class = int(sc.name) if sc and sc.name and str(sc.name).isdigit() else None
+        except Exception:
+            base_class = None
+    if base_class is None and publish_scope.get('base_class'):
+        try:
+            base_class = int(publish_scope.get('base_class'))
+        except Exception:
+            base_class = None
+    article.base_class = base_class
     
     try:
         db.session.add(article)
@@ -458,11 +476,24 @@ def update_article(article_id):
         # Cleaned scope: publish_for_all OR targeted by form/speciality (optional city/course/year)
         article.tag = None
         article.base_class = None
-        article.audience = ('all' if ps.get('publish_for_all') else None)
+        # audience per diagram
+        if ps.get('publish_for_all'):
+            article.audience = 'all'
+            article.audience_city_id = None
+            article.audience_course = None
+            article.audience_admission_year_id = None
+        elif ps.get('city_id'):
+            article.audience = 'city'
+            article.audience_city_id = ps.get('city_id')
+            article.audience_course = None
+        elif ps.get('course'):
+            article.audience = 'course'
+            article.audience_course = ps.get('course')
+            article.audience_city_id = None
+        else:
+            article.audience = None
         article.education_form_id = ps.get('education_form_id', article.education_form_id)
         article.speciality_id = ps.get('speciality_id', article.speciality_id)
-        article.audience_city_id = ps.get('city_id', article.audience_city_id)
-        article.audience_course = ps.get('course', article.audience_course)
         article.audience_admission_year_id = ps.get('admission_year_id', article.audience_admission_year_id)
         # optional fields
         import json
@@ -480,6 +511,22 @@ def update_article(article_id):
             }
             val = ps.get('education_mode')
             article.education_mode = ru_mode_map.get(val, val)
+        # School base_class
+        base_class = None
+        sc_id = ps.get('school_class_id')
+        if sc_id:
+            sc = SchoolClass.query.get(sc_id)
+            try:
+                base_class = int(sc.name) if sc and sc.name and str(sc.name).isdigit() else None
+            except Exception:
+                base_class = None
+        if base_class is None and ps.get('base_class'):
+            try:
+                base_class = int(ps.get('base_class'))
+            except Exception:
+                base_class = None
+        if base_class is not None:
+            article.base_class = base_class
     
     if 'category_ids' in data:
         # Remove existing categories
