@@ -66,7 +66,7 @@ export default function StudentLoginPage() {
             if (!selectedInstitution) return
             const instId = selectedInstitution.value
             try {
-                // clear selections
+                // clear dependent selections ONLY when institution changes
                 setSelectedSpeciality(null)
                 setSelectedEducationForm(null)
                 setSelectedAdmissionYear(null)
@@ -80,7 +80,6 @@ export default function StudentLoginPage() {
                 setAdmissionYears(years.data.map((y:any)=>({ value:y.id, label:String(y.year) })))
                 const classes = await http.get('/api/categories/school-classes', { params: { institution_type_id: instId } })
                 setSchoolClasses(classes.data.map((cl:any)=>({ value:cl.id, label:cl.name })))
-                // refresh groups list with new filters
                 await refreshGroups(instId)
             } catch (e) {
                 // ignore
@@ -88,7 +87,17 @@ export default function StudentLoginPage() {
         }
         run()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedInstitution, selectedCity, selectedSpeciality, selectedEducationForm, selectedAdmissionYear, selectedSchoolClass])
+    }, [selectedInstitution])
+
+    // refresh groups when any filter (except institution change) changes
+    useEffect(() => {
+        const run = async () => {
+            if (!selectedInstitution) return
+            await refreshGroups(selectedInstitution.value)
+        }
+        run()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedCity, selectedSchoolClass, selectedSpeciality, selectedEducationForm, selectedAdmissionYear])
 
     async function refreshGroups(instId?: number) {
         const params:any = {}
@@ -167,6 +176,7 @@ export default function StudentLoginPage() {
             onChange={(_, v)=>{ setSelectedInstitution(v); setSelectedGroup(null) }}
             disablePortal
             autoHighlight
+            isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
             getOptionLabel={o=>o?.label ?? ''}
             renderInput={(params) => <TextField {...params} label="Тип учреждения" placeholder="Колледж / Вуз / Школа"/>}
             sx={{ mb:2 }}
@@ -177,6 +187,7 @@ export default function StudentLoginPage() {
             onChange={(_, v)=>{ setSelectedCity(v); setSelectedGroup(null) }}
             disablePortal
             autoHighlight
+            isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
             getOptionLabel={o=>o?.label ?? ''}
             renderInput={(params) => <TextField {...params} label="Город (необязательно)" placeholder="Выберите город"/>}
             sx={{ mb:2 }}
@@ -188,6 +199,7 @@ export default function StudentLoginPage() {
               onChange={(_, v)=>{ setSelectedSchoolClass(v); refreshGroups(selectedInstitution.value) }}
               disablePortal
               autoHighlight
+              isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
               getOptionLabel={o=>o?.label ?? ''}
               renderInput={(params) => <TextField {...params} label="Класс" placeholder="Выберите класс"/>}
               sx={{ mb:2 }}
@@ -200,6 +212,7 @@ export default function StudentLoginPage() {
                 onChange={(_, v)=>{ setSelectedSpeciality(v); refreshGroups(selectedInstitution?.value) }}
                 disablePortal
                 autoHighlight
+                isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
                 getOptionLabel={o=>o?.label ?? ''}
                 renderInput={(params) => <TextField {...params} label="Специальность (одна из)" placeholder="Выберите специальность"/>}
                 sx={{ mb:2 }}
@@ -210,6 +223,7 @@ export default function StudentLoginPage() {
                 onChange={(_, v)=>{ setSelectedEducationForm(v); refreshGroups(selectedInstitution?.value) }}
                 disablePortal
                 autoHighlight
+                isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
                 getOptionLabel={o=>o?.label ?? ''}
                 renderInput={(params) => <TextField {...params} label="Форма обучения" placeholder="Очная / Заочная"/>}
                 sx={{ mb:2 }}
@@ -220,6 +234,7 @@ export default function StudentLoginPage() {
                 onChange={(_, v)=>{ setSelectedAdmissionYear(v); refreshGroups(selectedInstitution?.value) }}
                 disablePortal
                 autoHighlight
+                isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
                 getOptionLabel={o=>o?.label ?? ''}
                 renderInput={(params) => <TextField {...params} label="Год поступления (необязательно)" placeholder="Выберите год"/>}
                 sx={{ mb:2 }}
@@ -232,6 +247,7 @@ export default function StudentLoginPage() {
             onChange={(_, v)=>setSelectedGroup(v)}
             disablePortal
             autoHighlight
+            isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
             getOptionLabel={o=>o?.label ?? ''}
             renderInput={(params) => <TextField {...params} label="Группа" placeholder="Выберите группу"/>}
           />
@@ -249,6 +265,7 @@ export default function StudentLoginPage() {
             onChange={(_, v)=>setSelectedCourse(v)}
             disablePortal
             autoHighlight
+            isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
             getOptionLabel={o=>o?.label ?? ''}
             renderInput={(params) => <TextField {...params} label="Курс" placeholder="Выберите курс"/>}
             sx={{ mt:2 }}
