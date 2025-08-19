@@ -46,6 +46,11 @@ export default function StudentLoginPage() {
                 setInstitutionTypes(instResp.data.map((i:any)=>({ value:i.id, label:i.name, name:i.name })))
                 const citiesResp = await http.get('/api/categories/cities')
                 setCities(citiesResp.data.map((c:any)=>({ value:c.id, label:c.name })))
+                // Load specialities (all)
+                try {
+                    const specs = await http.get('/api/categories/specialities')
+                    setSpecialities(specs.data.map((s:any)=>({ value:s.id, label:`${s.code} ${s.name}`, institution_type_id: s.institution_type_id })))
+                } catch {}
                 // Fetch courses (1..4)
                 const courseResp = await http.get('/api/categories/courses', { params: { max: 4 } })
                 setCourses((courseResp.data as number[]).map((n:number)=>({ value: n, label: String(n) })))
@@ -60,26 +65,15 @@ export default function StudentLoginPage() {
         fetchData();
     }, []);
 
-    // fetch dependent dictionaries when institution changes
+    // Fetch education forms when speciality changes (derive institution from speciality)
     useEffect(() => {
         const run = async () => {
-            if (!selectedInstitution) return
-            const instId = selectedInstitution.value
+            if (!selectedSpeciality) return
+            const instId = (selectedSpeciality as any).institution_type_id
             try {
-                // clear dependent selections ONLY when institution changes
-                setSelectedSpeciality(null)
                 setSelectedEducationForm(null)
-                setSelectedAdmissionYear(null)
-                setSelectedSchoolClass(null)
-                // fetch by institution
-                const specs = await http.get('/api/categories/specialities', { params: { institution_type_id: instId } })
-                setSpecialities(specs.data.map((s:any)=>({ value:s.id, label:`${s.code} ${s.name}` })))
                 const forms = await http.get('/api/categories/education-forms', { params: { institution_type_id: instId } })
                 setEducationForms(forms.data.map((f:any)=>({ value:f.id, label:f.name })))
-                const years = await http.get('/api/categories/admission-years', { params: { institution_type_id: instId } })
-                setAdmissionYears(years.data.map((y:any)=>({ value:y.id, label:String(y.year) })))
-                const classes = await http.get('/api/categories/school-classes', { params: { institution_type_id: instId } })
-                setSchoolClasses(classes.data.map((cl:any)=>({ value:cl.id, label:cl.name })))
                 await refreshGroups(instId)
             } catch (e) {
                 // ignore
@@ -87,26 +81,25 @@ export default function StudentLoginPage() {
         }
         run()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedInstitution])
+    }, [selectedSpeciality])
 
     // refresh groups when any filter (except institution change) changes
     useEffect(() => {
         const run = async () => {
-            if (!selectedInstitution) return
-            await refreshGroups(selectedInstitution.value)
+            const instId = (selectedSpeciality as any)?.institution_type_id
+            if (!instId) return
+            await refreshGroups(instId)
         }
         run()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedCity, selectedSchoolClass, selectedSpeciality, selectedEducationForm, selectedAdmissionYear])
+    }, [selectedCity, selectedSpeciality, selectedEducationForm])
 
     async function refreshGroups(instId?: number) {
         const params:any = {}
         if (instId) params.institution_type_id = instId
         if (selectedCity) params.city_id = selectedCity.value
-        if (selectedSchoolClass) params.school_class_id = selectedSchoolClass.value
         if (selectedSpeciality) params.speciality_id = selectedSpeciality.value
         if (selectedEducationForm) params.education_form_id = selectedEducationForm.value
-        if (selectedAdmissionYear) params.admission_year_id = selectedAdmissionYear.value
         const groupsResponse = await http.get('/api/categories/groups', { params })
         const groupsOptions = groupsResponse.data.map((group: any) => ({
             value: group.id,

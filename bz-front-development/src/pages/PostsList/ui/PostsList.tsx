@@ -23,9 +23,10 @@ interface ArticleListItem {
 interface PostsListProps {
   expandAllDefault?: boolean
   fullscreen?: boolean
+  notionMode?: boolean
 }
 
-export default function PostsList({ expandAllDefault = false, fullscreen = false }: PostsListProps) {
+export default function PostsList({ expandAllDefault = false, fullscreen = false, notionMode = false }: PostsListProps) {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [items, setItems] = useState<ArticleListItem[]>([])
@@ -40,7 +41,9 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const [reactionCounts, setReactionCounts] = useState<Record<number, Record<string, number>>>({})
   const [showToTop, setShowToTop] = useState(false)
-  
+  const [readerId, setReaderId] = useState<number | null>(null)
+  const [readerArticle, setReaderArticle] = useState<any | null>(null)
+  const [readerLoading, setReaderLoading] = useState(false)
 
   const pageFromURL = useMemo(() => Number(searchParams.get('page') ?? 1), [searchParams])
   useEffect(() => { setPage(pageFromURL) }, [pageFromURL])
@@ -121,12 +124,51 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  useEffect(() => {
+    if (!notionMode) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeReader()
+      if (e.key === 'ArrowLeft') readerNavigate(-1)
+      if (e.key === 'ArrowRight') readerNavigate(1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [notionMode, readerId, items])
+
   function toggleExpand(id: number) {
+    if (notionMode) {
+      openReader(id)
+      return
+    }
     setExpanded(prev => {
       const next = { ...prev, [id]: !prev[id] }
       if (next[id]) loadReactionsFor([id])
       return next
     })
+  }
+
+  function openReader(id: number) {
+    setReaderId(id)
+    setReaderLoading(true)
+    http.get(`/api/articles/${id}`).then(res => {
+      setReaderArticle(res.data)
+      loadReactionsFor([id])
+    }).catch(()=> setReaderArticle(null)).finally(()=> setReaderLoading(false))
+  }
+
+  function closeReader() {
+    setReaderId(null)
+    setReaderArticle(null)
+  }
+
+  function readerNavigate(delta: number) {
+    if (!readerId) return
+    const ids = items.map(it => it.id)
+    const idx = ids.indexOf(readerId)
+    if (idx < 0) return
+    const nextIdx = idx + delta
+    if (nextIdx < 0 || nextIdx >= ids.length) return
+    openReader(ids[nextIdx])
   }
 
   function getAvatarColor(seed: number): string {
@@ -170,8 +212,6 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     const text = stripHtml(item.content)
     navigator.clipboard?.writeText(`${item.title}\n\n${text}`).catch(()=>{})
   }
-
-  
 
   function handleSearch() {
     const next = new URLSearchParams(searchParams)
@@ -220,23 +260,27 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
                   <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
                     <h3 style={{ margin: 0, fontSize: 16, lineHeight: 1.3, flex: '1 1 auto', cursor:'pointer' }} onClick={()=> toggleExpand(item.id)}>{item.title}</h3>
                   </div>
-                  <div
-                    className='article-content'
-                    style={{
-                      marginTop: 6,
-                      maxHeight: expanded[item.id] ? undefined : 160,
-                      overflow: expanded[item.id] ? 'visible' : 'hidden',
-                      cursor: 'auto'
-                    }}
-                    onClick={()=> toggleExpand(item.id)}
-                    dangerouslySetInnerHTML={{ __html: item.content }}
-                  />
-                  {!expanded[item.id] && (
-                    <div style={{ marginTop: 6 }}>
-                      <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>toggleExpand(item.id)}>
-                        <span>Показать полностью</span>
-                      </Button>
-                    </div>
+                  {!notionMode && (
+                    <>
+                      <div
+                        className='article-content'
+                        style={{
+                          marginTop: 6,
+                          maxHeight: expanded[item.id] ? undefined : 160,
+                          overflow: expanded[item.id] ? 'visible' : 'hidden',
+                          cursor: 'auto'
+                        }}
+                        onClick={()=> toggleExpand(item.id)}
+                        dangerouslySetInnerHTML={{ __html: item.content }}
+                      />
+                      {!expanded[item.id] && (
+                        <div style={{ marginTop: 6 }}>
+                          <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>toggleExpand(item.id)}>
+                            <span>Показать полностью</span>
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
                     <small style={{ opacity: .6 }}>{new Date(item.created_at).toLocaleDateString('ru-RU')}</small>
@@ -286,6 +330,35 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
           <Fab size='small' color='primary' aria-label='Наверх' onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} style={{ position:'fixed', right: 16, bottom: 16 }}>
             <NorthIcon fontSize='small' />
           </Fab>
+        )}
+        {notionMode && readerId !== null && (
+          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.25)', display:'flex', justifyContent:'flex-end', zIndex:50 }} onClick={closeReader}>
+            <div onClick={e=>e.stopPropagation()} style={{ width:'min(100%, 860px)', height:'100%', background:'#fff', padding:'24px', overflowY:'auto', boxShadow:'rgba(0,0,0,0.2) 0 0 30px' }}>
+              {readerLoading && <div>Загрузка…</div>}
+              {!readerLoading && readerArticle && (
+                <div>
+                  <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12}}>
+                    <h2 style={{margin:0, fontSize: 22}}>{(readerArticle as any).title}</h2>
+                    <div style={{display:'flex', gap:8}}>
+                      <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>readerNavigate(-1)}><span>←</span></Button>
+                      <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>readerNavigate(1)}><span>→</span></Button>
+                      <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={closeReader}><span>Закрыть</span></Button>
+                    </div>
+                  </div>
+                  <div style={{opacity:.6, fontSize:12, marginTop:6}}>{new Date((readerArticle as any).created_at).toLocaleString('ru-RU')}</div>
+                  <div style={{display:'flex', flexWrap:'wrap', gap:8, marginTop:10}}>
+                    {(((readerArticle as any).categories)||[]).map((c:any)=> (
+                      <span key={c.id} style={{fontSize:12, background:'#f1f3f5', padding:'2px 8px', borderRadius:999}}>
+                        {c.top_category?.name || 'Категория'}
+                      </span>
+                    ))}
+                  </div>
+                  <hr style={{margin:'16px 0', border:'none', borderTop:'1px solid rgba(0,0,0,0.08)'}}/>
+                  <article className='article-content' style={{ lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: (readerArticle as any).content }} />
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </Container>
     </div>

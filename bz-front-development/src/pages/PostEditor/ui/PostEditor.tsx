@@ -381,8 +381,8 @@ export default function PostEditor() {
                     {/* Categories */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
                         <InputSelect
-                            placeholder="Выберите группы"
-                            label={<p>Группы</p>}
+                            placeholder="Выберите группы (не обязательно)"
+                            label={<p>Группы (не обязательно)</p>}
                             options={groups}
                             value={selectedGroups}
                             onChange={(options) => setSelectedGroups(options || [])}
@@ -390,8 +390,8 @@ export default function PostEditor() {
                         />
                         
                         <InputSelect
-                            placeholder="Выберите категории"
-                            label={<p>Категории</p>}
+                            placeholder="Выберите категории (не обязательно)"
+                            label={<p>Категории (не обязательно)</p>}
                             options={topCategories}
                             value={selectedTopCategories}
                             onChange={(options) => setSelectedTopCategories(options || [])}
@@ -440,48 +440,74 @@ export default function PostEditor() {
                                 {!formData.publish_scope?.publish_for_all && (
                                 <>
                                     <FormControl fullWidth size='small'>
-                                        <InputLabel id='spec-label-2'>Специальность</InputLabel>
+                                        <InputLabel id='spec-label-2'>Специальность (не обязательно)</InputLabel>
                                         <Select labelId='spec-label-2' label='Специальность' value={formData.publish_scope?.speciality_id || ''} onChange={async (e)=> {
-                                            const val = Number(e.target.value)
+                                            const raw = e.target.value as any
+                                            const val = raw === '' ? undefined : Number(raw)
                                             setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, speciality_id: val}}))
                                             const spec = specialities.find(s=>s.value===val)
                                             if (spec?.institution_type_id) {
                                                 try { const resp = await http.get('/api/categories/education-forms', { params: { institution_type_id: spec.institution_type_id } }); setEducationForms(resp.data.map((f:any)=>({value:f.id,label:f.name}))) } catch {}
                                             }
                                         }}>
+                                            <MenuItem value=''>— Все специальности —</MenuItem>
                                             {specialities.map(s=> <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
                                         </Select>
                                     </FormControl>
                                     <FormControl fullWidth size='small'>
-                                        <InputLabel id='form-label-2'>Форма обучения</InputLabel>
-                                        <Select labelId='form-label-2' label='Форма обучения' value={formData.publish_scope?.education_form_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, education_form_id: Number(e.target.value)}}))}>
+                                        <InputLabel id='form-label-2'>Форма обучения (не обязательно)</InputLabel>
+                                        <Select labelId='form-label-2' label='Форма обучения' value={formData.publish_scope?.education_form_id || ''} onChange={(e)=> {
+                                            const raw = e.target.value as any
+                                            const val = raw === '' ? undefined : Number(raw)
+                                            setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, education_form_id: val}}))
+                                        }}>
+                                            <MenuItem value=''>— Все форматы —</MenuItem>
                                             {educationForms.map(f=> <MenuItem key={f.value} value={f.value}>{f.label}</MenuItem>)}
                                         </Select>
                                     </FormControl>
                                 </>) }
                                 {/* Переключатель "Город" (при выборе скрывает курс) */}
                                 <FormControl fullWidth size='small'>
-                                    <InputLabel id='city-label'>Город (необязательно)</InputLabel>
-                                    <Select labelId='city-label' label='Город (необязательно)' value={formData.publish_scope?.city_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: e.target.value===''? undefined : Number(e.target.value), course: undefined}}))}>
-                                        <MenuItem value=''>—</MenuItem>
+                                    <InputLabel id='city-label'>Город (не обязательно)</InputLabel>
+                                    <Select labelId='city-label' label='Город (не обязательно)' value={formData.publish_scope?.city_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: e.target.value===''? undefined : Number(e.target.value), course: undefined}}))}>
+                                        <MenuItem value=''>— Все города —</MenuItem>
                                         {cities.map(c=> <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
                                     </Select>
                                 </FormControl>
                                 {/* Переключатель "Учебная информация" — курс */}
                                 <FormControl fullWidth size='small' disabled={!!formData.publish_scope?.city_id}>
-                                    <InputLabel id='course-label'>Курс (необязательно)</InputLabel>
-                                    <Select labelId='course-label' label='Курс (необязательно)' value={formData.publish_scope?.course || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, course: e.target.value===''? undefined : Number(e.target.value)}}))}>
-                                        <MenuItem value=''>—</MenuItem>
+                                    <InputLabel id='course-label'>Курс (не обязательно)</InputLabel>
+                                    <Select labelId='course-label' label='Курс (не обязательно)' value={formData.publish_scope?.course || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, course: e.target.value===''? undefined : Number(e.target.value)}}))}>
+                                        <MenuItem value=''>— Все курсы —</MenuItem>
                                         {courseOptions.map(o=> <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                                     </Select>
                                 </FormControl>
                                 <FormControl fullWidth size='small'>
-                                    <InputLabel id='year-label'>Год поступления (необязательно)</InputLabel>
-                                    <Select labelId='year-label' label='Год поступления (необязательно)' value={formData.publish_scope?.admission_year_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, admission_year_id: Number(e.target.value)}}))}>
-                                        <MenuItem value=''>—</MenuItem>
+                                    <InputLabel id='year-label'>Год поступления (не обязательно)</InputLabel>
+                                    <Select labelId='year-label' label='Год поступления (не обязательно)' value={formData.publish_scope?.admission_year_id || ''} onChange={(e)=> {
+                                        const raw = e.target.value as any
+                                        const val = raw === '' ? undefined : Number(raw)
+                                        setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, admission_year_id: val}}))
+                                    }}>
+                                        <MenuItem value=''>— Все годы поступления —</MenuItem>
                                         {admissionYears.map(y=> <MenuItem key={y.value} value={y.value}>{y.label}</MenuItem>)}
                                     </Select>
                                 </FormControl>
+                                {/* Школа — класс */}
+                                {selectedInstitution?.name?.toLowerCase()==='школа' && (
+                                  <FormControl fullWidth size='small'>
+                                    <InputLabel id='class-label'>Класс (не обязательно)</InputLabel>
+                                    <Select labelId='class-label' label='Класс (не обязательно)' value={selectedSchoolClass?.value || ''} onChange={(e)=> {
+                                      const raw = e.target.value as any
+                                      const val = raw === '' ? undefined : Number(raw)
+                                      const found = schoolClasses.find(c=>c.value===val)
+                                      setSelectedSchoolClass(found || null)
+                                    }}>
+                                      <MenuItem value=''>— Все классы —</MenuItem>
+                                      {schoolClasses.map(cl=> <MenuItem key={cl.value} value={cl.value}>{cl.label}</MenuItem>)}
+                                    </Select>
+                                  </FormControl>
+                                )}
                             </div>
                         </AccordionDetails>
                     </Accordion>
