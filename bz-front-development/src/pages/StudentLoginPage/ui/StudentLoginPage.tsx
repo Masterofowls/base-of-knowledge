@@ -46,14 +46,7 @@ export default function StudentLoginPage() {
                 setInstitutionTypes(instResp.data.map((i:any)=>({ value:i.id, label:i.name, name:i.name })))
                 const citiesResp = await http.get('/api/categories/cities')
                 setCities(citiesResp.data.map((c:any)=>({ value:c.id, label:c.name })))
-                // Load specialities (all)
-                try {
-                    const specs = await http.get('/api/categories/specialities')
-                    setSpecialities(specs.data.map((s:any)=>({ value:s.id, label:`${s.code} ${s.name}`, institution_type_id: s.institution_type_id })))
-                } catch {}
-                // Fetch courses (1..4)
-                const courseResp = await http.get('/api/categories/courses', { params: { max: 4 } })
-                setCourses((courseResp.data as number[]).map((n:number)=>({ value: n, label: String(n) })))
+                // Fetch courses disabled per new UX
                 
             } catch (error) {
                 console.error('Failed to fetch data:', error);
@@ -65,15 +58,26 @@ export default function StudentLoginPage() {
         fetchData();
     }, []);
 
-    // Fetch education forms when speciality changes (derive institution from speciality)
+    // fetch dependent dictionaries when institution changes
     useEffect(() => {
         const run = async () => {
-            if (!selectedSpeciality) return
-            const instId = (selectedSpeciality as any).institution_type_id
+            if (!selectedInstitution) return
+            const instId = selectedInstitution.value
             try {
+                // clear dependent selections ONLY when institution changes
+                setSelectedSpeciality(null)
                 setSelectedEducationForm(null)
+                setSelectedAdmissionYear(null)
+                setSelectedSchoolClass(null)
+                // fetch by institution
+                const specs = await http.get('/api/categories/specialities', { params: { institution_type_id: instId } })
+                setSpecialities(specs.data.map((s:any)=>({ value:s.id, label:`${s.code} ${s.name}` })))
                 const forms = await http.get('/api/categories/education-forms', { params: { institution_type_id: instId } })
                 setEducationForms(forms.data.map((f:any)=>({ value:f.id, label:f.name })))
+                const years = await http.get('/api/categories/admission-years', { params: { institution_type_id: instId } })
+                setAdmissionYears(years.data.map((y:any)=>({ value:y.id, label:String(y.year) })))
+                const classes = await http.get('/api/categories/school-classes', { params: { institution_type_id: instId } })
+                setSchoolClasses(classes.data.map((cl:any)=>({ value:cl.id, label:cl.name })))
                 await refreshGroups(instId)
             } catch (e) {
                 // ignore
@@ -81,23 +85,23 @@ export default function StudentLoginPage() {
         }
         run()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedSpeciality])
+    }, [selectedInstitution])
 
     // refresh groups when any filter (except institution change) changes
     useEffect(() => {
         const run = async () => {
-            const instId = (selectedSpeciality as any)?.institution_type_id
-            if (!instId) return
-            await refreshGroups(instId)
+            if (!selectedInstitution) return
+            await refreshGroups(selectedInstitution.value)
         }
         run()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedCity, selectedSpeciality, selectedEducationForm])
+    }, [selectedCity, selectedSchoolClass, selectedSpeciality, selectedEducationForm])
 
     async function refreshGroups(instId?: number) {
         const params:any = {}
         if (instId) params.institution_type_id = instId
         if (selectedCity) params.city_id = selectedCity.value
+        if (selectedSchoolClass) params.school_class_id = selectedSchoolClass.value
         if (selectedSpeciality) params.speciality_id = selectedSpeciality.value
         if (selectedEducationForm) params.education_form_id = selectedEducationForm.value
         const groupsResponse = await http.get('/api/categories/groups', { params })
@@ -118,35 +122,32 @@ export default function StudentLoginPage() {
             if (!selectedSchoolClass) { alert('Выберите класс'); return }
         } else {
             if (!selectedEducationForm) { alert('Выберите форму обучения'); return }
-            if (!selectedSpeciality && !selectedAdmissionYear) { alert('Укажите специальность или год поступления'); return }
+            if (!selectedSpeciality) { alert('Выберите специальность'); return }
         }
         try {
             const payload:any = {
                 institution_type_id: selectedInstitution.value,
                 city_id: selectedCity?.value,
-                group_id: selectedGroup?.value,
-                course: selectedCourse?.value,
+                group_id: isSchool ? undefined : selectedGroup?.value,
             }
             if (isSchool) {
                 payload.school_class_id = selectedSchoolClass?.value
             } else {
                 payload.education_form_id = selectedEducationForm?.value
                 if (selectedSpeciality) payload.speciality_id = selectedSpeciality.value
-                if (selectedAdmissionYear) payload.admission_year_id = selectedAdmissionYear.value
             }
             const resp = await http.post('/api/auth/student-login', payload)
             const { token, context } = resp.data || {}
             if (token) localStorage.setItem('student_ctx_token', token)
             // Store selections for feed
-            if (selectedGroup) {
+            if (!isSchool && selectedGroup) {
                 localStorage.setItem('student_group', selectedGroup.label)
                 localStorage.setItem('student_group_id', String(selectedGroup.value))
             }
-            if (selectedCourse) localStorage.setItem('student_course', String(selectedCourse.value))
-            if (selectedAdmissionYear) localStorage.setItem('student_admission_year_id', String(selectedAdmissionYear.value))
             if (selectedInstitution) localStorage.setItem('student_institution_type_id', String(selectedInstitution.value))
             if (selectedEducationForm) localStorage.setItem('student_education_form_id', String(selectedEducationForm.value))
             if (selectedCity) localStorage.setItem('student_city_id', String(selectedCity.value))
+            if (isSchool && selectedSchoolClass) localStorage.setItem('student_base_class', selectedSchoolClass.label)
             localStorage.setItem('user_role', 'student')
             localStorage.setItem('strict_audience', '1')
             navigate('/student')
@@ -182,7 +183,7 @@ export default function StudentLoginPage() {
             autoHighlight
             isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
             getOptionLabel={o=>o?.label ?? ''}
-            renderInput={(params) => <TextField {...params} label="Город (необязательно)" placeholder="Выберите город"/>}
+            renderInput={(params) => <TextField {...params} label="Город (не обязательно)" placeholder="Выберите город"/>}
             sx={{ mb:2 }}
           />
           {selectedInstitution && selectedInstitution.name.toLowerCase()==='школа' ? (
@@ -207,7 +208,7 @@ export default function StudentLoginPage() {
                 autoHighlight
                 isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
                 getOptionLabel={o=>o?.label ?? ''}
-                renderInput={(params) => <TextField {...params} label="Специальность (одна из)" placeholder="Выберите специальность"/>}
+                renderInput={(params) => <TextField {...params} label="Специальность" placeholder="Выберите специальность"/>}
                 sx={{ mb:2 }}
               />
               <Autocomplete
@@ -221,53 +222,26 @@ export default function StudentLoginPage() {
                 renderInput={(params) => <TextField {...params} label="Форма обучения" placeholder="Очная / Заочная"/>}
                 sx={{ mb:2 }}
               />
-              <Autocomplete
-                options={admissionYears}
-                value={selectedAdmissionYear}
-                onChange={(_, v)=>{ setSelectedAdmissionYear(v); refreshGroups(selectedInstitution?.value) }}
-                disablePortal
-                autoHighlight
-                isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-                getOptionLabel={o=>o?.label ?? ''}
-                renderInput={(params) => <TextField {...params} label="Год поступления (необязательно)" placeholder="Выберите год"/>}
-                sx={{ mb:2 }}
-              />
             </>
           )}
-          <Autocomplete
-            options={groups}
-            value={selectedGroup}
-            onChange={(_, v)=>setSelectedGroup(v)}
-            disablePortal
-            autoHighlight
-            isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-            getOptionLabel={o=>o?.label ?? ''}
-            renderInput={(params) => <TextField {...params} label="Группа" placeholder="Выберите группу"/>}
-          />
-          {selectedGroup?.meta?.institution_type_id && (
-            <Alert severity="info" sx={{ mt:1 }}>
-              {selectedGroup.meta.institution_type_id === 1 && (<Box sx={{display:'flex',alignItems:'center',gap:1}}><SchoolIcon2 fontSize='small'/> <span>Тип: Школа. Доступен выбор класса. Прочие категории скрыты.</span></Box>)}
-              {selectedGroup.meta.institution_type_id === 2 && (<Box sx={{display:'flex',alignItems:'center',gap:1}}><ApartmentIcon fontSize='small'/> <span>Тип: Колледж. Класс не применяется. Используются профиль/форма/год.</span></Box>)}
-              {selectedGroup.meta.institution_type_id === 3 && (<Box sx={{display:'flex',alignItems:'center',gap:1}}><DomainIcon fontSize='small'/> <span>Тип: Вуз. Класс не применяется. Используются профиль/форма/год.</span></Box>)}
-            </Alert>
+          {(!selectedInstitution || selectedInstitution.name.toLowerCase()!=='школа') && (
+            <Autocomplete
+              options={groups}
+              value={selectedGroup}
+              onChange={(_, v)=>setSelectedGroup(v)}
+              disablePortal
+              autoHighlight
+              isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+              getOptionLabel={o=>o?.label ?? ''}
+              renderInput={(params) => <TextField {...params} label="Группа (не обязательно)" placeholder="Выберите группу"/>}
+            />
           )}
-          {/* base selection removed */}
-          <Autocomplete
-            options={courses}
-            value={selectedCourse}
-            onChange={(_, v)=>setSelectedCourse(v)}
-            disablePortal
-            autoHighlight
-            isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-            getOptionLabel={o=>o?.label ?? ''}
-            renderInput={(params) => <TextField {...params} label="Курс" placeholder="Выберите курс"/>}
-            sx={{ mt:2 }}
-          />
+          {/* course removed per new UX */}
           <Box sx={{ display:'flex', gap:1, mt:2 }}>
             <Button onClick={handleBack} startIcon={<ArrowBackIcon/>} variant="outlined" color="inherit">Назад</Button>
             <Button onClick={handleStudentLogin} variant="contained" sx={{ ml:'auto' }}>Войти</Button>
           </Box>
-          <Alert sx={{ mt:2 }} severity="info">Данные студентов не сохраняются в базе. Вход осуществляется через выбор группы для просмотра материалов.</Alert>
+          <Alert sx={{ mt:2 }} severity="info">Данные студентов не сохраняются в базе. Вход осуществляется через выбор контекста (специальность/форма/город/класс).</Alert>
         </Paper>
       </Container>
     );
