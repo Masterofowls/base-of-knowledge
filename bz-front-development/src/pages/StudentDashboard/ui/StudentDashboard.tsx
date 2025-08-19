@@ -68,7 +68,7 @@ export default function StudentDashboard() {
             {/* Feed only, full available width */}
             <div style={{display:'flex', justifyContent:'center', width:'100%'}}>
                 <div style={{flex: 1, maxWidth: 900}}>
-                    <PostsList fullscreen />
+                    <PostsList fullscreen notionMode />
                 </div>
             </div>
         </main>

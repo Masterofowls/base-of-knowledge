@@ -86,7 +86,7 @@ def get_media(media_id):
     return send_file(
         file_obj,
         mimetype=media.mime_type,
-        as_attachment=True,
+        as_attachment=False,
         download_name=media.file_name
     )
 

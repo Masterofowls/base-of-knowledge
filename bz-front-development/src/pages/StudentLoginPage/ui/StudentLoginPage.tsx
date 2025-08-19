@@ -15,6 +15,7 @@ import ApartmentIcon from '@mui/icons-material/Apartment'
 import DomainIcon from '@mui/icons-material/Domain'
 import SchoolIcon from '@mui/icons-material/School'
 import { FormControl, InputLabel, MenuItem, Select } from '@mui/material'
+import { VirtualListbox } from 'shared/ui/VirtualListbox'
 
 export default function StudentLoginPage() {
     const navigate = useNavigate();
@@ -174,6 +175,7 @@ export default function StudentLoginPage() {
             getOptionLabel={o=>o?.label ?? ''}
             renderInput={(params) => <TextField {...params} label="Тип учреждения" placeholder="Колледж / Вуз / Школа"/>}
             sx={{ mb:2 }}
+            ListboxComponent={VirtualListbox as any}
           />
           <Autocomplete
             options={cities}
@@ -185,6 +187,7 @@ export default function StudentLoginPage() {
             getOptionLabel={o=>o?.label ?? ''}
             renderInput={(params) => <TextField {...params} label="Город (не обязательно)" placeholder="Выберите город"/>}
             sx={{ mb:2 }}
+            ListboxComponent={VirtualListbox as any}
           />
           {selectedInstitution && selectedInstitution.name.toLowerCase()==='школа' ? (
             <Autocomplete
@@ -210,6 +213,7 @@ export default function StudentLoginPage() {
                 getOptionLabel={o=>o?.label ?? ''}
                 renderInput={(params) => <TextField {...params} label="Специальность" placeholder="Выберите специальность"/>}
                 sx={{ mb:2 }}
+                ListboxComponent={VirtualListbox as any}
               />
               <Autocomplete
                 options={educationForms}
@@ -221,6 +225,7 @@ export default function StudentLoginPage() {
                 getOptionLabel={o=>o?.label ?? ''}
                 renderInput={(params) => <TextField {...params} label="Форма обучения" placeholder="Очная / Заочная"/>}
                 sx={{ mb:2 }}
+                ListboxComponent={VirtualListbox as any}
               />
             </>
           )}
@@ -234,6 +239,7 @@ export default function StudentLoginPage() {
               isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
               getOptionLabel={o=>o?.label ?? ''}
               renderInput={(params) => <TextField {...params} label="Группа (не обязательно)" placeholder="Выберите группу"/>}
+              ListboxComponent={VirtualListbox as any}
             />
           )}
           {/* course removed per new UX */}

@@ -11,8 +11,14 @@ import Quill from 'quill'
 import 'quill/dist/quill.snow.css'
 import ArrowIcon from "shared/assets/icons/ArrrowLeft.svg?react";
 import SaveIcon from "shared/assets/icons/Plus.svg?react";
-import { Accordion, AccordionSummary, AccordionDetails, FormControlLabel, Checkbox, Select, MenuItem, InputLabel, FormControl, Chip, Button as MUIButton, Autocomplete, TextField } from '@mui/material'
+import { Accordion, AccordionSummary, AccordionDetails, FormControlLabel, Checkbox, Autocomplete, TextField, IconButton } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import UploadIcon from '@mui/icons-material/Upload'
+import DeleteIcon from '@mui/icons-material/Delete'
+import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import imageCompression from 'browser-image-compression'
+import { VirtualListbox } from 'shared/ui/VirtualListbox'
 
 interface Category {
     id: number;
@@ -96,6 +102,7 @@ export default function PostEditor() {
     const [error, setError] = useState<string | null>(null);
     const editorRef = useRef<HTMLDivElement | null>(null)
     const quillRef = useRef<Quill | null>(null)
+    const [attachments, setAttachments] = useState<Array<{ id:number, url:string, name:string, type:string }>>([])
     const TOOLBAR: any = useMemo(() => ([
         [{ 'font': [] }],
         [{ 'size': ['small', false, 'large', 'huge'] }],
@@ -120,27 +127,17 @@ export default function PostEditor() {
 
     const fetchCategories = async () => {
         try {
-            // Fetch groups
             const groupsResponse = await http.get('/api/categories/groups');
-            const groupsOptions = groupsResponse.data.map((group: Group) => ({
-                value: group.id,
-                label: group.display_name
-            }));
+            const groupsOptions = groupsResponse.data.map((group: Group) => ({ value: group.id, label: group.display_name }));
             setGroups(groupsOptions);
 
-            // Fetch top categories
             const topCategoriesResponse = await http.get('/api/categories/top-categories');
-            const topCategoriesOptions = topCategoriesResponse.data.map((category: TopCategory) => ({
-                value: category.id,
-                label: category.name
-            }));
+            const topCategoriesOptions = topCategoriesResponse.data.map((category: TopCategory) => ({ value: category.id, label: category.name }));
             setTopCategories(topCategoriesOptions);
 
-            // Fetch institution types
             const instResp = await http.get('/api/categories/institution-types')
             setInstitutionTypes(instResp.data.map((i:any)=>({ value:i.id, label:i.name, name:i.name })))
 
-            // Fetch cities
             const citiesResponse = await http.get('/api/categories/cities');
             setCities(citiesResponse.data.map((c:any)=>({value:c.id,label:c.name})))
 
@@ -161,7 +158,6 @@ export default function PostEditor() {
         }
     };
 
-    // Load dependent dictionaries when institution changes
     useEffect(() => {
         const run = async () => {
             if (!selectedInstitution) return
@@ -176,52 +172,32 @@ export default function PostEditor() {
                 const classesResponse = await http.get('/api/categories/school-classes', { params: { institution_type_id: instId } })
                 setSchoolClasses(classesResponse.data.map((cl:any)=>({ value:cl.id, label:cl.name })))
                 setSelectedSchoolClass(null)
-                // If switched to school — course is not applicable
                 if (selectedInstitution.name.toLowerCase()==='школа') {
                     setFormData(prev=> ({...prev, publish_scope: { ...(prev.publish_scope||{}), course: undefined }}))
                 }
             } catch {}
         }
         run()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedInstitution])
 
     const fetchArticle = async () => {
         if (!id) return;
-        
         try {
             setLoading(true);
             const response = await http.get(`/api/articles/${id}`);
             const article = response.data;
-            
-            setFormData({
-                title: article.title,
-                content: article.content,
-                is_published: article.is_published,
-                is_for_staff: article.is_for_staff,
-                is_actual: article.is_actual,
-                category_ids: article.categories.map((cat: Category) => cat.id)
-            });
-
+            setFormData({ title: article.title, content: article.content, is_published: article.is_published, is_for_staff: article.is_for_staff, is_actual: article.is_actual, category_ids: article.categories.map((cat: Category) => cat.id) });
             if (quillRef.current) quillRef.current.setText('')
             if (quillRef.current && article.content) {
                 quillRef.current.setText('')
                 quillRef.current.clipboard.dangerouslyPasteHTML(article.content)
             }
-
-            // Set selected categories for the UI
-            const selectedGroupIds = article.categories
-                .filter((cat: Category) => cat.group)
-                .map((cat: Category) => cat.group!.id);
+            const selectedGroupIds = article.categories.filter((cat: Category) => cat.group).map((cat: Category) => cat.group!.id);
             const selectedGroupOptions = groups.filter(group => selectedGroupIds.includes(group.value));
             setSelectedGroups(selectedGroupOptions);
-
-            const selectedTopCategoryIds = article.categories
-                .filter((cat: Category) => cat.top_category)
-                .map((cat: Category) => cat.top_category!.id);
+            const selectedTopCategoryIds = article.categories.filter((cat: Category) => cat.top_category).map((cat: Category) => cat.top_category!.id);
             const selectedTopCategoryOptions = topCategories.filter(cat => selectedTopCategoryIds.includes(cat.value));
             setSelectedTopCategories(selectedTopCategoryOptions);
-
         } catch (error) {
             console.error('Failed to fetch article:', error);
             setError('Не удалось загрузить пост');
@@ -231,25 +207,13 @@ export default function PostEditor() {
     };
 
     const handleInputChange = (field: keyof PostFormData, value: any) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
+        setFormData(prev => ({ ...prev, [field]: value }));
     };
 
     const handleSubmit = async () => {
-        if (!formData.title.trim()) {
-            setError('Название поста обязательно');
-            return;
-        }
-
+        if (!formData.title.trim()) { setError('Название поста обязательно'); return; }
         const html = quillRef.current?.root.innerHTML ?? formData.content
-        if (!html || html === '<p><br></p>') {
-            setError('Содержание поста обязательно');
-            return;
-        }
-
-        // Audience validation per rules
+        if (!html || html === '<p><br></p>') { setError('Содержание поста обязательно'); return; }
         const ps = formData.publish_scope || {}
         if (!ps.publish_for_all) {
             const hasCity = !!ps.city_id
@@ -261,67 +225,58 @@ export default function PostEditor() {
                 return
             }
         }
-
         try {
             setSaving(true);
             setError(null);
-
-            // Combine selected category IDs
-            const categoryIds = [
-                ...selectedGroups.map(group => group.value),
-                ...selectedTopCategories.map(cat => cat.value)
-            ];
-
-            // augment publish_scope with institution and school_class if selected
+            const categoryIds = [ ...selectedGroups.map(group => group.value), ...selectedTopCategories.map(cat => cat.value) ];
             const augmentedScope = { ...(formData.publish_scope||{}) }
-            if (selectedInstitution) {
-                augmentedScope.institution_type_id = selectedInstitution.value
-            }
-            if (selectedSchoolClass) {
-                augmentedScope.school_class_id = selectedSchoolClass.value
-            }
-
-            const postData = {
-                ...formData,
-                content: html,
-                category_ids: categoryIds,
-                publish_scope: augmentedScope
-            };
-
-            if (isEditing) {
-                await http.put(`/api/articles/${id}`, postData);
-            } else {
-                await http.post('/api/articles', postData);
-            }
-
+            if (selectedInstitution) augmentedScope.institution_type_id = selectedInstitution.value
+            if (selectedSchoolClass) augmentedScope.school_class_id = selectedSchoolClass.value
+            const postData = { ...formData, content: html, category_ids: categoryIds, publish_scope: augmentedScope };
+            if (isEditing) await http.put(`/api/articles/${id}`, postData); else await http.post('/api/articles', postData);
             navigate('/admin/posts');
         } catch (error: any) {
             console.error('Failed to save post:', error);
             setError(error.response?.data?.error || 'Не удалось сохранить пост');
-        } finally {
-            setSaving(false);
-        }
+        } finally { setSaving(false); }
     };
 
-    const handleBack = () => {
-        navigate('/admin/posts');
-    };
+    const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || [])
+        for (const file of files) {
+            const isImage = /image\/(png|jpeg|jpg|webp)/.test(file.type)
+            const toUpload = isImage ? await imageCompression(file, { maxSizeMB: 0.6, maxWidthOrHeight: 1920 }) : file
+            const form = new FormData()
+            form.append('file', toUpload)
+            try {
+                const res = await http.post('/api/media/upload', form, { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${localStorage.getItem('jwt_token')||''}` } })
+                const id = res.data.id
+                const url = `/api/media/${id}`
+                setAttachments(prev => [...prev, { id, url, name: res.data.file_name, type: res.data.media_type }])
+                const q = quillRef.current
+                if (q && res.data.media_type === 'image') {
+                    const range = q.getSelection(true)
+                    q.insertEmbed(range ? range.index : q.getLength(), 'image', url, 'user')
+                } else if (q && res.data.media_type === 'file') {
+                    const range = q.getSelection(true)
+                    q.insertText(range ? range.index : q.getLength(), `\n[Файл: ${res.data.file_name}](${url})\n`)
+                }
+            } catch(e) { console.error(e) }
+        }
+        e.currentTarget.value = ''
+    }
+
+    const handleBack = () => { navigate('/admin/posts'); };
 
     useEffect(() => {
         if (!editorRef.current || quillRef.current) return
         const q = new Quill(editorRef.current, {
             theme: 'snow',
-            placeholder: 'Введите текст поста…',
-            modules: {
-                toolbar: TOOLBAR,
-                clipboard: { matchVisual: false }
-            }
+            placeholder: 'Перетащите файлы в это поле или используйте кнопку загрузки',
+            modules: { toolbar: TOOLBAR, clipboard: { matchVisual: false } }
         })
         quillRef.current = q
-        // keep two-way sync with formData.content for fallback
-        q.on('text-change', () => {
-            setFormData(prev => ({ ...prev, content: q.root.innerHTML }))
-        })
+        q.on('text-change', () => { setFormData(prev => ({ ...prev, content: q.root.innerHTML })) })
         return () => { quillRef.current = null }
     }, [TOOLBAR])
 
@@ -340,14 +295,15 @@ export default function PostEditor() {
             <Container gap="20px" width='min(100%, 960px)' direction="column" paddings='24px'>
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-                    <span 
-                        onClick={handleBack} 
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: "5px", cursor: 'pointer' }}
-                    >
+                    <span onClick={handleBack} style={{ display: 'inline-flex', alignItems: 'center', gap: "5px", cursor: 'pointer' }}>
                         <ArrowIcon width='13px' height='11px' />
                         <p>Назад к управлению постами</p>
                     </span>
                     <h2>{isEditing ? 'Редактировать пост' : 'Создать новый пост'}</h2>
+                    <label style={{ marginLeft: 'auto' }}>
+                        <input type='file' multiple accept='image/*,application/pdf,video/*' onChange={handleFileInput} style={{ display:'none' }} />
+                        <Button width='auto' backgroundColor='#eee' theme={ThemeButton.CLEAR}><span><UploadIcon fontSize='small' />&nbsp;Загрузить</span></Button>
+                    </label>
                 </div>
 
                 {/* Error Display */}
@@ -360,83 +316,83 @@ export default function PostEditor() {
                 {/* Form */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {/* Title */}
-                    <Input
-                        type="text"
-                        placeholder="Введите название поста"
-                        label={<p>Название поста *</p>}
-                        value={formData.title}
-                        onChange={(value) => handleInputChange('title', value)}
-                    />
+                    <Input type="text" placeholder="Введите название поста" label={<p>Название поста *</p>} value={formData.title} onChange={(value) => handleInputChange('title', value)} />
 
-                    {/* Content */}
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-                            Содержание поста *
-                        </label>
+                    {/* Content with DnD */}
+                    <div onDragOver={(e)=>{ e.preventDefault(); }} onDrop={async (e)=>{
+                        e.preventDefault();
+                        const files = Array.from(e.dataTransfer.files || [])
+                        for (const file of files) {
+                            const isImage = /image\/(png|jpeg|jpg|webp)/.test(file.type)
+                            const toUpload = isImage ? await imageCompression(file, { maxSizeMB: 0.6, maxWidthOrHeight: 1920 }) : file
+                            const form = new FormData()
+                            form.append('file', toUpload)
+                            try {
+                                const res = await http.post('/api/media/upload', form, { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${localStorage.getItem('jwt_token')||''}` } })
+                                const id = res.data.id
+                                const url = `/api/media/${id}`
+                                setAttachments(prev => [...prev, { id, url, name: res.data.file_name, type: res.data.media_type }])
+                                const q = quillRef.current
+                                if (q && res.data.media_type === 'image') {
+                                    const range = q.getSelection(true)
+                                    q.insertEmbed(range ? range.index : q.getLength(), 'image', url, 'user')
+                                } else if (q && res.data.media_type === 'file') {
+                                    const range = q.getSelection(true)
+                                    q.insertText(range ? range.index : q.getLength(), `\n[Файл: ${res.data.file_name}](${url})\n`)
+                                }
+                            } catch(e) { console.error(e) }
+                        }
+                    }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Содержание поста *</label>
                         <div style={{ border: '1px solid #ddd', borderRadius: 6 }}>
                             <div ref={editorRef} style={{ minHeight: 280 }} />
                         </div>
+                        {attachments.length > 0 && (
+                          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(140px,1fr))', gap:12, marginTop:12 }}>
+                            {attachments.map(att => (
+                              <div key={att.id} style={{ border:'1px solid #eee', borderRadius:8, padding:8 }}>
+                                {att.type==='image' ? (
+                                  <img src={att.url} alt={att.name} style={{ width:'100%', height:100, objectFit:'cover', borderRadius:6 }} />
+                                ) : (
+                                  <a href={att.url} target='_blank' rel='noreferrer'>{att.name}</a>
+                                )}
+                                <div style={{ display:'flex', justifyContent:'flex-end' }}>
+                                  <IconButton size='small' onClick={()=> setAttachments(prev => prev.filter(x=>x.id!==att.id))}><DeleteIcon fontSize='small' /></IconButton>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                     </div>
 
                     {/* Categories */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
-                        <InputSelect
-                            placeholder="Выберите группы (не обязательно)"
-                            label={<p>Группы (не обязательно)</p>}
-                            options={groups}
-                            value={selectedGroups}
-                            onChange={(options) => setSelectedGroups(options || [])}
-                            isMulti={true}
-                        />
-                        
-                        <InputSelect
-                            placeholder="Выберите категории (не обязательно)"
-                            label={<p>Категории (не обязательно)</p>}
-                            options={topCategories}
-                            value={selectedTopCategories}
-                            onChange={(options) => setSelectedTopCategories(options || [])}
-                            isMulti={true}
-                        />
+                        <InputSelect placeholder="Выберите группы (не обязательно)" label={<p>Группы (не обязательно)</p>} options={groups} value={selectedGroups} onChange={(options) => setSelectedGroups(options || [])} isMulti={true} />
+                        <InputSelect placeholder="Выберите категории (не обязательно)" label={<p>Категории (не обязательно)</p>} options={topCategories} value={selectedTopCategories} onChange={(options) => setSelectedTopCategories(options || [])} isMulti={true} />
                     </div>
 
                     {/* Checkboxes */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={formData.is_published}
-                                onChange={(e) => handleInputChange('is_published', e.target.checked)}
-                            />
+                            <input type="checkbox" checked={formData.is_published} onChange={(e) => handleInputChange('is_published', e.target.checked)} />
                             <span>Опубликовать сразу</span>
                         </label>
-                        
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={formData.is_for_staff}
-                                onChange={(e) => handleInputChange('is_for_staff', e.target.checked)}
-                            />
+                            <input type="checkbox" checked={formData.is_for_staff} onChange={(e) => handleInputChange('is_for_staff', e.target.checked)} />
                             <span>Только для сотрудников</span>
                         </label>
-                        
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={formData.is_actual}
-                                onChange={(e) => handleInputChange('is_actual', e.target.checked)}
-                            />
+                            <input type="checkbox" checked={formData.is_actual} onChange={(e) => handleInputChange('is_actual', e.target.checked)} />
                             <span>Актуальный</span>
                         </label>
                     </div>
 
-                    {/* Аудитория: переключатели "Для всех / Город / Учебная информация" */}
+                    {/* Audience */}
                     <Accordion defaultExpanded>
                         <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Параметры аудитории</AccordionSummary>
                         <AccordionDetails>
                             <div style={{display:'grid', gridTemplateColumns:'1fr', gap:12}}>
-                                {/* Для всех */}
                                 <FormControlLabel control={<Checkbox checked={!!formData.publish_scope?.publish_for_all} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, publish_for_all: e.target.checked, city_id: undefined, course: undefined }}))}/>} label='Для всех' />
-                                {/* Если не для всех, доступны Город и Учебная информация */}
                                 {!formData.publish_scope?.publish_for_all && (
                                 <>
                                     <FormControl fullWidth size='small'>
@@ -466,7 +422,6 @@ export default function PostEditor() {
                                         </Select>
                                     </FormControl>
                                 </>) }
-                                {/* Переключатель "Город" (при выборе скрывает курс) */}
                                 <FormControl fullWidth size='small'>
                                     <InputLabel id='city-label'>Город (не обязательно)</InputLabel>
                                     <Select labelId='city-label' label='Город (не обязательно)' value={formData.publish_scope?.city_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: e.target.value===''? undefined : Number(e.target.value), course: undefined}}))}>
@@ -474,7 +429,6 @@ export default function PostEditor() {
                                         {cities.map(c=> <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
                                     </Select>
                                 </FormControl>
-                                {/* Переключатель "Учебная информация" — курс */}
                                 <FormControl fullWidth size='small' disabled={!!formData.publish_scope?.city_id}>
                                     <InputLabel id='course-label'>Курс (не обязательно)</InputLabel>
                                     <Select labelId='course-label' label='Курс (не обязательно)' value={formData.publish_scope?.course || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, course: e.target.value===''? undefined : Number(e.target.value)}}))}>
@@ -493,7 +447,6 @@ export default function PostEditor() {
                                         {admissionYears.map(y=> <MenuItem key={y.value} value={y.value}>{y.label}</MenuItem>)}
                                     </Select>
                                 </FormControl>
-                                {/* Школа — класс */}
                                 {selectedInstitution?.name?.toLowerCase()==='школа' && (
                                   <FormControl fullWidth size='small'>
                                     <InputLabel id='class-label'>Класс (не обязательно)</InputLabel>
@@ -514,27 +467,8 @@ export default function PostEditor() {
 
                     {/* Action Buttons */}
                     <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
-                        <Button
-                            onClick={handleBack}
-                            width='120px'
-                            backgroundColor='#666'
-                            theme={ThemeButton.CLEAR}
-                        >
-                            <span>Отмена</span>
-                        </Button>
-                        
-                        <Button
-                            onClick={handleSubmit}
-                            width='180px'
-                            backgroundColor='#00AAFF'
-                            theme={ThemeButton.ARROW}
-                            disabled={saving}
-                        >
-                            <span>
-                                <SaveIcon width='13px' height='13px' />
-                                <p>{saving ? 'Сохранение...' : (isEditing ? 'Обновить' : 'Создать')}</p>
-                            </span>
-                        </Button>
+                        <Button onClick={handleBack} width='120px' backgroundColor='#666' theme={ThemeButton.CLEAR}><span>Отмена</span></Button>
+                        <Button onClick={handleSubmit} width='180px' backgroundColor='#00AAFF' theme={ThemeButton.ARROW} disabled={saving}><span><SaveIcon width='13px' height='13px' /><p>{saving ? 'Сохранение...' : (isEditing ? 'Обновить' : 'Создать')}</p></span></Button>
                     </div>
                 </div>
             </Container>
