@@ -1,0 +1,107 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36" version="28.1.0">
+  <diagram name="Страница — 1" id="JFmpAm3WH8YWqq2uzqp-">
+    <mxGraphModel dx="1042" dy="670" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#ffffff" math="0" shadow="1">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="k9Ec4tWy4QfhTWG7qi_L-1" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="130" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-1" value="вход студента&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="60" y="100" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-2" value="&lt;br&gt;Специальность&lt;br&gt;Форма обчуения&amp;nbsp;&lt;br&gt;Город&lt;br&gt;Группа&lt;br&gt;(автоматическая фильтрация на фронте)" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="290" y="70" width="146" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="k9Ec4tWy4QfhTWG7qi_L-4" target="k9Ec4tWy4QfhTWG7qi_L-5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-4" value="Создать пост&lt;br&gt;фильтры&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="60" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="k9Ec4tWy4QfhTWG7qi_L-5" target="k9Ec4tWy4QfhTWG7qi_L-8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-5" value="Общая информация&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#6a00ff;fontColor=#ffffff;strokeColor=#3700CC;" parent="1" vertex="1">
+          <mxGeometry x="303" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-7" value="Выкладывает пост для всех. При выборе этого пункта все остальные фильтры скрываются&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#6a00ff;fontColor=#ffffff;strokeColor=#3700CC;" parent="1" vertex="1">
+          <mxGeometry x="303" y="350" width="137" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="k9Ec4tWy4QfhTWG7qi_L-8" target="k9Ec4tWy4QfhTWG7qi_L-11" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-8" value="Город" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0050ef;fontColor=#ffffff;strokeColor=#001DBC;" parent="1" vertex="1">
+          <mxGeometry x="530" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-10" value="выкладывает пост для всех в определеннй город. Все остальные фильры скрываются" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0050ef;fontColor=#ffffff;strokeColor=#001DBC;" parent="1" vertex="1">
+          <mxGeometry x="530" y="350" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="k9Ec4tWy4QfhTWG7qi_L-11" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="850" y="370" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="k9Ec4tWy4QfhTWG7qi_L-11" value="Учебная информация&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="790" y="260" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="8d3qM4YQGqwuRDhm3hNM-2" target="VKy8KMV9oymrr06K2iVw-3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8d3qM4YQGqwuRDhm3hNM-2" value="фильтры&amp;nbsp;&lt;div&gt;Специальность&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="790" y="500" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-1" value="Вопросы&lt;br&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Можем ли мы скачать статьи из вика?&lt;br&gt;Дает ли вик апишку&amp;nbsp;&lt;/span&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" parent="1" vertex="1">
+          <mxGeometry x="560" y="70" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="VKy8KMV9oymrr06K2iVw-3" target="VKy8KMV9oymrr06K2iVw-5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-3" value="Форма обучения&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="790" y="605" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="VKy8KMV9oymrr06K2iVw-5" target="VKy8KMV9oymrr06K2iVw-7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-5" value="Год поступления" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="790" y="705" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="VKy8KMV9oymrr06K2iVw-7" target="VKy8KMV9oymrr06K2iVw-9" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-7" value="Город" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="790" y="805" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-9" value="Группа (не обязательно)" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="790" y="915" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-11" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;direction=west;" parent="1" vertex="1">
+          <mxGeometry x="910" y="525" width="20" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="VKy8KMV9oymrr06K2iVw-15" target="8d3qM4YQGqwuRDhm3hNM-2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="VKy8KMV9oymrr06K2iVw-15" target="VKy8KMV9oymrr06K2iVw-17" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-15" value="Колледж&lt;br&gt;Вуз&lt;br&gt;Школа" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="790" y="360" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-17" value="Выбор класса&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="1080" y="360" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-19" value="если выбрана школа то остается только 1 выбор это класс" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="940" y="340" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="PMe_Dls5NtTG308cswaD-1" value="возможность выбрать для каждого фильтра( для всех, или все)" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="940" y="705" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VKy8KMV9oymrr06K2iVw-21" value="Директор сказал, нужно отображение по разделам (ноушен)(убрать ленту)&lt;br&gt;Отображение только названий&amp;nbsp;&lt;br&gt;По клику открывается статья&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="850" y="70" width="330" height="140" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -116,8 +116,8 @@ def get_articles():
             and_(Article.audience.isnot(None), Article.audience != 'all')
         )
 
-    # If city filter is provided, prioritize city-only audience
-    if audience_city_id and not any([audience_course, audience_admission_year_id, speciality_id]):
+    # If city filter provided, include city-targeted or general
+    if audience_city_id:
         query = query.filter(or_(Article.audience == 'city', Article.audience == 'all'))
 
     # Sorting
@@ -345,6 +345,15 @@ def create_article():
         'Заочное': 'distance',
         'Очно-заочное': 'mixed'
     }
+    # Derive audience per diagram: 'all' → hide others; else if city → 'city' and hide other audience fields; else if course → 'course'
+    derived_audience = None
+    if publish_scope.get('publish_for_all'):
+        derived_audience = 'all'
+    elif publish_scope.get('city_id'):
+        derived_audience = 'city'
+    elif publish_scope.get('course'):
+        derived_audience = 'course'
+
     article = Article(
         title=title,
         content=content,
@@ -353,10 +362,10 @@ def create_article():
         is_actual=is_actual,
         tag=None,
         base_class=None,
-        audience=('all' if publish_scope.get('publish_for_all') else None),
-        audience_city_id=publish_scope.get('city_id'),
-        audience_course=publish_scope.get('course'),
-        audience_admission_year_id=publish_scope.get('admission_year_id')
+        audience=derived_audience,
+        audience_city_id=(publish_scope.get('city_id') if derived_audience == 'city' else None),
+        audience_course=(publish_scope.get('course') if derived_audience == 'course' else None),
+        audience_admission_year_id=(publish_scope.get('admission_year_id') if derived_audience not in ('all','city') else None)
     )
     # optional multi-course + mode + speciality
     courses = publish_scope.get('courses')
@@ -692,7 +701,11 @@ def student_feed():
 
     query = Article.query.filter(Article.is_published.is_(True))
 
-    # Targeting logic: allow audience 'all', or match targeted dimension
+    # Targeting logic per diagram:
+    # - Always include audience 'all'
+    # - If city present, include city targeted
+    # - If course provided, include course targeted
+    # - School case: if group has school_class, allow class-only filtering via additional constraints below
     conds = [Article.audience == 'all']
     if city_id:
         conds.append(and_(Article.audience == 'city', Article.audience_city_id == city_id))

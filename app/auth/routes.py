@@ -2,6 +2,7 @@ from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app.auth import auth_bp
 from app.models import User, Role
+from app.models import InstitutionType, EducationForm, Speciality, AdmissionYear, City, SchoolClass, Group
 from app import db, bcrypt
 import re
 from email_validator import validate_email, EmailNotValidError
@@ -268,3 +269,115 @@ def change_password():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to update password'}), 500
+
+
+@auth_bp.route('/student-login', methods=['POST'])
+def student_login_context():
+    """Student login via academic filters (no password).
+    Accepts institution and optional fields according to the diagram:
+    - Required: institution_type_id
+    - If school selected: require school_class_id; other academic filters are ignored
+    - Else (college/university): require education_form_id, and at least one of (speciality_id, admission_year_id)
+    Optional in both: city_id, group_id, course
+
+    Returns a normalized context and a short-lived token with the context in claims.
+    """
+    data = request.get_json() or {}
+
+    institution_type_id = data.get('institution_type_id')
+    if not institution_type_id:
+        return jsonify({'error': 'institution_type_id is required'}), 400
+
+    inst = InstitutionType.query.get(institution_type_id)
+    if not inst:
+        return jsonify({'error': 'Institution type not found'}), 404
+
+    # Optional common fields
+    city_id = data.get('city_id')
+    group_id = data.get('group_id')
+    course = data.get('course')
+
+    context = {
+        'institution_type_id': inst.id,
+        'institution_type': inst.name,
+        'city_id': None,
+        'group_id': None,
+        'course': None,
+        'school_class_id': None,
+        'education_form_id': None,
+        'speciality_id': None,
+        'admission_year_id': None,
+    }
+
+    if city_id:
+        city = City.query.get(city_id)
+        if not city:
+            return jsonify({'error': 'City not found'}), 404
+        context['city_id'] = city.id
+
+    if group_id:
+        grp = Group.query.get(group_id)
+        if not grp:
+            return jsonify({'error': 'Group not found'}), 404
+        context['group_id'] = grp.id
+
+    if course is not None:
+        try:
+            context['course'] = int(course)
+        except Exception:
+            return jsonify({'error': 'course must be an integer'}), 400
+
+    # Branch: School → only class remains
+    if inst.name.lower() == 'школа':
+        school_class_id = data.get('school_class_id')
+        if not school_class_id:
+            return jsonify({'error': 'school_class_id is required for schools'}), 400
+        sc = SchoolClass.query.get(school_class_id)
+        if not sc:
+            return jsonify({'error': 'School class not found'}), 404
+        if sc.institution_type_id != inst.id:
+            return jsonify({'error': 'School class does not belong to the selected institution type'}), 400
+        context['school_class_id'] = sc.id
+    else:
+        # College/University → need form and one of (speciality or admission year)
+        education_form_id = data.get('education_form_id')
+        speciality_id = data.get('speciality_id')
+        admission_year_id = data.get('admission_year_id')
+
+        if not education_form_id:
+            return jsonify({'error': 'education_form_id is required'}), 400
+        ef = EducationForm.query.get(education_form_id)
+        if not ef:
+            return jsonify({'error': 'Education form not found'}), 404
+        if ef.institution_type_id != inst.id:
+            return jsonify({'error': 'Education form does not belong to the selected institution type'}), 400
+        context['education_form_id'] = ef.id
+
+        # At least one of speciality or admission year
+        if not speciality_id and not admission_year_id:
+            return jsonify({'error': 'Provide speciality_id or admission_year_id'}), 400
+
+        if speciality_id:
+            sp = Speciality.query.get(speciality_id)
+            if not sp:
+                return jsonify({'error': 'Speciality not found'}), 404
+            if sp.institution_type_id != inst.id:
+                return jsonify({'error': 'Speciality does not belong to the selected institution type'}), 400
+            context['speciality_id'] = sp.id
+
+        if admission_year_id:
+            ay = AdmissionYear.query.get(admission_year_id)
+            if not ay:
+                return jsonify({'error': 'Admission year not found'}), 404
+            if ay.institution_type_id != inst.id:
+                return jsonify({'error': 'Admission year does not belong to the selected institution type'}), 400
+            context['admission_year_id'] = ay.id
+
+    # Create a short-lived token that carries the context
+    try:
+        token = create_access_token(identity='student_ctx', additional_claims={'ctx': context})
+    except Exception:
+        # If token creation fails, still return context
+        token = None
+
+    return jsonify({'context': context, 'token': token}), 200

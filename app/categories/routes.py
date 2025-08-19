@@ -367,20 +367,33 @@ def get_groups():
     
     query = Group.query
     
-    # If city chosen, prioritize only city filter
+    # Diagram rules:
+    # - If city chosen, prioritize only city filter
+    # - If institution is School, only class filter is relevant
     if city_id:
         query = query.filter_by(city_id=city_id)
     else:
         if institution_type_id:
             query = query.filter_by(institution_type_id=institution_type_id)
-        if speciality_id:
-            query = query.filter_by(speciality_id=speciality_id)
-        if education_form_id:
-            query = query.filter_by(education_form_id=education_form_id)
-        if admission_year_id:
-            query = query.filter_by(admission_year_id=admission_year_id)
-        if school_class_id:
-            query = query.filter_by(school_class_id=school_class_id)
+            # Detect school by name to simplify (id-based check could be done on client as well)
+            inst = InstitutionType.query.get(institution_type_id)
+            is_school = bool(inst and inst.name.lower() == 'школа')
+        else:
+            is_school = False
+
+        if is_school:
+            # For schools we only consider class. Other academic filters are ignored.
+            if school_class_id:
+                query = query.filter_by(school_class_id=school_class_id)
+        else:
+            if speciality_id:
+                query = query.filter_by(speciality_id=speciality_id)
+            if education_form_id:
+                query = query.filter_by(education_form_id=education_form_id)
+            if admission_year_id:
+                query = query.filter_by(admission_year_id=admission_year_id)
+            if school_class_id:
+                query = query.filter_by(school_class_id=school_class_id)
     
     if search:
         # Basic ilike search by display_name or speciality code/name
@@ -652,16 +665,16 @@ def create_group():
     if not data:
         return jsonify({'error': 'No data provided'}), 400
     
-    required_fields = ['display_name', 'speciality_id', 'education_form_id', 'admission_year_id', 'institution_type_id']
-    for field in required_fields:
+    required_base = ['display_name', 'institution_type_id']
+    for field in required_base:
         if not data.get(field):
             return jsonify({'error': f'{field} is required'}), 400
     
     display_name = data['display_name'].strip()
-    speciality_id = data['speciality_id']
-    education_form_id = data['education_form_id']
-    admission_year_id = data['admission_year_id']
     institution_type_id = data['institution_type_id']
+    speciality_id = data.get('speciality_id')
+    education_form_id = data.get('education_form_id')
+    admission_year_id = data.get('admission_year_id')
     school_class_id = data.get('school_class_id')
     city_id = data.get('city_id')
     base_class = data.get('base_class')
@@ -674,21 +687,35 @@ def create_group():
     if Group.query.filter_by(display_name=display_name).first():
         return jsonify({'error': 'Display name already exists'}), 409
     
-    # Validate foreign keys
-    if not Speciality.query.get(speciality_id):
-        return jsonify({'error': 'Speciality not found'}), 404
-    
-    if not EducationForm.query.get(education_form_id):
-        return jsonify({'error': 'Education form not found'}), 404
-    
-    if not AdmissionYear.query.get(admission_year_id):
-        return jsonify({'error': 'Admission year not found'}), 404
-    
-    if not InstitutionType.query.get(institution_type_id):
+    # Validate institution type first
+    inst = InstitutionType.query.get(institution_type_id)
+    if not inst:
         return jsonify({'error': 'Institution type not found'}), 404
-    
-    if school_class_id and not SchoolClass.query.get(school_class_id):
-        return jsonify({'error': 'School class not found'}), 404
+
+    is_school = inst.name.lower() == 'школа'
+
+    # For schools: require school_class_id; other academic refs are ignored
+    if is_school:
+        if not school_class_id:
+            return jsonify({'error': 'school_class_id is required for schools'}), 400
+        if not SchoolClass.query.get(school_class_id):
+            return jsonify({'error': 'School class not found'}), 404
+        # Normalize: ignore speciality/form/year for schools
+        speciality_id = None
+        education_form_id = None
+        admission_year_id = None
+    else:
+        # For college/university: require education_form_id and at least one of speciality/admission_year
+        if not education_form_id:
+            return jsonify({'error': 'education_form_id is required for non-school institutions'}), 400
+        if not EducationForm.query.get(education_form_id):
+            return jsonify({'error': 'Education form not found'}), 404
+        if not (speciality_id or admission_year_id):
+            return jsonify({'error': 'Provide speciality_id or admission_year_id'}), 400
+        if speciality_id and not Speciality.query.get(speciality_id):
+            return jsonify({'error': 'Speciality not found'}), 404
+        if admission_year_id and not AdmissionYear.query.get(admission_year_id):
+            return jsonify({'error': 'Admission year not found'}), 404
     
     if city_id and not City.query.get(city_id):
         return jsonify({'error': 'City not found'}), 404

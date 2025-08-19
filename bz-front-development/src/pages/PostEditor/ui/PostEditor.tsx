@@ -371,12 +371,14 @@ export default function PostEditor() {
                         </label>
                     </div>
 
-                    {/* Audience parameters */}
+                    {/* Аудитория: переключатели "Для всех / Город / Учебная информация" */}
                     <Accordion defaultExpanded>
                         <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Параметры аудитории</AccordionSummary>
                         <AccordionDetails>
                             <div style={{display:'grid', gridTemplateColumns:'1fr', gap:12}}>
-                                <FormControlLabel control={<Checkbox checked={!!formData.publish_scope?.publish_for_all} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, publish_for_all: e.target.checked}}))}/>} label='Опубликовать для всех' />
+                                {/* Для всех */}
+                                <FormControlLabel control={<Checkbox checked={!!formData.publish_scope?.publish_for_all} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, publish_for_all: e.target.checked, city_id: undefined, course: undefined }}))}/>} label='Для всех' />
+                                {/* Если не для всех, доступны Город и Учебная информация */}
                                 {!formData.publish_scope?.publish_for_all && (
                                 <>
                                     <FormControl fullWidth size='small'>
@@ -399,17 +401,18 @@ export default function PostEditor() {
                                         </Select>
                                     </FormControl>
                                 </>) }
-                                {/* Optional filters */}
+                                {/* Переключатель "Город" (при выборе скрывает курс) */}
                                 <FormControl fullWidth size='small'>
                                     <InputLabel id='city-label'>Город (необязательно)</InputLabel>
-                                    <Select labelId='city-label' label='Город (необязательно)' value={formData.publish_scope?.city_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: Number(e.target.value)}}))}>
+                                    <Select labelId='city-label' label='Город (необязательно)' value={formData.publish_scope?.city_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: e.target.value===''? undefined : Number(e.target.value), course: undefined}}))}>
                                         <MenuItem value=''>—</MenuItem>
                                         {cities.map(c=> <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
                                     </Select>
                                 </FormControl>
-                                <FormControl fullWidth size='small'>
+                                {/* Переключатель "Учебная информация" — курс */}
+                                <FormControl fullWidth size='small' disabled={!!formData.publish_scope?.city_id}>
                                     <InputLabel id='course-label'>Курс (необязательно)</InputLabel>
-                                    <Select labelId='course-label' label='Курс (необязательно)' value={formData.publish_scope?.course || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, course: Number(e.target.value)}}))}>
+                                    <Select labelId='course-label' label='Курс (необязательно)' value={formData.publish_scope?.course || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, course: e.target.value===''? undefined : Number(e.target.value)}}))}>
                                         <MenuItem value=''>—</MenuItem>
                                         {courseOptions.map(o=> <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                                     </Select>
