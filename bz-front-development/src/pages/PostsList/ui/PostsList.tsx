@@ -27,9 +27,10 @@ interface PostsListProps {
   expandAllDefault?: boolean
   fullscreen?: boolean
   notionMode?: boolean
+  showSearch?: boolean
 }
 
-export default function PostsList({ expandAllDefault = false, fullscreen = false, notionMode = false }: PostsListProps) {
+export default function PostsList({ expandAllDefault = false, fullscreen = false, notionMode = false, showSearch = true }: PostsListProps) {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [items, setItems] = useState<ArticleListItem[]>([])
@@ -52,6 +53,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   const [outline, setOutline] = useState<Array<{ id: string, text: string, level: number }>>([])
   const [activeOutlineId, setActiveOutlineId] = useState<string | null>(null)
   const [related, setRelated] = useState<Array<{ id: number, title: string }>>([])
+  const headerPrevDisplay = useRef<string | null>(null)
   const [extraFilters, setExtraFilters] = useState<any>({})
 
   const pageFromURL = useMemo(() => Number(searchParams.get('page') ?? 1), [searchParams])
@@ -161,6 +163,11 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
       setTimeout(buildOutline, 0)
       // removed related sidebar and in-pane outline observer for full-screen mode
     }).catch(()=> setReaderArticle(null)).finally(()=> setReaderLoading(false))
+    // hide global header while reading
+    try {
+      const header = document.querySelector('header') as HTMLElement | null
+      if (header) { headerPrevDisplay.current = header.style.display || ''; header.style.display = 'none' }
+    } catch {}
   }
 
   function closeReader() {
@@ -169,6 +176,10 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     setOutline([])
     setActiveOutlineId(null)
     setRelated([])
+    try {
+      const header = document.querySelector('header') as HTMLElement | null
+      if (header) header.style.display = headerPrevDisplay.current ?? ''
+    } catch {}
   }
 
   function readerNavigate(delta: number) {
@@ -304,12 +315,14 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
             <Tab label="Общая" />
             <Tab label="Учебная" />
           </Tabs>
-          <form onSubmit={(e)=>{ e.preventDefault(); handleSearch() }}>
-            <Paper elevation={1} sx={{ display:'flex', alignItems:'center', px:1.5, py:0.5 }}>
-              <SearchIcon fontSize='small' sx={{ mr: 1 }} />
-              <InputBase placeholder='Поиск' value={query} onChange={(e)=>setQuery(e.target.value)} sx={{ minWidth: 220 }} />
-            </Paper>
-          </form>
+          {showSearch && (
+            <form onSubmit={(e)=>{ e.preventDefault(); handleSearch() }}>
+              <Paper elevation={1} sx={{ display:'flex', alignItems:'center', px:1.5, py:0.5 }}>
+                <SearchIcon fontSize='small' sx={{ mr: 1 }} />
+                <InputBase placeholder='Поиск' value={query} onChange={(e)=>setQuery(e.target.value)} sx={{ minWidth: 220 }} />
+              </Paper>
+            </form>
+          )}
         </div>
         {/* Быстрые фильтры */}
         <div style={{ display:'flex', gap:8, alignItems:'center', padding:'8px 12px', flexWrap:'wrap' }}>
@@ -338,7 +351,11 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
                     <div key={item.id} style={{...style, borderBottom:'1px solid var(--border-muted, rgba(0,0,0,0.08))', padding:'12px 16px', background:'transparent' }}>
                       <div style={{display:'grid', gridTemplateColumns:'80px 1fr', gap:12, alignItems:'start'}}>
                         <div style={{ width:80, height:80, background:'#f6f6f6', borderRadius:8, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }} onClick={()=> toggleExpand(item.id)}>
-                          {img ? <img src={img} alt='' style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <span style={{fontSize:12, opacity:.5}}>Нет фото</span>}
+                          {img ? (
+                            <img src={img} alt='' style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                          ) : (
+                            <span style={{fontSize:11, opacity:.8, padding:6, display:'-webkit-box', WebkitLineClamp:4, WebkitBoxOrient:'vertical', overflow:'hidden', lineHeight:1.25}}>{textPreview}</span>
+                          )}
                         </div>
                         <div>
                           <h3 style={{ margin: 0, fontSize: 16, lineHeight: 1.3, cursor:'pointer' }} onClick={()=> toggleExpand(item.id)}>{item.title}</h3>
@@ -372,25 +389,16 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
           </Fab>
         )}
         {notionMode && readerId !== null && (
-          <div style={{ position:'fixed', inset:0, background:'#fff', zIndex:60 }} onClick={closeReader}>
-            <div onClick={e=>e.stopPropagation()} style={{ width:'min(100%, 1040px)', margin:'0 auto', height:'100%', display:'flex', flexDirection:'column' }}>
-              <div style={{ padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid rgba(0,0,0,0.06)' }}>
-                <h2 style={{margin:0, fontSize: 22, lineHeight:1.2}}>{(readerArticle as any)?.title}</h2>
-                <div style={{display:'flex', gap:8}}>
-                  <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>readerNavigate(-1)}><span>←</span></Button>
-                  <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>readerNavigate(1)}><span>→</span></Button>
-                  <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={closeReader}><span>Закрыть</span></Button>
-                </div>
-              </div>
-              <div style={{opacity:.6, fontSize:12, padding:'6px 16px'}}>{readerArticle ? new Date((readerArticle as any).created_at).toLocaleString('ru-RU') : ''}</div>
-              <div style={{ flex:'1 1 auto', overflowY:'auto' }} onClick={handleContentClick}>
-                <div style={{ padding:'16px 16px 40px' }}>
-                  {readerLoading && <div>Загрузка…</div>}
-                  {!readerLoading && readerArticle && (
-                    <article ref={contentRef} className='article-content' style={{ lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: (readerArticle as any).content }} />
-                  )}
-                </div>
-              </div>
+          <div style={{ position:'fixed', inset:0, background:'#fff', zIndex:9999 }}>
+            {/* Close (X) */}
+            <button aria-label='Закрыть' onClick={closeReader} style={{ position:'fixed', top:10, right:12, width:36, height:36, borderRadius:'50%', border:'1px solid rgba(0,0,0,0.12)', background:'#fff', boxShadow:'0 1px 4px rgba(0,0,0,0.08)', cursor:'pointer' }}>×</button>
+            <div style={{ width:'min(100%, 900px)', margin:'56px auto 24px', padding:'0 12px' }} onClick={handleContentClick}>
+              <h1 style={{margin:'0 0 8px 0', fontSize:24, lineHeight:1.25}}>{(readerArticle as any)?.title}</h1>
+              <div style={{opacity:.6, fontSize:12, marginBottom:12}}>{readerArticle ? new Date((readerArticle as any).created_at).toLocaleString('ru-RU') : ''}</div>
+              {readerLoading && <div>Загрузка…</div>}
+              {!readerLoading && readerArticle && (
+                <article ref={contentRef} className='article-content' style={{ lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: (readerArticle as any).content }} />
+              )}
             </div>
           </div>
         )}
