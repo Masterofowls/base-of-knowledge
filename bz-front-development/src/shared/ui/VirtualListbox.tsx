@@ -1,6 +1,7 @@
 // path: src/shared/ui/VirtualListbox.tsx
 import * as React from 'react'
-import { FixedSizeList, ListChildComponentProps } from 'react-window'
+import { FixedSizeList } from 'react-window'
+import type { ListChildComponentProps } from 'react-window'
 
 const LISTBOX_PADDING = 8 // px
 
