@@ -143,6 +143,7 @@ export default function PostEditor() {
     const [error, setError] = useState<string | null>(null);
     const editorRef = useRef<HTMLDivElement | null>(null)
     const quillRef = useRef<Quill | null>(null)
+    const fileInputRef = useRef<HTMLInputElement | null>(null)
     const [attachments, setAttachments] = useState<Array<{ id:number, url:string, name:string, type:string }>>([])
     const TOOLBAR: any = useMemo(() => ([
         [{ 'font': [] }],
@@ -307,6 +308,10 @@ export default function PostEditor() {
         e.currentTarget.value = ''
     }
 
+    function handleOpenFileDialog() {
+        fileInputRef.current?.click()
+    }
+
     function handleInsertCallout() {
         const q = quillRef.current
         if (!q) return
@@ -395,10 +400,8 @@ export default function PostEditor() {
                     </span>
                     <h2>{isEditing ? 'Редактировать пост' : 'Создать новый пост'}</h2>
                     <div style={{ display:'flex', gap:8, marginLeft:'auto' }}>
-                        <label>
-                            <input type='file' multiple accept='image/*,application/pdf,video/*' onChange={handleFileInput} style={{ display:'none' }} />
-                            <Button width='auto' backgroundColor='#eee' theme={ThemeButton.CLEAR}><span><UploadIcon fontSize='small' />&nbsp;Загрузить</span></Button>
-                        </label>
+                        <input ref={fileInputRef} type='file' multiple onChange={handleFileInput} accept='image/*,application/pdf,video/*,.pdf,.doc,.docx,.txt,.md,.markdown,.rtf,.fb2,.odt,.ods,.ppt,.pptx,.xls,.xlsx' style={{ display:'none' }} />
+                        <Button width='auto' backgroundColor='#eee' theme={ThemeButton.CLEAR} onClick={handleOpenFileDialog}><span><UploadIcon fontSize='small' />&nbsp;Загрузить</span></Button>
                         <Button width='auto' backgroundColor='#eef2ff' theme={ThemeButton.CLEAR} onClick={handleInsertCallout}><span><InfoOutlinedIcon fontSize='small'/>&nbsp;Callout</span></Button>
                         <Button width='auto' backgroundColor='#eff6ff' theme={ThemeButton.CLEAR} onClick={handleInsertTable}><span><TableChartOutlinedIcon fontSize='small'/>&nbsp;Таблица</span></Button>
                     </div>
