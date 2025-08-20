@@ -28,54 +28,69 @@ self.addEventListener('fetch', event => {
   const { request } = event
   if (request.method !== 'GET') return
 
+  // Never intercept API calls
+  if (request.url.includes('/api/')) return
+
   // Navigation requests: network-first with fallback to cached index
   if (request.mode === 'navigate') {
-    event.respondWith(
-      (async () => {
-        try {
-          const fresh = await fetch(request)
-          if (shouldCacheResponse(request, fresh)) caches.open(CACHE_NAME).then(c => c.put(request, fresh.clone()))
-          return fresh
-        } catch (e) {
-          const fallback = await caches.match('/index.html')
-          return fallback || new Response('', { status: 503 })
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(request)
+        const freshClone = fresh.clone()
+        if (shouldCacheResponse(request, fresh)) {
+          event.waitUntil((async () => {
+            const c = await caches.open(CACHE_NAME)
+            await c.put(request, freshClone)
+          })())
         }
-      })()
-    )
+        return fresh
+      } catch (e) {
+        const fallback = await caches.match('/index.html')
+        return fallback || new Response('', { status: 503 })
+      }
+    })())
     return
   }
 
   // Assets: network-first, fallback to cache; only cache valid asset responses
   if (request.url.includes('/assets/')) {
-    event.respondWith(
-      (async () => {
-        try {
-          const fresh = await fetch(request)
-          if (shouldCacheResponse(request, fresh)) caches.open(CACHE_NAME).then(c => c.put(request, fresh.clone()))
-          return fresh
-        } catch (e) {
-          const cached = await caches.match(request)
-          return cached || new Response('', { status: 504 })
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(request)
+        const freshClone = fresh.clone()
+        if (shouldCacheResponse(request, fresh)) {
+          event.waitUntil((async () => {
+            const c = await caches.open(CACHE_NAME)
+            await c.put(request, freshClone)
+          })())
         }
-      })()
-    )
+        return fresh
+      } catch (e) {
+        const cached = await caches.match(request)
+        return cached || new Response('', { status: 504 })
+      }
+    })())
     return
   }
 
   // Default: cache-first, then network
-  event.respondWith(
-    (async () => {
-      const cached = await caches.match(request)
-      if (cached) return cached
-      try {
-        const fresh = await fetch(request)
-        if (shouldCacheResponse(request, fresh)) caches.open(CACHE_NAME).then(c => c.put(request, fresh.clone()))
-        return fresh
-      } catch (e) {
-        return new Response('', { status: 504 })
+  event.respondWith((async () => {
+    const cached = await caches.match(request)
+    if (cached) return cached
+    try {
+      const fresh = await fetch(request)
+      const freshClone = fresh.clone()
+      if (shouldCacheResponse(request, fresh)) {
+        event.waitUntil((async () => {
+          const c = await caches.open(CACHE_NAME)
+          await c.put(request, freshClone)
+        })())
       }
-    })()
-  )
+      return fresh
+    } catch (e) {
+      return new Response('', { status: 504 })
+    }
+  })())
 })
 
 
