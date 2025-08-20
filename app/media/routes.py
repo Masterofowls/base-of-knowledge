@@ -1,17 +1,43 @@
-from flask import request, jsonify, send_file
+from flask import request, jsonify, send_file, redirect, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.media import media_bp
 from app.models import ArticleMedia, ArticleMediaLink, Article, User
 from app import db
 import os
+import mimetypes
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import io
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'pdf', 'doc', 'docx', 'txt', 'mp4', 'avi', 'mov'}
+ALLOWED_EXTENSIONS = {
+    # images
+    'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp',
+    # documents
+    'pdf', 'doc', 'docx', 'txt', 'md', 'markdown', 'rtf', 'fb2', 'odt', 'ods', 'ppt', 'pptx', 'xls', 'xlsx',
+    # videos
+    'mp4', 'avi', 'mov', 'mkv', 'webm', 'm4v', '3gp'
+}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def guess_mime(filename: str, fallback: str = 'application/octet-stream') -> str:
+    # Extend default types
+    mimetypes.add_type('text/markdown', '.md')
+    mimetypes.add_type('application/x-fictionbook+xml', '.fb2')
+    mimetypes.add_type('application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.docx')
+    mimetypes.add_type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx')
+    mimetypes.add_type('application/vnd.openxmlformats-officedocument.presentationml.presentation', '.pptx')
+    # common video types
+    mimetypes.add_type('video/mp4', '.mp4')
+    mimetypes.add_type('video/x-matroska', '.mkv')
+    mimetypes.add_type('video/webm', '.webm')
+    mimetypes.add_type('video/quicktime', '.mov')
+    mimetypes.add_type('video/x-msvideo', '.avi')
+    mimetypes.add_type('video/x-m4v', '.m4v')
+    mimetypes.add_type('video/3gpp', '.3gp')
+    mime, _ = mimetypes.guess_type(filename)
+    return mime or fallback
 
 @media_bp.route('/upload', methods=['POST'])
 @jwt_required()
@@ -43,9 +69,9 @@ def upload_media():
         file_extension = filename.rsplit('.', 1)[1].lower()
         if file_extension in ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']:
             media_type = 'image'
-        elif file_extension in ['mp4', 'avi', 'mov']:
+        elif file_extension in ['mp4', 'avi', 'mov', 'mkv', 'webm', 'm4v', '3gp']:
             media_type = 'video'
-        elif file_extension in ['pdf', 'doc', 'docx', 'txt']:
+        elif file_extension in ['pdf', 'doc', 'docx', 'txt', 'md', 'markdown', 'rtf', 'fb2', 'odt', 'ods', 'ppt', 'pptx', 'xls', 'xlsx']:
             media_type = 'file'
         else:
             media_type = 'file'
@@ -55,7 +81,7 @@ def upload_media():
             media_type=media_type,
             data=file_data,
             file_name=filename,
-            mime_type=file.content_type,
+            mime_type=(file.content_type or guess_mime(filename)),
             caption=request.form.get('caption', '')
         )
         
@@ -77,18 +103,84 @@ def upload_media():
 
 @media_bp.route('/<int:media_id>', methods=['GET'])
 def get_media(media_id):
-    """Get media file"""
+    """Get media file with support for inline display and HTTP Range for video/audio/pdf.
+    For link-type media, redirect to the stored URL.
+    """
     media = ArticleMedia.query.get_or_404(media_id)
-    
-    # Create file-like object from binary data
-    file_obj = io.BytesIO(media.data)
-    
-    return send_file(
+    # Handle link redirects
+    if media.media_type == 'link' and media.file_name:
+        return redirect(media.file_name, code=302)
+
+    data = media.data or b''
+    mime = media.mime_type or guess_mime(media.file_name or '')
+
+    # Handle Range requests for streaming
+    range_header = request.headers.get('Range')
+    if range_header and len(data) > 0:
+        try:
+            # Example: Range: bytes=START-END
+            units, rng = range_header.split('=')
+            if units.strip() != 'bytes':
+                raise ValueError('unsupported range unit')
+            start_s, end_s = (rng.split('-') + [''])[:2]
+            start = int(start_s) if start_s else 0
+            end = int(end_s) if end_s else len(data) - 1
+            start = max(0, start)
+            end = min(len(data) - 1, end)
+            if start > end:
+                start, end = 0, len(data) - 1
+            chunk = data[start:end + 1]
+            rv = Response(chunk, 206, mimetype=mime, direct_passthrough=True)
+            rv.headers.add('Content-Range', f'bytes {start}-{end}/{len(data)}')
+            rv.headers.add('Accept-Ranges', 'bytes')
+            rv.headers.add('Content-Length', str(len(chunk)))
+            rv.headers.add('Content-Disposition', f'inline; filename="{media.file_name}"')
+            return rv
+        except Exception:
+            # Fallback to full content
+            pass
+
+    # Full content
+    file_obj = io.BytesIO(data)
+    rv = send_file(
         file_obj,
-        mimetype=media.mime_type,
+        mimetype=mime,
         as_attachment=False,
         download_name=media.file_name
     )
+    # hint to clients that range is supported
+    rv.headers.add('Accept-Ranges', 'bytes')
+    return rv
+
+@media_bp.route('/create-link', methods=['POST'])
+@jwt_required()
+def create_link_media():
+    """Register an external link (e.g., YouTube/VK video) as media of type 'link'.
+    Body: { url: string, caption?: string }
+    """
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    data = request.get_json() or {}
+    url = (data.get('url') or '').strip()
+    if not url:
+        return jsonify({'error': 'url is required'}), 400
+    try:
+        # store empty payload for link; keep url in file_name for reference
+        media = ArticleMedia(
+            media_type='link',
+            data=b'',
+            file_name=url,
+            mime_type='text/uri-list',
+            caption=data.get('caption', '')
+        )
+        db.session.add(media)
+        db.session.commit()
+        return jsonify({ 'id': media.id, 'url': url, 'media_type': 'link' }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to create link'}), 500
 
 @media_bp.route('/<int:media_id>', methods=['DELETE'])
 @jwt_required()

@@ -93,6 +93,21 @@ function isPdfUrl(url: string): boolean {
     return /\.pdf(\?|#|$)/i.test(url)
 }
 
+function toVkEmbed(url: string): string | null {
+    try {
+        const u = new URL(url)
+        if (/(^|\.)vk\.com$/.test(u.hostname)) {
+            const joined = u.pathname + ' ' + (u.searchParams.get('z') || '')
+            const m = joined.match(/video(-?\d+_\d+)/)
+            if (m && m[1]) {
+                const [oid, id] = m[1].split('_')
+                return `https://vk.com/video_ext.php?oid=${oid}&id=${id}`
+            }
+        }
+    } catch {}
+    return null
+}
+
 export default function PostEditor() {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
@@ -337,6 +352,14 @@ export default function PostEditor() {
                 e.preventDefault()
                 const range = q.getSelection(true)
                 q.insertEmbed(range ? range.index : q.getLength(), 'video', yt, 'user')
+                return
+            }
+            const vk = toVkEmbed(text)
+            if (vk) {
+                e.preventDefault()
+                const range = q.getSelection(true)
+                const html = `<p></p><iframe src="${vk}" style="width:100%;height:420px;border:0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="VK Video"></iframe><p></p>`
+                q.clipboard.dangerouslyPasteHTML(range ? range.index : q.getLength(), html)
                 return
             }
             if (isPdfUrl(text)) {
