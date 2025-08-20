@@ -18,10 +18,22 @@ self.addEventListener('activate', event => {
 
 function shouldCacheResponse(request, response) {
   if (!response || !response.ok) return false
+  if (response.type && response.type !== 'basic' && response.type !== 'default') return false
   const ct = response.headers.get('content-type') || ''
   // Avoid caching HTML as response for JS/CSS assets due to SPA rewrites
   if ((request.destination === 'script' || request.destination === 'style') && ct.includes('text/html')) return false
   return true
+}
+
+async function cachePutSafe(request, response) {
+  try {
+    const buf = await response.clone().arrayBuffer()
+    const resCopy = new Response(buf, { status: response.status, statusText: response.statusText, headers: response.headers })
+    const c = await caches.open(CACHE_NAME)
+    await c.put(request, resCopy)
+  } catch (e) {
+    // ignore caching errors
+  }
 }
 
 self.addEventListener('fetch', event => {
@@ -36,13 +48,7 @@ self.addEventListener('fetch', event => {
     event.respondWith((async () => {
       try {
         const fresh = await fetch(request)
-        const freshClone = fresh.clone()
-        if (shouldCacheResponse(request, fresh)) {
-          event.waitUntil((async () => {
-            const c = await caches.open(CACHE_NAME)
-            await c.put(request, freshClone)
-          })())
-        }
+        if (shouldCacheResponse(request, fresh)) event.waitUntil(cachePutSafe(request, fresh))
         return fresh
       } catch (e) {
         const fallback = await caches.match('/index.html')
@@ -57,13 +63,7 @@ self.addEventListener('fetch', event => {
     event.respondWith((async () => {
       try {
         const fresh = await fetch(request)
-        const freshClone = fresh.clone()
-        if (shouldCacheResponse(request, fresh)) {
-          event.waitUntil((async () => {
-            const c = await caches.open(CACHE_NAME)
-            await c.put(request, freshClone)
-          })())
-        }
+        if (shouldCacheResponse(request, fresh)) event.waitUntil(cachePutSafe(request, fresh))
         return fresh
       } catch (e) {
         const cached = await caches.match(request)
@@ -79,13 +79,7 @@ self.addEventListener('fetch', event => {
     if (cached) return cached
     try {
       const fresh = await fetch(request)
-      const freshClone = fresh.clone()
-      if (shouldCacheResponse(request, fresh)) {
-        event.waitUntil((async () => {
-          const c = await caches.open(CACHE_NAME)
-          await c.put(request, freshClone)
-        })())
-      }
+      if (shouldCacheResponse(request, fresh)) event.waitUntil(cachePutSafe(request, fresh))
       return fresh
     } catch (e) {
       return new Response('', { status: 504 })

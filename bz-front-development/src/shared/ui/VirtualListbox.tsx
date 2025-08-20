@@ -7,26 +7,15 @@ const LISTBOX_PADDING = 8 // px
 
 function renderRow(props: ListChildComponentProps) {
   const { data, index, style } = props as any
-  const dataSet = data[index]
-  const inlineStyle = {
-    ...style,
-    top: (style.top as number) + LISTBOX_PADDING,
-  }
-  return (
-    <div style={inlineStyle} key={index} {...dataSet[0]}>
-      {dataSet[1]}
-    </div>
-  )
+  const item = data[index] as React.ReactElement
+  const inlineStyle = { ...style, top: (style.top as number) + LISTBOX_PADDING }
+  return React.cloneElement(item, { style: inlineStyle })
 }
 
 // MUI Autocomplete virtualized ListboxComponent
 export const VirtualListbox = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLElement>>(function VirtualListbox(props, ref) {
   const { children, ...other } = props
-  const itemData: Array<any> = []
-  // Flatten the children (MUI provides [props, option] tuples)
-  (children as any[]).forEach((item) => {
-    itemData.push(item)
-  })
+  const itemData = React.Children.toArray(children) as React.ReactElement[]
   const ITEM_SIZE = 36
   const height = Math.min(8, itemData.length) * ITEM_SIZE + 2 * LISTBOX_PADDING
 
