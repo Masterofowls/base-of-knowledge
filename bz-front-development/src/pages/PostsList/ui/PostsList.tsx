@@ -6,7 +6,7 @@ import { Input } from 'shared/ui/Input/Input.tsx'
 import { Button } from 'shared/ui/Button'
 import { ThemeButton } from 'shared/ui/Button/ui/Button.tsx'
 import cls from './PostsList.module.scss'
-import { Autocomplete, TextField, Tabs, Tab, Card, CardContent, Skeleton, IconButton, Tooltip, Fab, Chip, InputAdornment } from '@mui/material'
+import { Tabs, Tab, Skeleton, IconButton, Tooltip, Fab, Chip, Paper, InputBase } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import { FixedSizeList as List } from 'react-window'
 import type { ListChildComponentProps } from 'react-window'
@@ -159,8 +159,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
       setReaderArticle(res.data)
       loadReactionsFor([id])
       setTimeout(buildOutline, 0)
-      setTimeout(loadRelated, 0)
-      setTimeout(wireOutlineObserver, 0)
+      // removed related sidebar and in-pane outline observer for full-screen mode
     }).catch(()=> setReaderArticle(null)).finally(()=> setReaderLoading(false))
   }
 
@@ -209,19 +208,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     targets.forEach(t => io.observe(t))
   }
 
-  async function loadRelated() {
-    try {
-      const cats = (readerArticle?.categories || []) as any[]
-      const t = cats.find(c => c.top_category?.id)
-      const s = cats.find(c => c.subcategory?.id)
-      const params: any = { page: 1, per_page: 10, is_published: true }
-      if (t) params.top_category_id = t.top_category.id
-      else if (s) params.subcategory_id = s.subcategory.id
-      const res = await http.get('/api/articles', { params })
-      const list = (res.data?.articles || []).filter((a:any)=>a.id !== readerId).map((a:any)=>({ id: a.id, title: a.title }))
-      setRelated(list)
-    } catch {}
-  }
+  // removed related loader (sidebar no longer shown)
 
   function handleContentClick(e: React.MouseEvent<HTMLDivElement>) {
     const target = e.target as HTMLElement
@@ -286,6 +273,19 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     setSearchParams(next)
   }
 
+  function getFirstImageSrc(html: string): string | null {
+    const tmp = document.createElement('div')
+    tmp.innerHTML = html
+    const img = tmp.querySelector('img') as HTMLImageElement | null
+    return img?.src || null
+  }
+
+  function getSnippet(html: string, maxLen = 180): string {
+    const text = stripHtml(html)
+    if (text.length <= maxLen) return text
+    return text.slice(0, maxLen).trim() + '…'
+  }
+
   const containerWidth = fullscreen ? 'min(100%, 900px)' : 'min(100%, 1000px)'
   const filtered = items.filter((it) => {
     if (tab === 0) return true
@@ -304,23 +304,12 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
             <Tab label="Общая" />
             <Tab label="Учебная" />
           </Tabs>
-          <TextField
-            placeholder='Поиск'
-            size='small'
-            value={query}
-            onChange={(e)=> setQuery(e.target.value)}
-            onKeyDown={(e)=>{ if (e.key==='Enter') handleSearch() }}
-            sx={{ minWidth: 240 }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position='end'>
-                  <IconButton size='small' onClick={handleSearch} aria-label='Поиск'>
-                    <SearchIcon fontSize='small' />
-                  </IconButton>
-                </InputAdornment>
-              )
-            }}
-          />
+          <form onSubmit={(e)=>{ e.preventDefault(); handleSearch() }}>
+            <Paper elevation={1} sx={{ display:'flex', alignItems:'center', px:1.5, py:0.5 }}>
+              <SearchIcon fontSize='small' sx={{ mr: 1 }} />
+              <InputBase placeholder='Поиск' value={query} onChange={(e)=>setQuery(e.target.value)} sx={{ minWidth: 220 }} />
+            </Paper>
+          </form>
         </div>
         {/* Быстрые фильтры */}
         <div style={{ display:'flex', gap:8, alignItems:'center', padding:'8px 12px', flexWrap:'wrap' }}>
@@ -340,24 +329,22 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 0 }}>
             {!isLoading && filtered.length === 0 && <div style={{ color: '#888', padding: 16 }}>Посты не найдены</div>}
             {filtered.length > 0 && (
-              <List height={Math.min(600, filtered.length * 120)} width={'100%'} itemCount={filtered.length} itemSize={120} overscanCount={5}>
+              <List height={Math.min(600, filtered.length * 160)} width={'100%'} itemCount={filtered.length} itemSize={160} overscanCount={5}>
                 {({ index, style }: ListChildComponentProps) => {
                   const item = filtered[index] as any
+                  const img = getFirstImageSrc(item.content)
+                  const textPreview = getSnippet(item.content, 220)
                   return (
                     <div key={item.id} style={{...style, borderBottom:'1px solid var(--border-muted, rgba(0,0,0,0.08))', padding:'12px 16px', background:'transparent' }}>
-                      <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
-                        <h3 style={{ margin: 0, fontSize: 16, lineHeight: 1.3, flex: '1 1 auto', cursor:'pointer' }} onClick={()=> toggleExpand(item.id)}>{item.title}</h3>
+                      <div style={{display:'grid', gridTemplateColumns:'80px 1fr', gap:12, alignItems:'start'}}>
+                        <div style={{ width:80, height:80, background:'#f6f6f6', borderRadius:8, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }} onClick={()=> toggleExpand(item.id)}>
+                          {img ? <img src={img} alt='' style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <span style={{fontSize:12, opacity:.5}}>Нет фото</span>}
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: 16, lineHeight: 1.3, cursor:'pointer' }} onClick={()=> toggleExpand(item.id)}>{item.title}</h3>
+                          <div style={{ marginTop:6, color:'#555', fontSize:13, display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical', overflow:'hidden' }}>{textPreview}</div>
+                        </div>
                       </div>
-                      {!notionMode && (
-                        <>
-                          <div className='article-content' style={{ marginTop:6, maxHeight: expanded[item.id] ? undefined : 80, overflow: expanded[item.id] ? 'visible':'hidden' }} onClick={()=> toggleExpand(item.id)} dangerouslySetInnerHTML={{ __html: item.content }} />
-                          {!expanded[item.id] && (
-                            <div style={{ marginTop: 6 }}>
-                              <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>toggleExpand(item.id)}><span>Показать полностью</span></Button>
-                            </div>
-                          )}
-                        </>
-                      )}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
                         <small style={{ opacity: .6 }}>{new Date(item.created_at).toLocaleDateString('ru-RU')}</small>
                         <div style={{display:'flex', gap:16, alignItems:'center'}}>
@@ -385,48 +372,19 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
           </Fab>
         )}
         {notionMode && readerId !== null && (
-          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.25)', display:'flex', justifyContent:'flex-end', zIndex:50 }} onClick={closeReader}>
-            <div onClick={e=>e.stopPropagation()} style={{ width:'min(100%, 1000px)', height:'100%', background:'#fff', display:'grid', gridTemplateColumns:'280px 1fr', gap:0 }}>
-              <aside style={{ borderRight:'1px solid rgba(0,0,0,0.08)', padding:'16px', overflowY:'auto' }}>
-                <div style={{ fontWeight:700, marginBottom:8 }}>Содержание</div>
-                {outline.length === 0 && <div style={{opacity:.6, fontSize:13}}>Нет заголовков</div>}
-                <div style={{ display:'grid', gap:6 }}>
-                  {outline.map(it => (
-                    <a key={it.id} href={"#"+it.id} onClick={(e)=>{ e.preventDefault(); const el = document.getElementById(it.id); el?.scrollIntoView({behavior:'smooth', block:'start'}); }} style={{ fontSize:13, paddingLeft: (it.level-1)*12, color: it.id===activeOutlineId ? '#2F49D1' : '#333', fontWeight: it.id===activeOutlineId ? 700 : 400, textDecoration:'none' }}>{it.text || 'Раздел'}</a>
-                  ))}
+          <div style={{ position:'fixed', inset:0, background:'#fff', zIndex:60 }} onClick={closeReader}>
+            <div onClick={e=>e.stopPropagation()} style={{ width:'min(100%, 1040px)', margin:'0 auto', height:'100%', display:'flex', flexDirection:'column' }}>
+              <div style={{ padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid rgba(0,0,0,0.06)' }}>
+                <h2 style={{margin:0, fontSize: 22, lineHeight:1.2}}>{(readerArticle as any)?.title}</h2>
+                <div style={{display:'flex', gap:8}}>
+                  <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>readerNavigate(-1)}><span>←</span></Button>
+                  <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>readerNavigate(1)}><span>→</span></Button>
+                  <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={closeReader}><span>Закрыть</span></Button>
                 </div>
-                <div style={{ fontWeight:700, margin:'16px 0 8px' }}>Похожие</div>
-                <div style={{ display:'grid', gap:8 }}>
-                  {related.map(r => (
-                    <button key={r.id} onClick={()=>openReader(r.id)} style={{ textAlign:'left', background:'transparent', border:'none', padding:0, color:'#2F49D1', cursor:'pointer' }}>{r.title}</button>
-                  ))}
-                  {related.length === 0 && <div style={{opacity:.6, fontSize:13}}>Нет данных</div>}
-                </div>
-              </aside>
-              <div style={{ height:'100%', overflowY:'auto', position:'relative' }} onClick={handleContentClick}>
-                <div style={{ padding:'16px 24px 80px', borderBottom:'1px solid rgba(0,0,0,0.06)' }}>
-                  {/* breadcrumbs */}
-                  {readerArticle && (
-                    <div style={{fontSize:12, opacity:.7, display:'flex', gap:6, flexWrap:'wrap', marginBottom:8}}>
-                      {(readerArticle.categories||[]).map((c:any, idx:number)=> (
-                        <span key={idx}>
-                          <a href="#" onClick={(e)=>{e.preventDefault(); setExtraFilters({ top_category_id: c?.top_category?.id || undefined, subcategory_id: c?.subcategory?.id || undefined }); setReaderId(null); setReaderArticle(null);}} style={{color:'#2F49D1', textDecoration:'none'}}>{c.top_category?.name || 'Категория'}</a>
-                          {c.subcategory?.name ? ` / ${c.subcategory.name}` : ''}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12}}>
-                    <h2 style={{margin:0, fontSize: 22}}>{(readerArticle as any)?.title}</h2>
-                    <div style={{position:'sticky', right:0, display:'flex', gap:8}}>
-                      <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>readerNavigate(-1)}><span>←</span></Button>
-                      <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={()=>readerNavigate(1)}><span>→</span></Button>
-                      <Button theme={ThemeButton.CLEAR} width='auto' backgroundColor='transparent' onClick={closeReader}><span>Закрыть</span></Button>
-                    </div>
-                  </div>
-                  <div style={{opacity:.6, fontSize:12, marginTop:6}}>{readerArticle ? new Date((readerArticle as any).created_at).toLocaleString('ru-RU') : ''}</div>
-                </div>
-                <div style={{ padding:'24px 24px 80px' }}>
+              </div>
+              <div style={{opacity:.6, fontSize:12, padding:'6px 16px'}}>{readerArticle ? new Date((readerArticle as any).created_at).toLocaleString('ru-RU') : ''}</div>
+              <div style={{ flex:'1 1 auto', overflowY:'auto' }} onClick={handleContentClick}>
+                <div style={{ padding:'16px 16px 40px' }}>
                   {readerLoading && <div>Загрузка…</div>}
                   {!readerLoading && readerArticle && (
                     <article ref={contentRef} className='article-content' style={{ lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: (readerArticle as any).content }} />
