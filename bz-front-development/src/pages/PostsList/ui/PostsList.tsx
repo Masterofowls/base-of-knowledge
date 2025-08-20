@@ -6,8 +6,7 @@ import { Input } from 'shared/ui/Input/Input.tsx'
 import { Button } from 'shared/ui/Button'
 import { ThemeButton } from 'shared/ui/Button/ui/Button.tsx'
 import cls from './PostsList.module.scss'
-import { Tabs, Tab, Skeleton, IconButton, Tooltip, Fab, Chip, Paper, InputBase } from '@mui/material'
-import SearchIcon from '@mui/icons-material/Search'
+import { Skeleton, IconButton, Tooltip, Fab, Chip } from '@mui/material'
 import { FixedSizeList as List } from 'react-window'
 import type { ListChildComponentProps } from 'react-window'
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder'
@@ -37,7 +36,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState(searchParams.get('q') ?? '')
-  const [tab, setTab] = useState(0)
+  // removed tabs; using chip-based filters only
   const [quickFilters, setQuickFilters] = useState<{ city?: string; group?: string }>({})
   const [expanded, setExpanded] = useState<Record<number, boolean>>({})
   const [hasNext, setHasNext] = useState(false)
@@ -298,32 +297,11 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   }
 
   const containerWidth = fullscreen ? 'min(100%, 900px)' : 'min(100%, 1000px)'
-  const filtered = items.filter((it) => {
-    if (tab === 0) return true
-    const cats: any[] = (it as any).categories || []
-    const names = cats.map(c => c?.top_category?.name?.toLowerCase?.() || '')
-    if (tab === 1) return names.some(n => n.includes('общ'))
-    if (tab === 2) return names.some(n => n.includes('учеб'))
-    return true
-  })
+  const filtered = items
   return (
     <div className='page-center-wrapper' style={{ paddingTop: 0 }}>
       <Container gap='0' width={containerWidth} direction='column' paddings='0' className={cls.list}>
-        <div style={{ display: (notionMode && readerId !== null) ? 'none' : 'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'8px 12px', borderBottom: '1px solid var(--border-muted, rgba(0,0,0,0.08))' }}>
-          <Tabs value={tab} onChange={(_,v)=>setTab(v)} sx={{ minHeight: 40 }}>
-            <Tab label="Все" />
-            <Tab label="Общая" />
-            <Tab label="Учебная" />
-          </Tabs>
-          {showSearch && (
-            <form onSubmit={(e)=>{ e.preventDefault(); handleSearch() }}>
-              <Paper elevation={1} sx={{ display:'flex', alignItems:'center', px:1.5, py:0.5 }}>
-                <SearchIcon fontSize='small' sx={{ mr: 1 }} />
-                <InputBase placeholder='Поиск' value={query} onChange={(e)=>setQuery(e.target.value)} sx={{ minWidth: 220 }} />
-              </Paper>
-            </form>
-          )}
-        </div>
+        {/* header tabs/search removed; search lives in global header */}
         {/* Быстрые фильтры (скрыть в режиме чтения) */}
         <div style={{ display: (notionMode && readerId !== null) ? 'none' : 'flex', gap:8, alignItems:'center', padding:'8px 12px', flexWrap:'wrap' }}>
           <Chip size='small' label='Сбросить фильтры' onClick={()=>{ setQuickFilters({}); setExtraFilters({}) }} />
