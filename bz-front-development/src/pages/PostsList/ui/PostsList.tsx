@@ -309,7 +309,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   return (
     <div className='page-center-wrapper' style={{ paddingTop: 0 }}>
       <Container gap='0' width={containerWidth} direction='column' paddings='0' className={cls.list}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'8px 12px', borderBottom: '1px solid var(--border-muted, rgba(0,0,0,0.08))' }}>
+        <div style={{ display: (notionMode && readerId !== null) ? 'none' : 'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'8px 12px', borderBottom: '1px solid var(--border-muted, rgba(0,0,0,0.08))' }}>
           <Tabs value={tab} onChange={(_,v)=>setTab(v)} sx={{ minHeight: 40 }}>
             <Tab label="Все" />
             <Tab label="Общая" />
@@ -324,8 +324,8 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
             </form>
           )}
         </div>
-        {/* Быстрые фильтры */}
-        <div style={{ display:'flex', gap:8, alignItems:'center', padding:'8px 12px', flexWrap:'wrap' }}>
+        {/* Быстрые фильтры (скрыть в режиме чтения) */}
+        <div style={{ display: (notionMode && readerId !== null) ? 'none' : 'flex', gap:8, alignItems:'center', padding:'8px 12px', flexWrap:'wrap' }}>
           <Chip size='small' label='Сбросить фильтры' onClick={()=>{ setQuickFilters({}); setExtraFilters({}) }} />
           <Chip size='small' color={quickFilters.city ? 'primary':'default'} label={quickFilters.city ? `Город #${quickFilters.city}`:'Город'} onClick={()=>{
             const cityId = localStorage.getItem('student_city_id'); if (cityId) setQuickFilters(q=>({...q, city: cityId}));
@@ -335,10 +335,10 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
           }} />
         </div>
 
-        {isLoading && <div style={{ padding: 16 }}>Загрузка…</div>}
-        {error && <div style={{ padding: 16, color: '#E44A77' }}>{error}</div>}
+        {(!notionMode || readerId === null) && isLoading && <div style={{ padding: 16 }}>Загрузка…</div>}
+        {(!notionMode || readerId === null) && error && <div style={{ padding: 16, color: '#E44A77' }}>{error}</div>}
 
-        {!isLoading && !error && (
+        {(!notionMode || readerId === null) && !isLoading && !error && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 0 }}>
             {!isLoading && filtered.length === 0 && <div style={{ color: '#888', padding: 16 }}>Посты не найдены</div>}
             {filtered.length > 0 && (
@@ -383,15 +383,18 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
             )}
           </div>
         )}
-        {showToTop && (
+        {(!notionMode || readerId === null) && showToTop && (
           <Fab size='small' color='primary' aria-label='Наверх' onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} style={{ position:'fixed', right: 16, bottom: 16 }}>
             <NorthIcon fontSize='small' />
           </Fab>
         )}
         {notionMode && readerId !== null && (
-          <div style={{ position:'fixed', inset:0, background:'#fff', zIndex:9999 }}>
-            {/* Close (X) */}
-            <button aria-label='Закрыть' onClick={closeReader} style={{ position:'fixed', top:10, right:12, width:36, height:36, borderRadius:'50%', border:'1px solid rgba(0,0,0,0.12)', background:'#fff', boxShadow:'0 1px 4px rgba(0,0,0,0.08)', cursor:'pointer' }}>×</button>
+          <div style={{ background:'#fff' }}>
+            {/* Close (X) fixed */}
+            <button aria-label='Закрыть' onClick={closeReader} style={{ position:'fixed', top:10, right:12, width:36, height:36, borderRadius:'50%', border:'1px solid rgba(0,0,0,0.12)', background:'#fff', boxShadow:'0 1px 4px rgba(0,0,0,0.08)', cursor:'pointer', zIndex:10000 }}>×</button>
+            {/* Scroll shadows */}
+            <div style={{ position:'fixed', top:0, left:0, right:0, height:16, background:'linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0))', pointerEvents:'none', zIndex:9998 }} />
+            <div style={{ position:'fixed', bottom:0, left:0, right:0, height:16, background:'linear-gradient(to top, rgba(0,0,0,0.06), rgba(0,0,0,0))', pointerEvents:'none', zIndex:9998 }} />
             <div style={{ width:'min(100%, 900px)', margin:'56px auto 24px', padding:'0 12px' }} onClick={handleContentClick}>
               <h1 style={{margin:'0 0 8px 0', fontSize:24, lineHeight:1.25}}>{(readerArticle as any)?.title}</h1>
               <div style={{opacity:.6, fontSize:12, marginBottom:12}}>{readerArticle ? new Date((readerArticle as any).created_at).toLocaleString('ru-RU') : ''}</div>
