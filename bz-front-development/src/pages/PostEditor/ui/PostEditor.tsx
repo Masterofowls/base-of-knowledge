@@ -63,7 +63,34 @@ interface PostFormData {
         city_id?: number;
         course?: number;
         admission_year_id?: number;
+        institution_type_id?: number;
+        school_class_id?: number;
     }
+}
+
+function toYouTubeEmbed(url: string): string | null {
+    try {
+        const u = new URL(url)
+        if (/youtu\.be$/.test(u.hostname)) {
+            const id = u.pathname.replace('/', '')
+            if (id) return `https://www.youtube.com/embed/${id}`
+        }
+        if (/(^|\.)youtube\.com$/.test(u.hostname)) {
+            if (u.pathname.startsWith('/watch')) {
+                const id = u.searchParams.get('v')
+                if (id) return `https://www.youtube.com/embed/${id}`
+            }
+            if (u.pathname.startsWith('/shorts/')) {
+                const id = u.pathname.split('/')[2]
+                if (id) return `https://www.youtube.com/embed/${id}`
+            }
+        }
+    } catch {}
+    return null
+}
+
+function isPdfUrl(url: string): boolean {
+    return /\.pdf(\?|#|$)/i.test(url)
 }
 
 export default function PostEditor() {
@@ -97,7 +124,6 @@ export default function PostEditor() {
     const [selectedSchoolClass, setSelectedSchoolClass] = useState<{value:number,label:string} | null>(null)
     
     const [loading, setLoading] = useState(false);
-    const [bulk, setBulk] = useState<{ all_cities?: boolean; all_specialities?: boolean; all_education_modes?: boolean; all_groups?: boolean; audience_all?: boolean }>({})
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const editorRef = useRef<HTMLDivElement | null>(null)
@@ -114,7 +140,7 @@ export default function PostEditor() {
         [{ 'indent': '-1' }, { 'indent': '+1' }],
         [{ 'direction': 'rtl' }],
         ['blockquote', 'code-block'],
-        ['link', 'image'],
+        ['link', 'image', 'video'],
         ['clean']
     ]), [])
 
@@ -266,6 +292,32 @@ export default function PostEditor() {
         e.currentTarget.value = ''
     }
 
+    function handleInsertCallout() {
+        const q = quillRef.current
+        if (!q) return
+        const range = q.getSelection(true)
+        const html = `<div style="border-left:4px solid #3b82f6;background:#f0f7ff;padding:12px;border-radius:6px;">`+
+                     `<strong style="color:#1e40af;display:block;margin-bottom:6px;">Заметка</strong>`+
+                     `<p style="margin:0;">Текст заметки...</p>`+
+                     `</div><p><br/></p>`
+        q.clipboard.dangerouslyPasteHTML(range ? range.index : q.getLength(), html)
+    }
+
+    function handleInsertTable() {
+        const q = quillRef.current
+        if (!q) return
+        const range = q.getSelection(true)
+        const html = `<table style="width:100%;border-collapse:collapse;margin:8px 0;">`+
+                     `<thead><tr>`+
+                     `<th style="border:1px solid #ddd;padding:6px;background:#f9fafb;">Колонка 1</th>`+
+                     `<th style="border:1px solid #ddd;padding:6px;background:#f9fafb;">Колонка 2</th>`+
+                     `</tr></thead>`+
+                     `<tbody>`+
+                     `<tr><td style="border:1px solid #ddd;padding:6px;">Ячейка</td><td style="border:1px solid #ddd;padding:6px;">Ячейка</td></tr>`+
+                     `</tbody></table><p><br/></p>`
+        q.clipboard.dangerouslyPasteHTML(range ? range.index : q.getLength(), html)
+    }
+
     const handleBack = () => { navigate('/admin/posts'); };
 
     useEffect(() => {
@@ -277,7 +329,26 @@ export default function PostEditor() {
         })
         quillRef.current = q
         q.on('text-change', () => { setFormData(prev => ({ ...prev, content: q.root.innerHTML })) })
-        return () => { quillRef.current = null }
+        const onPaste = (e: ClipboardEvent) => {
+            const text = e.clipboardData?.getData('text/plain')?.trim()
+            if (!text) return
+            const yt = toYouTubeEmbed(text)
+            if (yt) {
+                e.preventDefault()
+                const range = q.getSelection(true)
+                q.insertEmbed(range ? range.index : q.getLength(), 'video', yt, 'user')
+                return
+            }
+            if (isPdfUrl(text)) {
+                e.preventDefault()
+                const range = q.getSelection(true)
+                const html = `<p></p><iframe src="${text}" style="width:100%;height:600px;border:0" title="PDF"></iframe><p></p>`
+                q.clipboard.dangerouslyPasteHTML(range ? range.index : q.getLength(), html)
+                return
+            }
+        }
+        q.root.addEventListener('paste', onPaste)
+        return () => { q.root.removeEventListener('paste', onPaste); quillRef.current = null }
     }, [TOOLBAR])
 
     if (loading) {
@@ -300,10 +371,14 @@ export default function PostEditor() {
                         <p>Назад к управлению постами</p>
                     </span>
                     <h2>{isEditing ? 'Редактировать пост' : 'Создать новый пост'}</h2>
-                    <label style={{ marginLeft: 'auto' }}>
-                        <input type='file' multiple accept='image/*,application/pdf,video/*' onChange={handleFileInput} style={{ display:'none' }} />
-                        <Button width='auto' backgroundColor='#eee' theme={ThemeButton.CLEAR}><span><UploadIcon fontSize='small' />&nbsp;Загрузить</span></Button>
-                    </label>
+                    <div style={{ display:'flex', gap:8, marginLeft:'auto' }}>
+                        <label>
+                            <input type='file' multiple accept='image/*,application/pdf,video/*' onChange={handleFileInput} style={{ display:'none' }} />
+                            <Button width='auto' backgroundColor='#eee' theme={ThemeButton.CLEAR}><span><UploadIcon fontSize='small' />&nbsp;Загрузить</span></Button>
+                        </label>
+                        <Button width='auto' backgroundColor='#eef2ff' theme={ThemeButton.CLEAR} onClick={handleInsertCallout}><span><InfoOutlinedIcon fontSize='small'/>&nbsp;Callout</span></Button>
+                        <Button width='auto' backgroundColor='#eff6ff' theme={ThemeButton.CLEAR} onClick={handleInsertTable}><span><TableChartOutlinedIcon fontSize='small'/>&nbsp;Таблица</span></Button>
+                    </div>
                 </div>
 
                 {/* Error Display */}
@@ -365,9 +440,34 @@ export default function PostEditor() {
                         )}
                     </div>
 
-                    {/* Categories */}
+                    {/* Categories single audience type */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
-                        <InputSelect placeholder="Выберите группы (не обязательно)" label={<p>Группы (не обязательно)</p>} options={groups} value={selectedGroups} onChange={(options) => setSelectedGroups(options || [])} isMulti={true} />
+                        <div>
+                            <label style={{ display:'block', marginBottom:6, fontWeight:500 }}>Тип категории поста</label>
+                            <Autocomplete
+                                options={[
+                                    { value:'all', label:'Общая информация' },
+                                    { value:'city', label:'Город' },
+                                    { value:'study', label:'Учебная информация' },
+                                ]}
+                                ListboxComponent={VirtualListbox as any}
+                                value={(function(){
+                                  const ps = formData.publish_scope || {}
+                                  if (ps?.publish_for_all) return { value:'all', label:'Общая информация' }
+                                  if (ps?.city_id) return { value:'city', label:'Город' }
+                                  return { value:'study', label:'Учебная информация' }
+                                })()}
+                                onChange={(_, v)=>{
+                                  if (!v) return
+                                  if (v.value==='all') setFormData(prev=> ({...prev, publish_scope:{ publish_for_all: true }}))
+                                  if (v.value==='city') setFormData(prev=> ({...prev, publish_scope:{ publish_for_all:false, city_id: undefined }}))
+                                  if (v.value==='study') setFormData(prev=> ({...prev, publish_scope:{ publish_for_all:false, city_id: undefined }}))
+                                }}
+                                isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                                getOptionLabel={(o)=>o?.label ?? ''}
+                                renderInput={(p)=>(<TextField {...p} placeholder='Выберите один вариант' size='small' />)}
+                            />
+                        </div>
                         <InputSelect placeholder="Выберите категории (не обязательно)" label={<p>Категории (не обязательно)</p>} options={topCategories} value={selectedTopCategories} onChange={(options) => setSelectedTopCategories(options || [])} isMulti={true} />
                     </div>
 
@@ -395,78 +495,84 @@ export default function PostEditor() {
                                 <FormControlLabel control={<Checkbox checked={!!formData.publish_scope?.publish_for_all} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, publish_for_all: e.target.checked, city_id: undefined, course: undefined }}))}/>} label='Для всех' />
                                 {!formData.publish_scope?.publish_for_all && (
                                 <>
-                                    <FormControl fullWidth size='small'>
-                                        <InputLabel id='spec-label-2'>Специальность (не обязательно)</InputLabel>
-                                        <Select labelId='spec-label-2' label='Специальность' value={formData.publish_scope?.speciality_id || ''} onChange={async (e)=> {
-                                            const raw = e.target.value as any
-                                            const val = raw === '' ? undefined : Number(raw)
+                                    <Autocomplete
+                                        options={specialities}
+                                        ListboxComponent={VirtualListbox as any}
+                                        value={specialities.find(s=> s.value === (formData.publish_scope?.speciality_id || 0)) || null}
+                                        onChange={async (_, v)=>{
+                                            const val = v?.value
                                             setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, speciality_id: val}}))
-                                            const spec = specialities.find(s=>s.value===val)
-                                            if (spec?.institution_type_id) {
-                                                try { const resp = await http.get('/api/categories/education-forms', { params: { institution_type_id: spec.institution_type_id } }); setEducationForms(resp.data.map((f:any)=>({value:f.id,label:f.name}))) } catch {}
+                                            if (v?.institution_type_id) {
+                                                try { const resp = await http.get('/api/categories/education-forms', { params: { institution_type_id: v.institution_type_id } }); setEducationForms(resp.data.map((f:any)=>({value:f.id,label:f.name}))) } catch {}
                                             }
-                                        }}>
-                                            <MenuItem value=''>— Все специальности —</MenuItem>
-                                            {specialities.map(s=> <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
-                                        </Select>
-                                    </FormControl>
-                                    <FormControl fullWidth size='small'>
-                                        <InputLabel id='form-label-2'>Форма обучения (не обязательно)</InputLabel>
-                                        <Select labelId='form-label-2' label='Форма обучения' value={formData.publish_scope?.education_form_id || ''} onChange={(e)=> {
-                                            const raw = e.target.value as any
-                                            const val = raw === '' ? undefined : Number(raw)
+                                        }}
+                                        isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                                        getOptionLabel={(o)=>o?.label ?? ''}
+                                        renderInput={(p)=>(<TextField {...p} label='Специальность (не обязательно)' placeholder='— Все специальности —' size='small'/>)}
+                                    />
+                                    <Autocomplete
+                                        options={educationForms}
+                                        ListboxComponent={VirtualListbox as any}
+                                        value={educationForms.find(f=> f.value === (formData.publish_scope?.education_form_id || 0)) || null}
+                                        onChange={(_, v)=>{
+                                            const val = v?.value
                                             setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, education_form_id: val}}))
-                                        }}>
-                                            <MenuItem value=''>— Все форматы —</MenuItem>
-                                            {educationForms.map(f=> <MenuItem key={f.value} value={f.value}>{f.label}</MenuItem>)}
-                                        </Select>
-                                    </FormControl>
+                                        }}
+                                        isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                                        getOptionLabel={(o)=>o?.label ?? ''}
+                                        renderInput={(p)=>(<TextField {...p} label='Форма обучения (не обязательно)' placeholder='— Все форматы —' size='small'/>)}
+                                    />
                                 </>) }
-                                <FormControl fullWidth size='small'>
-                                    <InputLabel id='city-label'>Город (не обязательно)</InputLabel>
-                                    <Select labelId='city-label' label='Город (не обязательно)' value={formData.publish_scope?.city_id || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: e.target.value===''? undefined : Number(e.target.value), course: undefined}}))}>
-                                        <MenuItem value=''>— Все города —</MenuItem>
-                                        {cities.map(c=> <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
-                                    </Select>
-                                </FormControl>
-                                <FormControl fullWidth size='small' disabled={!!formData.publish_scope?.city_id}>
-                                    <InputLabel id='course-label'>Курс (не обязательно)</InputLabel>
-                                    <Select labelId='course-label' label='Курс (не обязательно)' value={formData.publish_scope?.course || ''} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, course: e.target.value===''? undefined : Number(e.target.value)}}))}>
-                                        <MenuItem value=''>— Все курсы —</MenuItem>
-                                        {courseOptions.map(o=> <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
-                                    </Select>
-                                </FormControl>
-                                <FormControl fullWidth size='small'>
-                                    <InputLabel id='year-label'>Год поступления (не обязательно)</InputLabel>
-                                    <Select labelId='year-label' label='Год поступления (не обязательно)' value={formData.publish_scope?.admission_year_id || ''} onChange={(e)=> {
-                                        const raw = e.target.value as any
-                                        const val = raw === '' ? undefined : Number(raw)
-                                        setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, admission_year_id: val}}))
-                                    }}>
-                                        <MenuItem value=''>— Все годы поступления —</MenuItem>
-                                        {admissionYears.map(y=> <MenuItem key={y.value} value={y.value}>{y.label}</MenuItem>)}
-                                    </Select>
-                                </FormControl>
+                                <Autocomplete
+                                    options={cities}
+                                    ListboxComponent={VirtualListbox as any}
+                                    value={cities.find(c=> c.value === (formData.publish_scope?.city_id || 0)) || null}
+                                    onChange={(_, v)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: v?.value, course: undefined}}))}
+                                    isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                                    getOptionLabel={(o)=>o?.label ?? ''}
+                                    renderInput={(p)=>(<TextField {...p} label='Город (не обязательно)' placeholder='— Все города —' size='small'/>)}
+                                />
+                                <Autocomplete
+                                    options={courseOptions}
+                                    ListboxComponent={VirtualListbox as any}
+                                    value={courseOptions.find(c=> c.value === (formData.publish_scope?.course || 0)) || null}
+                                    onChange={(_, v)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, course: v?.value}}))}
+                                    isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                                    getOptionLabel={(o)=>o?.label ?? ''}
+                                    renderInput={(p)=>(<TextField {...p} label='Курс (не обязательно)' placeholder='— Все курсы —' size='small'/>)}
+                                    disabled={!!formData.publish_scope?.city_id}
+                                />
+                                <Autocomplete
+                                    options={admissionYears}
+                                    ListboxComponent={VirtualListbox as any}
+                                    value={admissionYears.find(y=> y.value === (formData.publish_scope?.admission_year_id || 0)) || null}
+                                    onChange={(_, v)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, admission_year_id: v?.value}}))}
+                                    isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                                    getOptionLabel={(o)=>o?.label ?? ''}
+                                    renderInput={(p)=>(<TextField {...p} label='Год поступления (не обязательно)' placeholder='— Все годы —' size='small'/>)}
+                                />
                                 {selectedInstitution?.name?.toLowerCase()==='школа' && (
-                                  <FormControl fullWidth size='small'>
-                                    <InputLabel id='class-label'>Класс (не обязательно)</InputLabel>
-                                    <Select labelId='class-label' label='Класс (не обязательно)' value={selectedSchoolClass?.value || ''} onChange={(e)=> {
-                                      const raw = e.target.value as any
-                                      const val = raw === '' ? undefined : Number(raw)
-                                      const found = schoolClasses.find(c=>c.value===val)
-                                      setSelectedSchoolClass(found || null)
-                                    }}>
-                                      <MenuItem value=''>— Все классы —</MenuItem>
-                                      {schoolClasses.map(cl=> <MenuItem key={cl.value} value={cl.value}>{cl.label}</MenuItem>)}
-                                    </Select>
-                                  </FormControl>
+                                  <Autocomplete
+                                    options={schoolClasses}
+                                    ListboxComponent={VirtualListbox as any}
+                                    value={selectedSchoolClass}
+                                    onChange={(_, v)=> setSelectedSchoolClass(v)}
+                                    isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                                    getOptionLabel={(o)=>o?.label ?? ''}
+                                    renderInput={(p)=>(<TextField {...p} label='Класс (не обязательно)' placeholder='— Все классы —' size='small'/>)}
+                                  />
                                 )}
                             </div>
                         </AccordionDetails>
                     </Accordion>
 
+                    {/* Groups moved to bottom */}
+                    <div>
+                        <InputSelect placeholder="Выберите группы (не обязательно)" label={<p>Группы (не обязательно)</p>} options={groups} value={selectedGroups} onChange={(options) => setSelectedGroups(options || [])} isMulti={true} />
+                    </div>
+
                     {/* Action Buttons */}
-                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
                         <Button onClick={handleBack} width='120px' backgroundColor='#666' theme={ThemeButton.CLEAR}><span>Отмена</span></Button>
                         <Button onClick={handleSubmit} width='180px' backgroundColor='#00AAFF' theme={ThemeButton.ARROW} disabled={saving}><span><SaveIcon width='13px' height='13px' /><p>{saving ? 'Сохранение...' : (isEditing ? 'Обновить' : 'Создать')}</p></span></Button>
                     </div>

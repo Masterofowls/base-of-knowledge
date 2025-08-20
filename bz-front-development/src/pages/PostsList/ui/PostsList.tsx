@@ -6,7 +6,8 @@ import { Input } from 'shared/ui/Input/Input.tsx'
 import { Button } from 'shared/ui/Button'
 import { ThemeButton } from 'shared/ui/Button/ui/Button.tsx'
 import cls from './PostsList.module.scss'
-import { Autocomplete, TextField, Tabs, Tab, Card, CardContent, Skeleton, IconButton, Tooltip, Fab, Chip } from '@mui/material'
+import { Autocomplete, TextField, Tabs, Tab, Card, CardContent, Skeleton, IconButton, Tooltip, Fab, Chip, InputAdornment } from '@mui/material'
+import SearchIcon from '@mui/icons-material/Search'
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window'
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder'
 import WhatshotIcon from '@mui/icons-material/Whatshot'
@@ -296,11 +297,30 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   return (
     <div className='page-center-wrapper' style={{ paddingTop: 0 }}>
       <Container gap='0' width={containerWidth} direction='column' paddings='0' className={cls.list}>
-        <Tabs value={tab} onChange={(_,v)=>setTab(v)} sx={{ px: 2, borderBottom: '1px solid var(--border-muted, rgba(0,0,0,0.08))' }}>
-          <Tab label="Все" />
-          <Tab label="Общая" />
-          <Tab label="Учебная" />
-        </Tabs>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'8px 12px', borderBottom: '1px solid var(--border-muted, rgba(0,0,0,0.08))' }}>
+          <Tabs value={tab} onChange={(_,v)=>setTab(v)} sx={{ minHeight: 40 }}>
+            <Tab label="Все" />
+            <Tab label="Общая" />
+            <Tab label="Учебная" />
+          </Tabs>
+          <TextField
+            placeholder='Поиск'
+            size='small'
+            value={query}
+            onChange={(e)=> setQuery(e.target.value)}
+            onKeyDown={(e)=>{ if (e.key==='Enter') handleSearch() }}
+            sx={{ minWidth: 240 }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position='end'>
+                  <IconButton size='small' onClick={handleSearch} aria-label='Поиск'>
+                    <SearchIcon fontSize='small' />
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+          />
+        </div>
         {/* Быстрые фильтры */}
         <div style={{ display:'flex', gap:8, alignItems:'center', padding:'8px 12px', flexWrap:'wrap' }}>
           <Chip size='small' label='Сбросить фильтры' onClick={()=>{ setQuickFilters({}); setExtraFilters({}) }} />
