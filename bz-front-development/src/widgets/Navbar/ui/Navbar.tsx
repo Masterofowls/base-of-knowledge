@@ -30,7 +30,12 @@ function Navbar({className}: NavbarProps) {
 
     const handleAdminOpen = (e: React.MouseEvent<HTMLElement>) => setAdminAnchorEl(e.currentTarget)
     const handleAdminClose = () => setAdminAnchorEl(null)
-    const handleLogout = () => {
+    const handleLogout = async () => {
+      try {
+        const token = localStorage.getItem('jwt_token')
+        if (token) await (await import('shared/api/http')).default.post('/api/auth/logout')
+        if (import.meta.env.DEV) console.log('[auth] logout success')
+      } catch (e) { if (import.meta.env.DEV) console.log('[auth] logout error', e) }
       localStorage.removeItem('jwt_token')
       localStorage.removeItem('user_role')
       handleAdminClose()

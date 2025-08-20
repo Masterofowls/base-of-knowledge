@@ -27,6 +27,9 @@ http.interceptors.request.use(
     const token = localStorage.getItem('jwt_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      if (import.meta.env.DEV) {
+        console.log('[auth] using token for request:', { url: config.url });
+      }
     }
     return config;
   },
@@ -43,6 +46,7 @@ http.interceptors.response.use(
       // Clear token on 401 Unauthorized
       localStorage.removeItem('jwt_token');
       localStorage.removeItem('user_role');
+      if (import.meta.env.DEV) console.log('[auth] session ended (401).');
     }
     return Promise.reject(error);
   }

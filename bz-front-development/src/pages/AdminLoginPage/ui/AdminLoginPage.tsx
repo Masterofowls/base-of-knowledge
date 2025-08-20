@@ -36,13 +36,16 @@ export default function AdminLoginPage() {
                 const roleName = (response.data.user?.role || '').toLowerCase()
                 const normalizedRole = roleName.includes('администратор') || roleName === 'admin' ? 'admin' : roleName
                 localStorage.setItem('user_role', normalizedRole || 'admin');
+                if (import.meta.env.DEV) console.log('[auth] admin login success:', { user: response.data.user });
                 navigate('/admin', { replace: true });
             }
         } catch (e: any) {
             if (e.response?.status === 401) {
                 setError('Неверные учетные данные');
+                if (import.meta.env.DEV) console.log('[auth] admin login failed: 401');
             } else {
                 setError(e.message ?? 'Ошибка входа');
+                if (import.meta.env.DEV) console.log('[auth] admin login error:', e);
             }
         } finally {
             setIsLoading(false)
