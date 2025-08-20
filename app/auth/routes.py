@@ -1,11 +1,13 @@
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app.auth import auth_bp
-from app.models import User, Role
+from app.models import User, Role, AdminSession, EditLock
 from app.models import InstitutionType, EducationForm, Speciality, AdmissionYear, City, SchoolClass, Group
 from app import db, bcrypt
 import re
 from email_validator import validate_email, EmailNotValidError
+import secrets
+from datetime import datetime
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -22,8 +24,21 @@ def login():
     if not user or not bcrypt.check_password_hash(user.password, password):
         return jsonify({'error': 'Invalid email or password'}), 401
     
-    # Create access token
-    access_token = create_access_token(identity=str(user.id))
+    # Enforce single active admin session (by role) — revoke others
+    if user.role and user.role.name.lower() in ('admin', 'editor'):
+        existing = AdminSession.query.filter_by(user_id=user.id, revoked_at=None).all()
+        for s in existing:
+            s.revoked_at = datetime.utcnow()
+        sid = secrets.token_hex(24)
+        sess = AdminSession(user_id=user.id, sid=sid, user_agent=request.headers.get('User-Agent'), ip_address=request.remote_addr)
+        db.session.add(sess)
+        db.session.commit()
+        additional = { 'sid': sid }
+    else:
+        additional = {}
+
+    # Create access token with session id claim when applicable
+    access_token = create_access_token(identity=str(user.id), additional_claims=additional)
     
     return jsonify({
         'access_token': access_token,
@@ -34,6 +49,85 @@ def login():
             'role': user.role.name
         }
     }), 200
+
+
+@auth_bp.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    user_id = int(get_jwt_identity())
+    claims = getattr(request, 'jwt_extended_claims', None)
+    sid = None
+    try:
+        # flask-jwt-extended >=4 attaches claims via get_jwt()
+        from flask_jwt_extended import get_jwt
+        sid = get_jwt().get('sid')
+    except Exception:
+        pass
+    if sid:
+        sess = AdminSession.query.filter_by(user_id=user_id, sid=sid, revoked_at=None).first()
+        if sess:
+            sess.revoked_at = datetime.utcnow()
+            db.session.commit()
+    return jsonify({'message': 'logged out'}), 200
+
+
+@auth_bp.route('/edit-locks/acquire', methods=['POST'])
+@jwt_required()
+def acquire_lock():
+    user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+    rtype = data.get('resource_type')
+    rid = data.get('resource_id')
+    if not rtype or not rid:
+        return jsonify({'error': 'resource_type and resource_id are required'}), 400
+    lock = EditLock.query.filter_by(resource_type=rtype, resource_id=rid).first()
+    if lock and not lock.is_expired():
+        if lock.user_id != user_id:
+            return jsonify({'error': 'locked', 'by_user_id': lock.user_id}), 409
+        # if same user, refresh
+        lock.heartbeat_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({'status': 'ok', 'lock_id': lock.id}), 200
+    if lock and lock.is_expired():
+        db.session.delete(lock)
+        db.session.commit()
+    new_lock = EditLock(resource_type=rtype, resource_id=rid, user_id=user_id)
+    db.session.add(new_lock)
+    db.session.commit()
+    return jsonify({'status': 'ok', 'lock_id': new_lock.id}), 200
+
+
+@auth_bp.route('/edit-locks/heartbeat', methods=['POST'])
+@jwt_required()
+def heartbeat_lock():
+    user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+    rtype = data.get('resource_type')
+    rid = data.get('resource_id')
+    if not rtype or not rid:
+        return jsonify({'error': 'resource_type and resource_id are required'}), 400
+    lock = EditLock.query.filter_by(resource_type=rtype, resource_id=rid, user_id=user_id).first()
+    if not lock:
+        return jsonify({'error': 'no_lock'}), 404
+    lock.heartbeat_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'status': 'ok'}), 200
+
+
+@auth_bp.route('/edit-locks/release', methods=['POST'])
+@jwt_required()
+def release_lock():
+    user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+    rtype = data.get('resource_type')
+    rid = data.get('resource_id')
+    if not rtype or not rid:
+        return jsonify({'error': 'resource_type and resource_id are required'}), 400
+    lock = EditLock.query.filter_by(resource_type=rtype, resource_id=rid, user_id=user_id).first()
+    if lock:
+        db.session.delete(lock)
+        db.session.commit()
+    return jsonify({'status': 'ok'}), 200
 
 @auth_bp.route('/register', methods=['POST'])
 def register():

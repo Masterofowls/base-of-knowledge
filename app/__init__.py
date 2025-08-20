@@ -2,7 +2,7 @@ from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_jwt
 from flask_bcrypt import Bcrypt
 import os
 from dotenv import load_dotenv
@@ -36,6 +36,7 @@ def create_app(config_name='development'):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False  # Tokens don't expire for now
+    app.config['JWT_TOKEN_LOCATION'] = ['headers']
     
     # Initialize extensions with app
     db.init_app(app)
@@ -88,6 +89,47 @@ def create_app(config_name='development'):
                 pass
         except Exception:
             pass
+
+    @app.before_request
+    def enforce_active_admin_session():
+        # Only for API paths
+        try:
+            from flask import request
+            path = request.path or ''
+            if not path.startswith('/api'):
+                return
+            # Public endpoints skip
+            public_paths = (
+                '/api/auth/login',
+                '/api/auth/register',
+                '/api/auth/student-login',
+            )
+            if path in public_paths:
+                return
+            # If no/invalid JWT, let @jwt_required on endpoints handle it
+            try:
+                verify_jwt_in_request(optional=True)
+            except Exception:
+                return
+            try:
+                claims = get_jwt()
+            except Exception:
+                return
+            sid = claims.get('sid')
+            if not sid:
+                # non-admin/student tokens: allow
+                return
+            # validate sid in DB
+            from app.models import AdminSession
+            from app import db as _db
+            sess = AdminSession.query.filter_by(sid=sid, revoked_at=None).first()
+            if not sess:
+                # revoke access
+                from flask import jsonify
+                return jsonify({'error': 'session_revoked'}), 401
+        except Exception:
+            # Fail open to avoid breaking non-protected routes; protected ones still need @jwt_required
+            return
 
     @app.route('/')
     def root_status():

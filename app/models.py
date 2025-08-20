@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.dialects.mysql import LONGBLOB, LONGTEXT
 from sqlalchemy import Text, LargeBinary
 
@@ -246,3 +246,36 @@ class ArticleMediaLink(db.Model):
     article_id = db.Column(db.Integer, db.ForeignKey('articles.id'), primary_key=True)
     media_id = db.Column(db.Integer, db.ForeignKey('articles_media.id'), primary_key=True)
     position = db.Column(db.Integer)
+
+
+class AdminSession(db.Model):
+    __tablename__ = 'admin_sessions'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    sid = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    user_agent = db.Column(db.String(255))
+    ip_address = db.Column(db.String(64))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    revoked_at = db.Column(db.DateTime)
+
+    def is_active(self) -> bool:
+        return self.revoked_at is None
+
+
+class EditLock(db.Model):
+    __tablename__ = 'edit_locks'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    resource_type = db.Column(db.String(50), nullable=False)  # e.g., 'article'
+    resource_id = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    acquired_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    heartbeat_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('resource_type', 'resource_id', name='uq_edit_lock_resource'),
+    )
+
+    def is_expired(self, ttl_seconds: int = 120) -> bool:
+        return (datetime.utcnow() - (self.heartbeat_at or self.acquired_at)).total_seconds() > ttl_seconds
