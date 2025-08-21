@@ -72,7 +72,8 @@ export default function StudentLoginPage() {
                 setSelectedSchoolClass(null)
                 // fetch by institution
                 const specs = await http.get('/api/categories/specialities', { params: { institution_type_id: instId } })
-                setSpecialities(specs.data.map((s:any)=>({ value:s.id, label:`${s.code} ${s.name}` })))
+                const specsList = specs.data.map((s:any)=>({ value:s.id, label:`${s.code} ${s.name}` }))
+                setSpecialities(specsList.filter((v:any, i:number, a:any[]) => a.findIndex((x:any)=>x.value===v.value)===i))
                 const forms = await http.get('/api/categories/education-forms', { params: { institution_type_id: instId } })
                 const formsList = forms.data.map((f:any)=>({ value:f.id, label:f.name }))
                 setEducationForms(formsList.filter((v:any, i:number, a:any[]) => a.findIndex((x:any)=>x.value===v.value)===i))
@@ -80,7 +81,8 @@ export default function StudentLoginPage() {
                 const yearsList = years.data.map((y:any)=>({ value:y.id, label:String(y.year) }))
                 setAdmissionYears(yearsList.filter((v:any, i:number, a:any[]) => a.findIndex((x:any)=>x.value===v.value)===i))
                 const classes = await http.get('/api/categories/school-classes', { params: { institution_type_id: instId } })
-                setSchoolClasses(classes.data.map((cl:any)=>({ value:cl.id, label:cl.name })))
+                const classesList = classes.data.map((cl:any)=>({ value:cl.id, label:cl.name }))
+                setSchoolClasses(classesList.filter((v:any, i:number, a:any[]) => a.findIndex((x:any)=>x.value===v.value)===i))
                 await refreshGroups(instId)
             } catch (e) {
                 // ignore

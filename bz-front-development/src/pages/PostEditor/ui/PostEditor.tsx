@@ -163,6 +163,7 @@ export default function PostEditor() {
         [{ 'direction': 'rtl' }],
         ['blockquote', 'code-block'],
         ['link', 'image', 'video'],
+        ['table'],
         ['clean']
     ]), [])
 
@@ -357,7 +358,28 @@ export default function PostEditor() {
         const q = new Quill(editorRef.current, {
             theme: 'snow',
             placeholder: 'Перетащите файлы в это поле или используйте кнопку загрузки',
-            modules: { toolbar: TOOLBAR, clipboard: { matchVisual: false } }
+            modules: {
+                toolbar: {
+                    container: TOOLBAR,
+                    handlers: {
+                        table: () => {
+                            // встроенная вставка таблицы (без отдельной кнопки вне тулбара)
+                            const qr = quillRef.current
+                            const range = qr?.getSelection(true)
+                            const html = `<table style="width:100%;border-collapse:collapse;margin:8px 0;">`
+                                + `<thead><tr>`
+                                + `<th style=\"border:1px solid #ddd;padding:6px;background:#f9fafb;\">Колонка 1</th>`
+                                + `<th style=\"border:1px solid #ddd;padding:6px;background:#f9fafb;\">Колонка 2</th>`
+                                + `</tr></thead>`
+                                + `<tbody>`
+                                + `<tr><td style=\"border:1px solid #ddd;padding:6px;\">Ячейка</td><td style=\"border:1px solid #ddd;padding:6px;\">Ячейка</td></tr>`
+                                + `</tbody></table><p><br/></p>`
+                            qr?.clipboard.dangerouslyPasteHTML(range ? range.index : qr?.getLength() || 0, html)
+                        }
+                    }
+                },
+                clipboard: { matchVisual: false }
+            }
         })
         quillRef.current = q
         q.on('text-change', () => { setFormData(prev => ({ ...prev, content: q.root.innerHTML })) })
@@ -484,6 +506,7 @@ export default function PostEditor() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
                         <div>
                             <label style={{ display:'block', marginBottom:6, fontWeight:500 }}>Тип категории поста</label>
+                            <small style={{ display:'block', marginBottom:6, opacity:.7 }}>«Общая информация» — всем пользователям; «Город» — для выбранного города; «Учебная информация» — по учебным фильтрам ниже.</small>
                             <Autocomplete
                                 options={[
                                     { value:'all', label:'Общая информация' },
@@ -523,7 +546,7 @@ export default function PostEditor() {
                             )}
                         </div>
                         <InputSelect placeholder="Выберите категории (не обязательно)" label={<p>Категории (не обязательно)</p>} options={topCategories} value={selectedTopCategories} onChange={(options) => setSelectedTopCategories(options || [])} isMulti={true} />
-                        <small style={{opacity:.7}}>Категории помогают различать «Новости» и «Объявления». Новости — информационные материалы; Объявления — организационные сообщения. Отображение зависит от выбранного раздела интерфейса.</small>
+                        <small style={{opacity:.7}}>Категории помогают различать «Новости» (информационные материалы) и «Объявления» (организационные сообщения). Они могут отображаться в разных разделах ленты и подборок.</small>
                     </div>
 
                     {/* Checkboxes */}
