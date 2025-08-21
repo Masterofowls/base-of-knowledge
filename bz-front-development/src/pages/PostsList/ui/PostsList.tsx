@@ -81,6 +81,8 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
       if (groupId) params.group_id = Number(groupId)
       if (course) params.course = Number(course)
       if (baseClass) params.base_class = Number(baseClass)
+      const studCity = localStorage.getItem('student_city_id')
+      if (studCity) params.audience_city_id = Number(studCity)
     }
 
     http

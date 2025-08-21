@@ -131,6 +131,12 @@ export default function PostEditor() {
     const [specialities, setSpecialities] = useState<{value:number,label:string,institution_type_id?:number}[]>([])
     const [educationForms, setEducationForms] = useState<{value:number,label:string}[]>([])
     const [courseOptions, setCourseOptions] = useState<{value:number,label:string}[]>([])
+    const currentCategoryType = useMemo(() => {
+        const ps = formData.publish_scope || {}
+        if (ps?.publish_for_all) return 'all'
+        if (ps?.city_id !== undefined) return 'city'
+        return 'study'
+    }, [formData.publish_scope])
 
     // Institution & School class controls
     const [institutionTypes, setInstitutionTypes] = useState<{value:number,label:string,name:string}[]>([])
@@ -184,13 +190,16 @@ export default function PostEditor() {
             setCities(citiesResponse.data.map((c:any)=>({value:c.id,label:c.name})))
 
             const yearsResponse = await http.get('/api/categories/admission-years')
-            setAdmissionYears(yearsResponse.data.map((y:any)=>({value:y.id,label:String(y.year)})))
+            const years = yearsResponse.data.map((y:any)=>({value:y.id,label:String(y.year)}))
+            setAdmissionYears(years.filter((v:any, i:number, a:any[]) => a.findIndex(x=>x.value===v.value)===i))
 
             const specsResponse = await http.get('/api/categories/specialities')
-            setSpecialities(specsResponse.data.map((s:any)=>({value:s.id,label:`${s.code} ${s.name}`, institution_type_id: s.institution_type_id})))
+            const specs = specsResponse.data.map((s:any)=>({value:s.id,label:`${s.code} ${s.name}`, institution_type_id: s.institution_type_id}))
+            setSpecialities(specs.filter((v:any, i:number, a:any[]) => a.findIndex(x=>x.value===v.value)===i))
 
             const formsResponse = await http.get('/api/categories/education-forms')
-            setEducationForms(formsResponse.data.map((f:any)=>({value:f.id,label:f.name})))
+            const forms = formsResponse.data.map((f:any)=>({value:f.id,label:f.name}))
+            setEducationForms(forms.filter((v:any, i:number, a:any[]) => a.findIndex(x=>x.value===v.value)===i))
 
             const coursesResp = await http.get('/api/categories/courses', { params: { max: 6 } })
             setCourseOptions((coursesResp.data as number[]).map((n:number)=>({ value:n, label:String(n) })))
@@ -206,11 +215,14 @@ export default function PostEditor() {
             try {
                 const instId = selectedInstitution.value
                 const specsResponse = await http.get('/api/categories/specialities', { params: { institution_type_id: instId } })
-                setSpecialities(specsResponse.data.map((s:any)=>({value:s.id,label:`${s.code} ${s.name}`, institution_type_id: s.institution_type_id})))
+                const specs = specsResponse.data.map((s:any)=>({value:s.id,label:`${s.code} ${s.name}`, institution_type_id: s.institution_type_id}))
+                setSpecialities(specs.filter((v:any, i:number, a:any[]) => a.findIndex(x=>x.value===v.value)===i))
                 const formsResponse = await http.get('/api/categories/education-forms', { params: { institution_type_id: instId } })
-                setEducationForms(formsResponse.data.map((f:any)=>({value:f.id,label:f.name})))
+                const forms = formsResponse.data.map((f:any)=>({value:f.id,label:f.name}))
+                setEducationForms(forms.filter((v:any, i:number, a:any[]) => a.findIndex(x=>x.value===v.value)===i))
                 const yearsResponse = await http.get('/api/categories/admission-years', { params: { institution_type_id: instId } })
-                setAdmissionYears(yearsResponse.data.map((y:any)=>({value:y.id,label:String(y.year)})))
+                const years = yearsResponse.data.map((y:any)=>({value:y.id,label:String(y.year)}))
+                setAdmissionYears(years.filter((v:any, i:number, a:any[]) => a.findIndex(x=>x.value===v.value)===i))
                 const classesResponse = await http.get('/api/categories/school-classes', { params: { institution_type_id: instId } })
                 setSchoolClasses(classesResponse.data.map((cl:any)=>({ value:cl.id, label:cl.name })))
                 setSelectedSchoolClass(null)
@@ -399,11 +411,13 @@ export default function PostEditor() {
                         <p>Назад к управлению постами</p>
                     </span>
                     <h2>{isEditing ? 'Редактировать пост' : 'Создать новый пост'}</h2>
-                    <div style={{ display:'flex', gap:8, marginLeft:'auto' }}>
+                    <div style={{ display:'flex', gap:8, marginLeft:'auto', alignItems:'center', flexWrap:'wrap' }}>
                         <input ref={fileInputRef} type='file' multiple onChange={handleFileInput} accept='image/*,application/pdf,video/*,.pdf,.doc,.docx,.txt,.md,.markdown,.rtf,.fb2,.odt,.ods,.ppt,.pptx,.xls,.xlsx' style={{ display:'none' }} />
                         <Button width='auto' backgroundColor='#eee' theme={ThemeButton.CLEAR} onClick={handleOpenFileDialog}><span><UploadIcon fontSize='small' />&nbsp;Загрузить</span></Button>
+                        <small style={{opacity:.7}}>Допустимые файлы: изображения (PNG/JPG/WEBP), PDF, видео, документы (DOC/DOCX, PPT/PPTX, XLS/XLSX, TXT, MD, RTF, FB2, ODT, ODS)</small>
                         <Button width='auto' backgroundColor='#eef2ff' theme={ThemeButton.CLEAR} onClick={handleInsertCallout}><span><InfoOutlinedIcon fontSize='small'/>&nbsp;Callout</span></Button>
-                        <Button width='auto' backgroundColor='#eff6ff' theme={ThemeButton.CLEAR} onClick={handleInsertTable}><span><TableChartOutlinedIcon fontSize='small'/>&nbsp;Таблица</span></Button>
+                        {/* Временное отключение создания таблиц до исправления */}
+                        {/* <Button width='auto' backgroundColor='#eff6ff' theme={ThemeButton.CLEAR} onClick={handleInsertTable}><span><TableChartOutlinedIcon fontSize='small'/>&nbsp;Таблица</span></Button> */}
                     </div>
                 </div>
 
@@ -486,15 +500,30 @@ export default function PostEditor() {
                                 onChange={(_, v)=>{
                                   if (!v) return
                                   if (v.value==='all') setFormData(prev=> ({...prev, publish_scope:{ publish_for_all: true }}))
-                                  if (v.value==='city') setFormData(prev=> ({...prev, publish_scope:{ publish_for_all:false, city_id: undefined }}))
+                                  if (v.value==='city') setFormData(prev=> ({...prev, publish_scope:{ publish_for_all:false, city_id: 0 }}))
                                   if (v.value==='study') setFormData(prev=> ({...prev, publish_scope:{ publish_for_all:false, city_id: undefined }}))
                                 }}
                                 isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
                                 getOptionLabel={(o)=>o?.label ?? ''}
                                 renderInput={(p)=>(<TextField {...p} placeholder='Выберите один вариант' size='small' />)}
                             />
+                            {/* Если выбран тип "Город" — показываем выбор города прямо здесь */}
+                            {(currentCategoryType === 'city') && (
+                              <div style={{ marginTop: 8 }}>
+                                <Autocomplete
+                                  options={cities}
+                                  ListboxComponent={VirtualListbox as any}
+                                  value={cities.find(c=> c.value === (formData.publish_scope?.city_id || 0)) || null}
+                                  onChange={(_, v)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: v?.value || undefined}}))}
+                                  isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                                  getOptionLabel={(o)=>o?.label ?? ''}
+                                  renderInput={(p)=>(<TextField {...p} label='Город' placeholder='— Выберите город —' size='small'/>)}
+                                />
+                              </div>
+                            )}
                         </div>
                         <InputSelect placeholder="Выберите категории (не обязательно)" label={<p>Категории (не обязательно)</p>} options={topCategories} value={selectedTopCategories} onChange={(options) => setSelectedTopCategories(options || [])} isMulti={true} />
+                        <small style={{opacity:.7}}>Категории помогают различать «Новости» и «Объявления». Новости — информационные материалы; Объявления — организационные сообщения. Отображение зависит от выбранного раздела интерфейса.</small>
                     </div>
 
                     {/* Checkboxes */}
@@ -515,7 +544,7 @@ export default function PostEditor() {
 
                     {/* Audience */}
                     <Accordion defaultExpanded>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Параметры аудитории</AccordionSummary>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Фильтры</AccordionSummary>
                         <AccordionDetails>
                             <div style={{display:'grid', gridTemplateColumns:'1fr', gap:12}}>
                                 <FormControlLabel control={<Checkbox checked={!!formData.publish_scope?.publish_for_all} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, publish_for_all: e.target.checked, city_id: undefined, course: undefined }}))}/>} label='Для всех' />

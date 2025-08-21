@@ -41,7 +41,8 @@ function QuickActionsAdmin({className}: QuickActionsAdminProps) {
             </div>
             <div className={cls.buttons}>
                 <Button onClick={handleCreatePost} className={cls.button} width="290px" theme={ThemeButton.ARROW} backgroundColor='#00AAFF'><span><PlusIcon width='13px' height='13px' /><p>Создать пост</p></span></Button>
-                <Button onClick={handleCreateGroup} className={cls.button} width="290px" theme={ThemeButton.ARROW} backgroundColor='#92DA63'><span><StudentsIcon width='15px' height='20px' /><p>Создать группу</p></span></Button>
+                {/* Удаляем дубль: создание группы уже доступно в управлении группами */}
+                {/* <Button onClick={handleCreateGroup} className={cls.button} width="290px" theme={ThemeButton.ARROW} backgroundColor='#92DA63'><span><StudentsIcon width='15px' height='20px' /><p>Создать группу</p></span></Button> */}
                 <Button onClick={handleManageGroups} className={cls.button} width="290px" theme={ThemeButton.ARROW} backgroundColor='#7F61DD'><span><BurgerIcon width='15px' height='20px' /><p>Управление группами</p></span></Button>
                 <Button onClick={handleManagePosts} className={cls.button} width="290px" theme={ThemeButton.ARROW} backgroundColor='#E44A77'><span><BurgerIcon width='15px' height='20px' /><p>Управление постами</p></span></Button>
             </div>
