@@ -162,6 +162,9 @@ test('API: create and delete article should return 200', async () => {
   if (crt.status !== 201) { console.warn('create failed; skip delete'); return }
   const id = crt.body?.id
   const delRes = await api.delete(`/api/articles/${id}`).set('Authorization', `Bearer ${token}`)
+  if (delRes.status !== 200) {
+    console.warn('Delete failed', delRes.status, delRes.body)
+  }
   expect(delRes.status).toBe(200)
 })
 

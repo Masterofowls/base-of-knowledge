@@ -664,8 +664,8 @@ def delete_article(article_id):
     
     article = Article.query.get_or_404(article_id)
     
-    # Check if user is author or has admin role
-    is_author = any(author.user_id == user.id for author in article.authors)
+    # Check if user is author or has admin role (avoid loading relationship)
+    is_author = ArticleAuthor.query.filter_by(article_id=article.id, user_id=user.id).first() is not None
     is_admin = user.role.name == 'Администратор'
     
     if not is_author and not is_admin:
@@ -700,8 +700,8 @@ def publish_article(article_id):
     
     article = Article.query.get_or_404(article_id)
     
-    # Check if user is author or has admin/editor role
-    is_author = any(author.user_id == user.id for author in article.authors)
+    # Check if user is author or has admin/editor role (avoid loading relationship)
+    is_author = ArticleAuthor.query.filter_by(article_id=article.id, user_id=user.id).first() is not None
     is_admin_or_editor = user.role.name in ['Администратор', 'Редактор']
     
     if not is_author and not is_admin_or_editor:
@@ -735,8 +735,8 @@ def unpublish_article(article_id):
     
     article = Article.query.get_or_404(article_id)
     
-    # Check if user is author or has admin/editor role
-    is_author = any(author.user_id == user.id for author in article.authors)
+    # Check if user is author or has admin/editor role (avoid loading relationship)
+    is_author = ArticleAuthor.query.filter_by(article_id=article.id, user_id=user.id).first() is not None
     is_admin_or_editor = user.role.name in ['Администратор', 'Редактор']
     
     if not is_author and not is_admin_or_editor:
