@@ -7,6 +7,7 @@ import { Button } from 'shared/ui/Button'
 import { ThemeButton } from 'shared/ui/Button/ui/Button.tsx'
 import cls from './PostsList.module.scss'
 import { Skeleton, IconButton, Tooltip, Fab, Chip, Autocomplete, TextField, Stack, Divider } from '@mui/material'
+import { motion, AnimatePresence } from 'framer-motion'
 import { FixedSizeList as List } from 'react-window'
 import type { ListChildComponentProps } from 'react-window'
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder'
@@ -379,8 +380,8 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
           </div>
         )}
         {/* header tabs/search removed; search lives in global header */}
-        {/* Быстрые фильтры (скрыть в режиме чтения) */}
-        <div style={{ display: (notionMode && readerId !== null) ? 'none' : 'flex', gap:8, alignItems:'center', padding:'8px 12px', flexWrap:'wrap' }}>
+        {/* Быстрые фильтры скрыты в notion-режиме: используем статические разделы */}
+        <div style={{ display: notionMode ? 'none' : 'flex', gap:8, alignItems:'center', padding:'8px 12px', flexWrap:'wrap' }}>
           <Chip size='small' label='Сбросить фильтры' onClick={()=>{ setQuickFilters({}); setMultiFilters({}); setExtraFilters({}) }} />
           <Chip size='small' color={quickFilters.view==='common' ? 'primary':'default'} label='Общая информация' onClick={()=> setQuickFilters(q=>({...q, view:'common'}))} />
           <Chip size='small' color={quickFilters.view==='city' ? 'primary':'default'} label='Город' onClick={()=> setQuickFilters(q=>({...q, view:'city'}))} />
@@ -484,9 +485,10 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
               if (sections.length === 0) return <div style={{ color: '#888', padding: 16 }}>Посты не найдены</div>
               const PAGE = 12
               return (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24 }}>
+                <AnimatePresence mode='popLayout'>
+                <motion.div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: .25 }}>
                   {sections.map((section) => (
-                    <section key={section.title} id={`sec-${slugify(section.title)}`}>
+                    <motion.section key={section.title} id={`sec-${slugify(section.title)}`} initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: .2 }}>
                       <h2 style={{ margin:'0 0 8px 0', fontSize:18, fontWeight:800 }}>{section.title}</h2>
                       <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:16 }}>
                         {section.subgroups.map((sg) => {
@@ -517,7 +519,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
                             </div>
                           )
                           return (
-                            <div key={sg.subtitle} id={`sub-${slugify(section.title)}-${slugify(sg.subtitle)}`}>
+                            <motion.div key={sg.subtitle} id={`sub-${slugify(section.title)}-${slugify(sg.subtitle)}`} initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: .2 }}>
                               {sg.subtitle !== '—' && <h3 style={{ margin:'6px 0', fontSize:14, fontWeight:700, opacity:.85 }}>{sg.subtitle}</h3>}
                               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
                                 {renderCol(left)}
@@ -531,13 +533,14 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
                                   >{isExpanded ? 'Свернуть' : 'Показать ещё'}</button>
                                 </div>
                               )}
-                            </div>
+                            </motion.div>
                           )
                         })}
                       </div>
-                    </section>
+                    </motion.section>
                   ))}
-                </div>
+                </motion.div>
+                </AnimatePresence>
               )
             })()}
           </div>
@@ -595,13 +598,24 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
           </Fab>
         )}
         {notionMode && readerId !== null && (
-          <div style={{ background:'#fff' }}>
+          <motion.div style={{ background:'#fff' }} initial={{ opacity: .0 }} animate={{ opacity: 1 }} transition={{ duration: .2 }}>
             {/* Close (X) fixed */}
             <button aria-label='Закрыть' onClick={closeReader} style={{ position:'fixed', top:10, right:12, width:36, height:36, borderRadius:'50%', border:'1px solid rgba(0,0,0,0.12)', background:'#fff', boxShadow:'0 1px 4px rgba(0,0,0,0.08)', cursor:'pointer', zIndex:10000 }}>×</button>
             {/* Scroll shadows */}
             <div style={{ position:'fixed', top:0, left:0, right:0, height:16, background:'linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0))', pointerEvents:'none', zIndex:9998 }} />
             <div style={{ position:'fixed', bottom:0, left:0, right:0, height:16, background:'linear-gradient(to top, rgba(0,0,0,0.06), rgba(0,0,0,0))', pointerEvents:'none', zIndex:9998 }} />
             <div style={{ width:'min(100%, 900px)', margin:'56px auto 24px', padding:'0 12px' }} onClick={handleContentClick}>
+              {/* Other posts list placed above current article */}
+              <div style={{ margin:'0 0 12px 0' }}>
+                <div style={{ margin:'0 0 6px 0', fontWeight:700, opacity:.8 }}>Другие посты</div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                  {filtered.filter((a:any)=>a.id!==readerId).slice(0,12).map((a:any)=> (
+                    <motion.a key={a.id} href={`/post/${a.id}`} data-article-id={a.id} onClick={e=>{ e.preventDefault(); openReader(a.id) }} initial={{ opacity: .7 }} whileHover={{ opacity: 1 }} style={{ textDecoration:'none', color:'#111', fontSize:14 }}>
+                      {a.title}
+                    </motion.a>
+                  ))}
+                </div>
+              </div>
               <h1 style={{margin:'0 0 8px 0', fontSize:24, lineHeight:1.25}}>{(readerArticle as any)?.title}</h1>
               <div style={{opacity:.6, fontSize:12, marginBottom:12}}>{readerArticle ? new Date((readerArticle as any).created_at).toLocaleString('ru-RU') : ''}</div>
               {readerLoading && <div>Загрузка…</div>}
@@ -609,7 +623,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
                 <article ref={contentRef} className='article-content' style={{ lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: (readerArticle as any).content }} />
               )}
             </div>
-          </div>
+          </motion.div>
         )}
         {/* Hover preview card */}
         {hoverPreview && (
@@ -623,48 +637,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
             <div style={{ fontSize:13, opacity:.8 }}>{getSnippet(hoverPreview.html, 180)}</div>
           </div>
         )}
-        {/* Right TOC for grouped view */}
-        {notionMode && readerId === null && !isLoading && !error && (
-          <aside style={{ position:'fixed', right: 16, top: 96, width: 220, maxHeight: '70vh', overflow:'auto', background:'rgba(255,255,255,0.9)', border:'1px solid rgba(0,0,0,0.08)', borderRadius:8, padding:8 }}>
-            {(() => {
-              type Section = { title: string, subgroups: Array<{ subtitle: string, list: any[] }> }
-              const sectionMap = new Map<string, Section>()
-              const cityLabelById = new Map<number, string>((dicts.cities || []).map((c:any)=>[c.value, c.label]))
-              filtered.forEach((it: any) => {
-                let sectionKey = 'Общее'
-                const cats = (it.categories || []) as any[]
-                if (cats.length && cats[0]?.top_category?.name) sectionKey = cats[0].top_category.name
-                if (it.audience === 'city' || it.audience_city_id) sectionKey = 'Разделы по городам'
-                const section = sectionMap.get(sectionKey) || { title: sectionKey, subgroups: [] }
-                if (sectionKey === 'Разделы по городам') {
-                  const cid = Number(it.audience_city_id || 0)
-                  const subKey = cityLabelById.get(cid) || (cid ? `Город #${cid}` : 'Города')
-                  let sub = section.subgroups.find(s => s.subtitle === subKey)
-                  if (!sub) { sub = { subtitle: subKey, list: [] }; section.subgroups.push(sub) }
-                } else {
-                  let sub = section.subgroups.find(s => s.subtitle === '—')
-                  if (!sub) { sub = { subtitle: '—', list: [] }; section.subgroups.push(sub) }
-                }
-                sectionMap.set(sectionKey, section)
-              })
-              const sections = Array.from(sectionMap.values())
-              return (
-                <nav>
-                  {sections.map(sec => (
-                    <div key={sec.title} style={{ marginBottom:8 }}>
-                      <a href={`#sec-${slugify(sec.title)}`} onClick={(e)=>{ e.preventDefault(); document.getElementById(`sec-${slugify(sec.title)}`)?.scrollIntoView({ behavior:'smooth', block:'start' }) }} style={{ fontWeight:700, textDecoration:'none', color:'#111' }}>{sec.title}</a>
-                      {sec.subgroups.filter(s=>s.subtitle!=='—').slice(0,12).map(sub => (
-                        <div key={sub.subtitle}>
-                          <a href={`#sub-${slugify(sec.title)}-${slugify(sub.subtitle)}`} onClick={(e)=>{ e.preventDefault(); document.getElementById(`sub-${slugify(sec.title)}-${slugify(sub.subtitle)}`)?.scrollIntoView({ behavior:'smooth', block:'start' }) }} style={{ display:'block', marginLeft:10, fontSize:12, textDecoration:'none', color:'#333', opacity:.85 }}>{sub.subtitle}</a>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </nav>
-              )
-            })()}
-          </aside>
-        )}
+        {/* Right TOC removed per request; static sections above handle navigation */}
       </Container>
     </div>
   )
