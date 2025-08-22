@@ -63,6 +63,7 @@ interface PostFormData {
     category_ids: number[];
     publish_scope?: {
         publish_for_all?: boolean;
+        // legacy single-value fields (kept for backward compat)
         education_form_id?: number;
         speciality_id?: number;
         city_id?: number;
@@ -70,6 +71,16 @@ interface PostFormData {
         admission_year_id?: number;
         institution_type_id?: number;
         school_class_id?: number;
+        // new multi-rule audience definition
+        rules?: Array<{
+            institution_type_ids?: number[];
+            education_form_ids?: number[];
+            speciality_ids?: number[];
+            city_ids?: number[];
+            admission_year_ids?: number[];
+            course?: number;
+            school_class_id?: number;
+        }>
     }
 }
 
@@ -136,6 +147,8 @@ export default function PostEditor() {
     const [specialities, setSpecialities] = useState<{value:number,label:string,institution_type_id?:number}[]>([])
     const [educationForms, setEducationForms] = useState<{value:number,label:string}[]>([])
     const [courseOptions, setCourseOptions] = useState<{value:number,label:string}[]>([])
+    // Мульти-правила публикации (экспериментальный конструктор)
+    const [audienceRules, setAudienceRules] = useState<Array<any>>([])
     const currentCategoryType = useMemo(() => {
         const ps = formData.publish_scope || {}
         if (ps?.publish_for_all) return 'all'
@@ -290,11 +303,22 @@ export default function PostEditor() {
         try {
             setSaving(true);
             setError(null);
-            const categoryIds = [ ...selectedGroups.map(group => group.value), ...selectedTopCategories.map(cat => cat.value) ];
+            const categoryIds = [ ...selectedGroups.map(group => group.value) ];
             const augmentedScope = { ...(formData.publish_scope||{}) }
+            if (audienceRules.length > 0) {
+                augmentedScope.rules = audienceRules.map((r:any)=>({
+                    institution_type_ids: (r.institution_type_ids||[]).map((o:any)=>o.value),
+                    education_form_ids: (r.education_form_ids||[]).map((o:any)=>o.value),
+                    speciality_ids: (r.speciality_ids||[]).map((o:any)=>o.value),
+                    city_ids: (r.city_ids||[]).map((o:any)=>o.value),
+                    admission_year_ids: (r.admission_year_ids||[]).map((o:any)=>o.value),
+                    course: r.course?.value ?? r.course ?? undefined,
+                    school_class_id: r.school_class_id?.value ?? undefined,
+                }))
+            }
             if (selectedInstitution) augmentedScope.institution_type_id = selectedInstitution.value
             if (selectedSchoolClass) augmentedScope.school_class_id = selectedSchoolClass.value
-            const postData = { ...formData, content: html, category_ids: [ ...selectedGroups.map(group => group.value) ], publish_scope: augmentedScope };
+            const postData = { ...formData, content: html, category_ids: categoryIds, publish_scope: augmentedScope };
             if (isEditing) await http.put(`/api/articles/${id}`, postData); else await http.post('/api/articles', postData);
             navigate('/admin/posts');
         } catch (error: any) {
@@ -606,6 +630,49 @@ export default function PostEditor() {
                                     renderInput={(p)=>(<TextField {...p} label='Класс (не обязательно)' placeholder='— Все классы —' size='small'/>)}
                                   />
                                 )}
+
+                                {/* Конструктор правил публикации (множественные условия) */}
+                                <div style={{ border:'1px dashed var(--border-muted, rgba(0,0,0,0.15))', borderRadius:8, padding:12 }}>
+                                  <label style={{ display:'block', fontWeight:600, marginBottom:8 }}>Правила публикации (опционально)</label>
+                                  <small style={{ display:'block', opacity:.7, marginBottom:12 }}>Добавляйте несколько правил: «для всех заочников», «для всех вузов города», «для всех поступивших в этом году по направлению» и т.д.</small>
+                                  {audienceRules.map((rule:any, idx:number)=> (
+                                    <div key={idx} style={{ border:'1px solid var(--border-muted, rgba(0,0,0,0.12))', borderRadius:8, padding:10, marginBottom:12 }}>
+                                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                                        <Autocomplete multiple options={institutionTypes} value={rule.institution_type_ids||[]} onChange={(_,v)=>{
+                                          const next=[...audienceRules]; next[idx] = { ...(rule||{}), institution_type_ids: v }; setAudienceRules(next)
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Типы учреждений' placeholder='Колледж / Вуз / Школа' size='small'/>)} />
+                                        <Autocomplete multiple options={educationForms} value={rule.education_form_ids||[]} onChange={(_,v)=>{
+                                          const next=[...audienceRules]; next[idx] = { ...(rule||{}), education_form_ids: v }; setAudienceRules(next)
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Формы обучения' placeholder='Очная / Заочная / Дистант' size='small'/>)} />
+                                        <Autocomplete multiple options={specialities} value={rule.speciality_ids||[]} onChange={(_,v)=>{
+                                          const next=[...audienceRules]; next[idx] = { ...(rule||{}), speciality_ids: v }; setAudienceRules(next)
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Специальности' placeholder='— Любые —' size='small'/>)} />
+                                        <Autocomplete multiple options={cities} value={rule.city_ids||[]} onChange={(_,v)=>{
+                                          const next=[...audienceRules]; next[idx] = { ...(rule||{}), city_ids: v }; setAudienceRules(next)
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Города' placeholder='— Любые —' size='small'/>)} />
+                                        <Autocomplete multiple options={admissionYears} value={rule.admission_year_ids||[]} onChange={(_,v)=>{
+                                          const next=[...audienceRules]; next[idx] = { ...(rule||{}), admission_year_ids: v }; setAudienceRules(next)
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Годы поступления' placeholder='Текущий / Прошлый / …' size='small'/>)} />
+                                      </div>
+                                      <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                                        <Autocomplete options={courseOptions} value={rule.course||null} onChange={(_,v)=>{
+                                          const next=[...audienceRules]; next[idx] = { ...(rule||{}), course: v }; setAudienceRules(next)
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Курс (необязательно)' placeholder='— Любой —' size='small'/>)} />
+                                        {selectedInstitution?.name?.toLowerCase()==='школа' && (
+                                          <Autocomplete options={schoolClasses} value={rule.school_class_id||null} onChange={(_,v)=>{
+                                            const next=[...audienceRules]; next[idx] = { ...(rule||{}), school_class_id: v }; setAudienceRules(next)
+                                          }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Класс (необязательно)' placeholder='— Любой —' size='small'/>)} />
+                                        )}
+                                        <Button width='auto' backgroundColor='#fee2e2' theme={ThemeButton.CLEAR} onClick={()=>{
+                                          const next=[...audienceRules]; next.splice(idx,1); setAudienceRules(next)
+                                        }}><span>Удалить правило</span></Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  <Button width='auto' backgroundColor='#e0f2fe' theme={ThemeButton.CLEAR} onClick={()=>{
+                                    setAudienceRules(prev=>[...prev, { institution_type_ids:[], education_form_ids:[], speciality_ids:[], city_ids:[], admission_year_ids:[], course:null, school_class_id:null }])
+                                  }}><span>Добавить правило</span></Button>
+                                </div>
                             </div>
                         </AccordionDetails>
                     </Accordion>

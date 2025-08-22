@@ -31,6 +31,27 @@ def get_articles():
     institution_type_id = request.args.get('institution_type_id', type=int)
     education_form_id = request.args.get('education_form_id', type=int)
     speciality_id = request.args.get('speciality_id', type=int)
+    # Array filters (multiple values)
+    try:
+        institution_type_ids = [int(x) for x in request.args.getlist('institution_type_ids') if str(x).isdigit()]
+    except Exception:
+        institution_type_ids = []
+    try:
+        education_form_ids = [int(x) for x in request.args.getlist('education_form_ids') if str(x).isdigit()]
+    except Exception:
+        education_form_ids = []
+    try:
+        speciality_ids = [int(x) for x in request.args.getlist('speciality_ids') if str(x).isdigit()]
+    except Exception:
+        speciality_ids = []
+    try:
+        city_ids = [int(x) for x in request.args.getlist('city_ids') if str(x).isdigit()]
+    except Exception:
+        city_ids = []
+    try:
+        admission_year_ids = [int(x) for x in request.args.getlist('admission_year_ids') if str(x).isdigit()]
+    except Exception:
+        admission_year_ids = []
     # Legacy/optional
     base_class = request.args.get('base_class', type=int)
     audience = request.args.get('audience', type=str)
@@ -44,6 +65,7 @@ def get_articles():
     sort_by = request.args.get('sort_by', default='created_at', type=str)
     sort_dir = request.args.get('sort_dir', default='desc', type=str)
     strict_audience = request.args.get('strict_audience', default=False, type=bool)
+    view = request.args.get('view', type=str)  # 'common' | 'city'
 
     # Build query
     query = Article.query
@@ -91,20 +113,30 @@ def get_articles():
         query = query.filter(Article.tag == tag)
     if institution_type_id:
         query = query.filter(Article.speciality.has(Speciality.institution_type_id == institution_type_id))
+    elif institution_type_ids:
+        query = query.filter(Article.speciality.has(Speciality.institution_type_id.in_(institution_type_ids)))
     if education_form_id:
         query = query.filter(Article.education_form_id == education_form_id)
+    elif education_form_ids:
+        query = query.filter(Article.education_form_id.in_(education_form_ids))
     if speciality_id:
         query = query.filter(Article.speciality_id == speciality_id)
+    elif speciality_ids:
+        query = query.filter(Article.speciality_id.in_(speciality_ids))
     if base_class:
         query = query.filter(Article.base_class == base_class)
     if audience:
         query = query.filter(Article.audience == audience)
     if audience_city_id:
         query = query.filter(Article.audience_city_id == audience_city_id)
+    elif city_ids:
+        query = query.filter(Article.audience_city_id.in_(city_ids))
     if audience_course:
         query = query.filter(Article.audience_course == audience_course)
     if audience_admission_year_id:
         query = query.filter(Article.audience_admission_year_id == audience_admission_year_id)
+    elif admission_year_ids:
+        query = query.filter(Article.audience_admission_year_id.in_(admission_year_ids))
     if education_mode:
         query = query.filter(Article.education_mode == education_mode)
     if speciality_id:
@@ -117,8 +149,13 @@ def get_articles():
             and_(Article.audience.isnot(None), Article.audience != 'all')
         )
 
+    # View toggle: 'common' shows only general posts; 'city' shows only city-targeted
+    if view == 'common':
+        query = query.filter(or_(Article.audience.is_(None), Article.audience == 'all'))
+    elif view == 'city':
+        query = query.filter(Article.audience == 'city')
     # If city filter provided, include city-targeted or general
-    if audience_city_id:
+    elif audience_city_id or city_ids:
         query = query.filter(or_(Article.audience == 'city', Article.audience == 'all'))
 
     # Sorting
@@ -346,6 +383,66 @@ def create_article():
         'Заочное': 'distance',
         'Очно-заочное': 'mixed'
     }
+    # New: support multi-rule audience (publish_scope.rules)
+    rules = publish_scope.get('rules') if isinstance(publish_scope, dict) else None
+    if isinstance(rules, list) and len(rules) > 0:
+        try:
+            created_ids = []
+            for r in rules:
+                inst_ids = r.get('institution_type_ids') or [None]
+                edu_forms = r.get('education_form_ids') or [None]
+                specs = r.get('speciality_ids') or [None]
+                cities = r.get('city_ids') or [None]
+                years = r.get('admission_year_ids') or [None]
+                courses = [r.get('course')] if r.get('course') is not None else [None]
+                for ef in edu_forms:
+                    for sp in specs:
+                        for ct in cities:
+                            for yr in years:
+                                for crs in courses:
+                                    # derive audience
+                                    local_aud = None
+                                    if r.get('publish_for_all'):
+                                        local_aud = 'all'
+                                    elif ct:
+                                        local_aud = 'city'
+                                    elif crs is not None:
+                                        local_aud = 'course'
+                                    art = Article(
+                                        title=title,
+                                        content=content,
+                                        is_published=is_published,
+                                        is_for_staff=is_for_staff,
+                                        is_actual=is_actual,
+                                        tag=None,
+                                        base_class=None,
+                                        audience=local_aud,
+                                        audience_city_id=(ct if local_aud == 'city' else None),
+                                        audience_course=(crs if local_aud == 'course' else None),
+                                        audience_admission_year_id=(yr if local_aud not in ('all','city') else None)
+                                    )
+                                    # optional fields
+                                    art.education_form_id = ef
+                                    art.speciality_id = sp
+                                    edu_mode = r.get('education_mode')
+                                    if isinstance(edu_mode, str) and edu_mode in ru_mode_map:
+                                        art.education_mode = ru_mode_map[edu_mode]
+                                    else:
+                                        art.education_mode = edu_mode
+
+                                    db.session.add(art)
+                                    db.session.flush()
+                                    db.session.add(ArticleAuthor(article_id=art.id, user_id=user.id))
+                                    for category_id in category_ids:
+                                        category = Category.query.get(category_id)
+                                        if category:
+                                            db.session.add(ArticleCategory(article_id=art.id, category_id=category_id))
+                                    created_ids.append(art.id)
+            db.session.commit()
+            return jsonify({'message': f'Created {len(created_ids)} articles', 'ids': created_ids}), 201
+        except Exception:
+            db.session.rollback()
+            return jsonify({'error': 'Failed to create articles from rules'}), 500
     # Derive audience per diagram: 'all' → hide others; else if city → 'city' and hide other audience fields; else if course → 'course'
     derived_audience = None
     if publish_scope.get('publish_for_all'):

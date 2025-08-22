@@ -6,7 +6,7 @@ import { Input } from 'shared/ui/Input/Input.tsx'
 import { Button } from 'shared/ui/Button'
 import { ThemeButton } from 'shared/ui/Button/ui/Button.tsx'
 import cls from './PostsList.module.scss'
-import { Skeleton, IconButton, Tooltip, Fab, Chip } from '@mui/material'
+import { Skeleton, IconButton, Tooltip, Fab, Chip, Autocomplete, TextField, Stack, Divider } from '@mui/material'
 import { FixedSizeList as List } from 'react-window'
 import type { ListChildComponentProps } from 'react-window'
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder'
@@ -37,7 +37,15 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState(searchParams.get('q') ?? '')
   // removed tabs; using chip-based filters only
-  const [quickFilters, setQuickFilters] = useState<{ city?: string; group?: string }>({})
+  const [quickFilters, setQuickFilters] = useState<{ city?: string; group?: string; view?: 'common' | 'city' }>({})
+  const [multiFilters, setMultiFilters] = useState<{
+    institutionTypeIds?: number[]
+    educationFormIds?: number[]
+    specialityIds?: number[]
+    cityIds?: number[]
+    admissionYearIds?: number[]
+  }>({})
+  const [dicts, setDicts] = useState<{ institutionTypes: any[]; educationForms: any[]; specialities: any[]; cities: any[]; years: any[] }>({ institutionTypes: [], educationForms: [], specialities: [], cities: [], years: [] })
   const [expanded, setExpanded] = useState<Record<number, boolean>>({})
   const [hasNext, setHasNext] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -68,10 +76,19 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     const baseClass = localStorage.getItem('student_base_class')
     const strict = localStorage.getItem('strict_audience') === '1'
     const isStudent = (localStorage.getItem('user_role') || '').toLowerCase() === 'student'
-    const endpoint = isStudent && groupId ? '/api/articles/student-feed' : '/api/articles'
+    const hasAdvanced = Boolean(
+      quickFilters.view || quickFilters.city || multiFilters.institutionTypeIds?.length || multiFilters.educationFormIds?.length || multiFilters.specialityIds?.length || multiFilters.cityIds?.length || multiFilters.admissionYearIds?.length
+    )
+    const endpoint = (isStudent && groupId && !hasAdvanced) ? '/api/articles/student-feed' : '/api/articles'
     const params: any = { page: targetPage, per_page: 10, search: query || undefined, sort_by: 'created_at', sort_dir: 'desc', ...extraFilters }
     if (quickFilters.city) params.audience_city_id = Number(quickFilters.city)
     if (quickFilters.group) params.group_id = Number(quickFilters.group)
+    if (quickFilters.view) params.view = quickFilters.view
+    if (multiFilters.institutionTypeIds?.length) multiFilters.institutionTypeIds.forEach((v, i)=> params[`institution_type_ids[${i}]`] = v)
+    if (multiFilters.educationFormIds?.length) multiFilters.educationFormIds.forEach((v, i)=> params[`education_form_ids[${i}]`] = v)
+    if (multiFilters.specialityIds?.length) multiFilters.specialityIds.forEach((v, i)=> params[`speciality_ids[${i}]`] = v)
+    if (multiFilters.cityIds?.length) multiFilters.cityIds.forEach((v, i)=> params[`city_ids[${i}]`] = v)
+    if (multiFilters.admissionYearIds?.length) multiFilters.admissionYearIds.forEach((v, i)=> params[`admission_year_ids[${i}]`] = v)
     if (!isStudent || !groupId) {
       params.is_published = true
       params.strict_audience = strict
@@ -104,11 +121,12 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     return () => controller.abort()
   }
 
+  const filterKey = useMemo(() => JSON.stringify({ q: query, quick: quickFilters, multi: multiFilters, extra: extraFilters }), [query, quickFilters, multiFilters, extraFilters])
   useEffect(() => {
     setPage(1)
     loadPage(1, { append: false })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, extraFilters])
+  }, [filterKey])
 
   useEffect(() => {
     if (!sentinelRef.current) return
@@ -125,6 +143,28 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     obs.observe(el)
     return () => obs.disconnect()
   }, [sentinelRef, hasNext, isLoadingMore, isLoading, page, items])
+
+  // Load dictionaries for advanced filters
+  useEffect(() => {
+    let ignore = false
+    Promise.all([
+      http.get('/api/categories/institution-types'),
+      http.get('/api/categories/education-forms'),
+      http.get('/api/categories/specialities'),
+      http.get('/api/categories/admission-years'),
+      http.get('/api/categories/cities'),
+    ]).then(([inst, forms, specs, years, cities]) => {
+      if (ignore) return
+      setDicts({
+        institutionTypes: (inst.data || []).map((i:any)=>({ value:i.id, label:i.name })),
+        educationForms: (forms.data || []).map((f:any)=>({ value:f.id, label:f.name })),
+        specialities: (specs.data || []).map((s:any)=>({ value:s.id, label:`${s.code} ${s.name}` })),
+        years: (years.data || []).map((y:any)=>({ value:y.id, label:String(y.year) })),
+        cities: (cities.data || []).map((c:any)=>({ value:c.id, label:c.name })),
+      })
+    }).catch(()=>{})
+    return () => { ignore = true }
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setShowToTop(window.scrollY > 400)
@@ -306,14 +346,72 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
         {/* header tabs/search removed; search lives in global header */}
         {/* Быстрые фильтры (скрыть в режиме чтения) */}
         <div style={{ display: (notionMode && readerId !== null) ? 'none' : 'flex', gap:8, alignItems:'center', padding:'8px 12px', flexWrap:'wrap' }}>
-          <Chip size='small' label='Сбросить фильтры' onClick={()=>{ setQuickFilters({}); setExtraFilters({}) }} />
-          <Chip size='small' color={quickFilters.city ? 'primary':'default'} label={quickFilters.city ? `Город #${quickFilters.city}`:'Город'} onClick={()=>{
+          <Chip size='small' label='Сбросить фильтры' onClick={()=>{ setQuickFilters({}); setMultiFilters({}); setExtraFilters({}) }} />
+          <Chip size='small' color={quickFilters.view==='common' ? 'primary':'default'} label='Общая информация' onClick={()=> setQuickFilters(q=>({...q, view:'common'}))} />
+          <Chip size='small' color={quickFilters.view==='city' ? 'primary':'default'} label='Город' onClick={()=> setQuickFilters(q=>({...q, view:'city'}))} />
+          <Chip size='small' color={quickFilters.city ? 'primary':'default'} label={quickFilters.city ? `Город #${quickFilters.city}`:'Город из контекста'} onClick={()=>{
             const cityId = localStorage.getItem('student_city_id'); if (cityId) setQuickFilters(q=>({...q, city: cityId}));
           }} />
-          <Chip size='small' color={quickFilters.group ? 'primary':'default'} label={quickFilters.group ? `Группа #${quickFilters.group}`:'Группа'} onClick={()=>{
+          <Chip size='small' color={quickFilters.group ? 'primary':'default'} label={quickFilters.group ? `Группа #${quickFilters.group}`:'Группа из контекста'} onClick={()=>{
             const groupId = localStorage.getItem('student_group_id'); if (groupId) setQuickFilters(q=>({...q, group: groupId}));
           }} />
         </div>
+
+        {/* Расширенные фильтры с зависимостями */}
+        {!notionMode && readerId === null && (
+          <div style={{ padding: '8px 12px' }}>
+            <Stack direction={{ xs:'column', sm:'row' }} spacing={1} alignItems='stretch'>
+              <Autocomplete
+                multiple
+                options={dicts.institutionTypes}
+                value={(dicts.institutionTypes || []).filter(o=> multiFilters.institutionTypeIds?.includes(o.value))}
+                onChange={(_, v:any[])=> setMultiFilters(f=>({ ...f, institutionTypeIds: v.map(o=>o.value) }))}
+                isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                getOptionLabel={(o)=>o?.label ?? ''}
+                renderInput={(p)=>(<TextField {...p} size='small' label='Типы учреждений' placeholder='Колледж / Вуз / Школа' />)}
+              />
+              <Autocomplete
+                multiple
+                options={dicts.educationForms}
+                value={(dicts.educationForms || []).filter(o=> multiFilters.educationFormIds?.includes(o.value))}
+                onChange={(_, v:any[])=> setMultiFilters(f=>({ ...f, educationFormIds: v.map(o=>o.value) }))}
+                isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                getOptionLabel={(o)=>o?.label ?? ''}
+                renderInput={(p)=>(<TextField {...p} size='small' label='Формы обучения' placeholder='Очная / Заочная / Дистант' />)}
+              />
+              <Autocomplete
+                multiple
+                options={dicts.specialities}
+                value={(dicts.specialities || []).filter(o=> multiFilters.specialityIds?.includes(o.value))}
+                onChange={(_, v:any[])=> setMultiFilters(f=>({ ...f, specialityIds: v.map(o=>o.value) }))}
+                isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                getOptionLabel={(o)=>o?.label ?? ''}
+                renderInput={(p)=>(<TextField {...p} size='small' label='Специальности' placeholder='— Любые —' />)}
+              />
+            </Stack>
+            <Stack direction={{ xs:'column', sm:'row' }} spacing={1} alignItems='stretch' sx={{ mt: 1 }}>
+              <Autocomplete
+                multiple
+                options={dicts.years}
+                value={(dicts.years || []).filter(o=> multiFilters.admissionYearIds?.includes(o.value))}
+                onChange={(_, v:any[])=> setMultiFilters(f=>({ ...f, admissionYearIds: v.map(o=>o.value) }))}
+                isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                getOptionLabel={(o)=>o?.label ?? ''}
+                renderInput={(p)=>(<TextField {...p} size='small' label='Годы поступления' placeholder='Текущий / Прошлый / …' />)}
+              />
+              <Autocomplete
+                multiple
+                options={dicts.cities}
+                value={(dicts.cities || []).filter(o=> multiFilters.cityIds?.includes(o.value))}
+                onChange={(_, v:any[])=> setMultiFilters(f=>({ ...f, cityIds: v.map(o=>o.value) }))}
+                isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
+                getOptionLabel={(o)=>o?.label ?? ''}
+                renderInput={(p)=>(<TextField {...p} size='small' label='Города' placeholder='— Любые —' />)}
+              />
+            </Stack>
+            <Divider sx={{ my: 1 }} />
+          </div>
+        )}
 
         {(!notionMode || readerId === null) && isLoading && <div style={{ padding: 16 }}>Загрузка…</div>}
         {(!notionMode || readerId === null) && error && <div style={{ padding: 16, color: '#E44A77' }}>{error}</div>}
