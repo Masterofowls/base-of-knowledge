@@ -546,8 +546,8 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
           </div>
         )}
 
-        {/* Default list when not using grouped mode or in reader */}
-        {(!notionMode || readerId !== null) && !isLoading && !error && (
+        {/* Default list only outside notion mode */}
+        {!notionMode && !isLoading && !error && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 0 }}>
             {!isLoading && filtered.length === 0 && <div style={{ color: '#888', padding: 16 }}>Посты не найдены</div>}
             {filtered.length > 0 && (
@@ -592,7 +592,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
             )}
           </div>
         )}
-        {(!notionMode || readerId === null) && showToTop && (
+        {!notionMode && showToTop && (
           <Fab size='small' color='primary' aria-label='Наверх' onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} style={{ position:'fixed', right: 16, bottom: 16 }}>
             <NorthIcon fontSize='small' />
           </Fab>
@@ -606,7 +606,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
             <div style={{ position:'fixed', bottom:0, left:0, right:0, height:16, background:'linear-gradient(to top, rgba(0,0,0,0.06), rgba(0,0,0,0))', pointerEvents:'none', zIndex:9998 }} />
             <div style={{ width:'min(100%, 900px)', margin:'56px auto 24px', padding:'0 12px' }} onClick={handleContentClick}>
               {/* Other posts list placed above current article */}
-              <div style={{ margin:'0 0 12px 0' }}>
+              <div style={{ margin:'0 0 12px 0', display: readerId ? 'block' : 'none' }}>
                 <div style={{ margin:'0 0 6px 0', fontWeight:700, opacity:.8 }}>Другие посты</div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                   {filtered.filter((a:any)=>a.id!==readerId).slice(0,12).map((a:any)=> (
