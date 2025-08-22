@@ -9,6 +9,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import http from "shared/api/http";
 import Quill from 'quill'
 import 'quill/dist/quill.snow.css'
+// Better table integration for consistent rows/cols and drag-resize
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import QuillBetterTable from 'quill-table-better'
+import 'quill-table-better/dist/quill-better-table.css'
 import ArrowIcon from "shared/assets/icons/ArrrowLeft.svg?react";
 import SaveIcon from "shared/assets/icons/Plus.svg?react";
 import { Accordion, AccordionSummary, AccordionDetails, FormControlLabel, Checkbox, Autocomplete, TextField, IconButton } from '@mui/material'
@@ -151,6 +156,8 @@ export default function PostEditor() {
     const quillRef = useRef<Quill | null>(null)
     const fileInputRef = useRef<HTMLInputElement | null>(null)
     const [attachments, setAttachments] = useState<Array<{ id:number, url:string, name:string, type:string }>>([])
+    try { (Quill as any).register({ 'modules/better-table': QuillBetterTable }, true) } catch {}
+
     const TOOLBAR: any = useMemo(() => ([
         [{ 'font': [] }],
         [{ 'size': ['small', false, 'large', 'huge'] }],
@@ -287,7 +294,7 @@ export default function PostEditor() {
             const augmentedScope = { ...(formData.publish_scope||{}) }
             if (selectedInstitution) augmentedScope.institution_type_id = selectedInstitution.value
             if (selectedSchoolClass) augmentedScope.school_class_id = selectedSchoolClass.value
-            const postData = { ...formData, content: html, category_ids: categoryIds, publish_scope: augmentedScope };
+            const postData = { ...formData, content: html, category_ids: [ ...selectedGroups.map(group => group.value) ], publish_scope: augmentedScope };
             if (isEditing) await http.put(`/api/articles/${id}`, postData); else await http.post('/api/articles', postData);
             navigate('/admin/posts');
         } catch (error: any) {
@@ -363,22 +370,20 @@ export default function PostEditor() {
                     container: TOOLBAR,
                     handlers: {
                         table: () => {
-                            // встроенная вставка таблицы (без отдельной кнопки вне тулбара)
-                            const qr = quillRef.current
-                            const range = qr?.getSelection(true)
-                            const html = `<table style="width:100%;border-collapse:collapse;margin:8px 0;">`
-                                + `<thead><tr>`
-                                + `<th style=\"border:1px solid #ddd;padding:6px;background:#f9fafb;\">Колонка 1</th>`
-                                + `<th style=\"border:1px solid #ddd;padding:6px;background:#f9fafb;\">Колонка 2</th>`
-                                + `</tr></thead>`
-                                + `<tbody>`
-                                + `<tr><td style=\"border:1px solid #ddd;padding:6px;\">Ячейка</td><td style=\"border:1px solid #ddd;padding:6px;\">Ячейка</td></tr>`
-                                + `</tbody></table><p><br/></p>`
-                            qr?.clipboard.dangerouslyPasteHTML(range ? range.index : qr?.getLength() || 0, html)
+                            const mod = (q as any).getModule('better-table')
+                            if (mod && typeof mod.insertTable === 'function') mod.insertTable(2, 2)
                         }
                     }
                 },
-                clipboard: { matchVisual: false }
+                clipboard: { matchVisual: false },
+                'better-table': {
+                    operationMenu: true,
+                    color: {
+                        row: '#f9fafb',
+                        column: '#f9fafb'
+                    }
+                },
+                keyboard: { bindings: (QuillBetterTable as any)?.keyboardBindings || {} }
             }
         })
         quillRef.current = q
@@ -505,48 +510,9 @@ export default function PostEditor() {
                     {/* Categories single audience type */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
                         <div>
-                            <label style={{ display:'block', marginBottom:6, fontWeight:500 }}>Тип категории поста</label>
-                            <small style={{ display:'block', marginBottom:6, opacity:.7 }}>«Общая информация» — всем пользователям; «Город» — для выбранного города; «Учебная информация» — по учебным фильтрам ниже.</small>
-                            <Autocomplete
-                                options={[
-                                    { value:'all', label:'Общая информация' },
-                                    { value:'city', label:'Город' },
-                                    { value:'study', label:'Учебная информация' },
-                                ]}
-                                ListboxComponent={VirtualListbox as any}
-                                value={(function(){
-                                  const ps = formData.publish_scope || {}
-                                  if (ps?.publish_for_all) return { value:'all', label:'Общая информация' }
-                                  if (ps?.city_id) return { value:'city', label:'Город' }
-                                  return { value:'study', label:'Учебная информация' }
-                                })()}
-                                onChange={(_, v)=>{
-                                  if (!v) return
-                                  if (v.value==='all') setFormData(prev=> ({...prev, publish_scope:{ publish_for_all: true }}))
-                                  if (v.value==='city') setFormData(prev=> ({...prev, publish_scope:{ publish_for_all:false, city_id: 0 }}))
-                                  if (v.value==='study') setFormData(prev=> ({...prev, publish_scope:{ publish_for_all:false, city_id: undefined }}))
-                                }}
-                                isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-                                getOptionLabel={(o)=>o?.label ?? ''}
-                                renderInput={(p)=>(<TextField {...p} placeholder='Выберите один вариант' size='small' />)}
-                            />
-                            {/* Если выбран тип "Город" — показываем выбор города прямо здесь */}
-                            {(currentCategoryType === 'city') && (
-                              <div style={{ marginTop: 8 }}>
-                                <Autocomplete
-                                  options={cities}
-                                  ListboxComponent={VirtualListbox as any}
-                                  value={cities.find(c=> c.value === (formData.publish_scope?.city_id || 0)) || null}
-                                  onChange={(_, v)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: v?.value || undefined}}))}
-                                  isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-                                  getOptionLabel={(o)=>o?.label ?? ''}
-                                  renderInput={(p)=>(<TextField {...p} label='Город' placeholder='— Выберите город —' size='small'/>)}
-                                />
-                              </div>
-                            )}
+                            <label style={{ display:'block', marginBottom:6, fontWeight:500 }}>Аудитория</label>
+                            <small style={{ display:'block', marginBottom:6, opacity:.7 }}>Выберите город или учебные фильтры ниже. Разделение на «Новости/Объявления» отключено.</small>
                         </div>
-                        <InputSelect placeholder="Выберите категории (не обязательно)" label={<p>Категории (не обязательно)</p>} options={topCategories} value={selectedTopCategories} onChange={(options) => setSelectedTopCategories(options || [])} isMulti={true} />
-                        <small style={{opacity:.7}}>Категории помогают различать «Новости» (информационные материалы) и «Объявления» (организационные сообщения). Они могут отображаться в разных разделах ленты и подборок.</small>
                     </div>
 
                     {/* Checkboxes */}
@@ -659,3 +625,4 @@ export default function PostEditor() {
         </div>
     );
 }
+

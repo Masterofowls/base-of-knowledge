@@ -35,6 +35,7 @@ export default function  MainPage() {
 
   return (
     <main>
+      <h1 style={{position:'absolute',left:-9999,top:'auto',width:1,height:1,overflow:'hidden'}}>Студенческий Портал — новости и объявления</h1>
       <Container maxWidth="lg" sx={{ py: 3 }}>
         {/* Top header area inspired by requested dashboard */}
         <Grid container spacing={2} alignItems="flex-end" sx={{ mb: 2 }}>
@@ -99,6 +100,9 @@ export default function  MainPage() {
                   </Badge>
                   <Chip label="Последние посты" color="primary" size="small" />
                 </Box>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Попробуйте также перейти на <a href="/studentlogin">вход студента</a> или в раздел <a href="/admin">панель администратора</a>.
+                </Typography>
                 <LatestPosts />
                 <Divider sx={{ my: 1.5 }} />
                 <Alert severity="info" sx={{ borderRadius: 2 }}>Нажимайте на пост, чтобы развернуть его содержимое.</Alert>
