@@ -66,6 +66,8 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   const [hoverPreview, setHoverPreview] = useState<{ title: string, html: string, img?: string } | null>(null)
   const [hoverPos, setHoverPos] = useState<{ x: number, y: number }>({ x: 0, y: 0 })
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+  const navRef = useRef<HTMLDivElement | null>(null)
+  const navPathRef = useRef<SVGPathElement | null>(null)
 
   function slugify(value: string): string {
     return (value || '')
@@ -274,12 +276,40 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
     if (!contentRef.current) return
     const root = contentRef.current
     const targets = Array.from(root.querySelectorAll('h1, h2, h3')) as HTMLElement[]
+    if (navObserverRef.current) navObserverRef.current.disconnect()
     const io = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) setActiveOutlineId((entry.target as HTMLElement).id)
       })
+      // Update nav path drawing (approximation)
+      try {
+        const navEl = navRef.current as HTMLElement | null
+        const pathEl = navPathRef.current as SVGPathElement | null
+        if (!navEl || !pathEl) return
+        const items = Array.from(navEl.querySelectorAll('li')) as HTMLLIElement[]
+        let d: string[] = []
+        let lastX = 0
+        items.forEach((li, idx) => {
+          const a = li.querySelector('a') as HTMLAnchorElement | null
+          if (!a) return
+          const rect = a.getBoundingClientRect()
+          const x = a.offsetLeft - 5
+          const y = a.offsetTop
+          const h = a.offsetHeight
+          if (idx === 0) { d.push('M', String(x), String(y), 'L', String(x), String(y + h)) }
+          else {
+            if (lastX !== x) d.push('L', String(lastX), String(y))
+            d.push('L', String(x), String(y), 'L', String(x), String(y + h))
+          }
+          lastX = x
+        })
+        pathEl.setAttribute('d', d.join(' '))
+        const anyVisible = items.some(li => li.classList.contains('visible'))
+        pathEl.style.opacity = anyVisible ? '1' : '0'
+      } catch {}
     }, { root: root, rootMargin: '0px 0px -70% 0px', threshold: [0, 1] })
     targets.forEach(t => io.observe(t))
+    navObserverRef.current = io
   }
 
   // removed related loader (sidebar no longer shown)
@@ -601,32 +631,50 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
             {/* Scroll shadows */}
             <div style={{ position:'fixed', top:0, left:0, right:0, height:16, background:'linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0))', pointerEvents:'none', zIndex:9998 }} />
             <div style={{ position:'fixed', bottom:0, left:0, right:0, height:16, background:'linear-gradient(to top, rgba(0,0,0,0.06), rgba(0,0,0,0))', pointerEvents:'none', zIndex:9998 }} />
-            <div style={{ width:'min(100%, 900px)', margin:'56px auto 24px', padding:'0 12px' }} onClick={handleContentClick}>
-              {/* Other posts list placed above current article */}
-              <div style={{ margin:'0 0 12px 0', display: readerId ? 'block' : 'none' }}>
-                <div style={{ margin:'0 0 6px 0', fontWeight:700, opacity:.8 }}>Другие посты</div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                  {filtered.filter((a:any)=>a.id!==readerId).slice(0,12).map((a:any)=> (
-                    <motion.a key={a.id} href={`/post/${a.id}`} data-article-id={a.id} onClick={e=>{ e.preventDefault(); openReader(a.id) }} initial={{ opacity: .7 }} whileHover={{ opacity: 1 }} style={{ textDecoration:'none', color:'#111', fontSize:14 }}>
-                      {a.title}
-                    </motion.a>
-                  ))}
-                </div>
+            <div style={{ width:'min(100%, 1200px)', margin:'56px auto 24px', padding:'0 12px', display:'grid', gridTemplateColumns:'220px minmax(0, 900px)', gap:20, alignItems:'start' }}>
+              {/* Progress Nav (sticky) */}
+              <div ref={navRef} style={{ position:'sticky', top:70, alignSelf:'start' }}>
+                <nav style={{ lineHeight: 2, position:'relative' }}>
+                  <ul style={{ margin:0, paddingLeft:10, listStyle:'none' }}>
+                    {outline.map(h => (
+                      <li key={h.id} data-target={h.id} className={activeOutlineId===h.id? 'visible':''} style={{ paddingLeft: h.level===1?0: h.level===2?20:40 }}>
+                        <a href={`#${h.id}`} onClick={(e)=>{ e.preventDefault(); document.getElementById(h.id)?.scrollIntoView({ behavior:'smooth', block:'start' }) }} style={{ display:'inline-block', color:'#7f7f7f', textDecoration:'none' }}>{h.text}</a>
+                      </li>
+                    ))}
+                  </ul>
+                  <svg style={{ position:'absolute', left:0, top:0, width:'100%', height:'100%', zIndex:-1 }}>
+                    <path ref={navPathRef as any} style={{ fill:'transparent', stroke:'#91cb3e', strokeWidth:3, strokeLinecap:'round', strokeLinejoin:'round' }} />
+                  </svg>
+                </nav>
               </div>
-              <h1 style={{margin:'0 0 8px 0', fontSize:24, lineHeight:1.25}}>{(readerArticle as any)?.title}</h1>
-              <div style={{opacity:.6, fontSize:12, marginBottom:12}}>{readerArticle ? new Date((readerArticle as any).created_at).toLocaleString('ru-RU') : ''}</div>
-              {readerLoading && <div>Загрузка…</div>}
-              {!readerLoading && readerArticle && (
-                <article ref={contentRef} className='article-content' style={{ lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: (readerArticle as any).content }} />
-              )}
-              {/* Reactions shown only in reader view */}
-              {!!readerId && (
-                <div style={{ display:'flex', gap:16, alignItems:'center', marginTop:16 }}>
-                  <Tooltip title="Нравится"><span><IconButton size='small' onClick={()=>sendReaction(readerId!,'❤️')}><FavoriteBorderIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[readerId!]?.['❤️'] ?? 0) || ''}</small></span></Tooltip>
-                  <Tooltip title="Огонь"><span><IconButton size='small' onClick={()=>sendReaction(readerId!,'🔥')}><WhatshotIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[readerId!]?.['🔥'] ?? 0) || ''}</small></span></Tooltip>
-                  <Tooltip title="Класс"><span><IconButton size='small' onClick={()=>sendReaction(readerId!,'👍')}><ThumbUpOffAltIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[readerId!]?.['👍'] ?? 0) || ''}</small></span></Tooltip>
+
+              {/* Reader column */}
+              <div onClick={handleContentClick}>
+                {/* Other posts list placed above current article */}
+                <div style={{ margin:'0 0 12px 0', display: readerId ? 'block' : 'none' }}>
+                  <div style={{ margin:'0 0 6px 0', fontWeight:700, opacity:.8 }}>Другие посты</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                    {filtered.filter((a:any)=>a.id!==readerId).slice(0,12).map((a:any)=> (
+                      <motion.a key={a.id} href={`/post/${a.id}`} data-article-id={a.id} onClick={e=>{ e.preventDefault(); openReader(a.id) }} initial={{ opacity: .7 }} whileHover={{ opacity: 1 }} style={{ textDecoration:'none', color:'#111', fontSize:14 }}>
+                        {a.title}
+                      </motion.a>
+                    ))}
+                  </div>
                 </div>
-              )}
+                <h1 style={{margin:'0 0 8px 0', fontSize:24, lineHeight:1.25}}>{(readerArticle as any)?.title}</h1>
+                <div style={{opacity:.6, fontSize:12, marginBottom:12}}>{readerArticle ? new Date((readerArticle as any).created_at).toLocaleString('ru-RU') : ''}</div>
+                {readerLoading && <div>Загрузка…</div>}
+                {!readerLoading && readerArticle && (
+                  <article ref={contentRef} className='article-content' style={{ lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: (readerArticle as any).content }} />
+                )}
+                {!!readerId && (
+                  <div style={{ display:'flex', gap:16, alignItems:'center', marginTop:16 }}>
+                    <Tooltip title="Нравится"><span><IconButton size='small' onClick={()=>sendReaction(readerId!,'❤️')}><FavoriteBorderIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[readerId!]?.['❤️'] ?? 0) || ''}</small></span></Tooltip>
+                    <Tooltip title="Огонь"><span><IconButton size='small' onClick={()=>sendReaction(readerId!,'🔥')}><WhatshotIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[readerId!]?.['🔥'] ?? 0) || ''}</small></span></Tooltip>
+                    <Tooltip title="Класс"><span><IconButton size='small' onClick={()=>sendReaction(readerId!,'👍')}><ThumbUpOffAltIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[readerId!]?.['👍'] ?? 0) || ''}</small></span></Tooltip>
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
