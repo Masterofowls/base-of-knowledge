@@ -64,6 +64,15 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   const [extraFilters, setExtraFilters] = useState<any>({})
   const [hoverPreview, setHoverPreview] = useState<{ title: string, html: string, img?: string } | null>(null)
   const [hoverPos, setHoverPos] = useState<{ x: number, y: number }>({ x: 0, y: 0 })
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+
+  function slugify(value: string): string {
+    return (value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9а-яё\s_-]/gi, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+  }
 
   // Student context (for header)
   const isStudentRole = (typeof window !== 'undefined' ? (localStorage.getItem('user_role') || '').toLowerCase() === 'student' : false)
@@ -473,16 +482,20 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
 
               const sections = Array.from(sectionMap.values())
               if (sections.length === 0) return <div style={{ color: '#888', padding: 16 }}>Посты не найдены</div>
+              const PAGE = 12
               return (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24 }}>
                   {sections.map((section) => (
-                    <section key={section.title}>
+                    <section key={section.title} id={`sec-${slugify(section.title)}`}>
                       <h2 style={{ margin:'0 0 8px 0', fontSize:18, fontWeight:800 }}>{section.title}</h2>
                       <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:16 }}>
                         {section.subgroups.map((sg) => {
                           const left: any[] = []
                           const right: any[] = []
-                          sg.list.forEach((a: any, idx: number) => (idx % 2 === 0 ? left : right).push(a))
+                          const key = `${section.title}__${sg.subtitle}`
+                          const isExpanded = !!expandedGroups[key]
+                          const listLimited = isExpanded ? sg.list : sg.list.slice(0, PAGE)
+                          listLimited.forEach((a: any, idx: number) => (idx % 2 === 0 ? left : right).push(a))
                           const renderCol = (arr: any[]) => (
                             <div>
                               {arr.map(a => (
@@ -504,12 +517,20 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
                             </div>
                           )
                           return (
-                            <div key={sg.subtitle}>
+                            <div key={sg.subtitle} id={`sub-${slugify(section.title)}-${slugify(sg.subtitle)}`}>
                               {sg.subtitle !== '—' && <h3 style={{ margin:'6px 0', fontSize:14, fontWeight:700, opacity:.85 }}>{sg.subtitle}</h3>}
                               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
                                 {renderCol(left)}
                                 {renderCol(right)}
                               </div>
+                              {sg.list.length > PAGE && (
+                                <div style={{ marginTop:8 }}>
+                                  <button
+                                    onClick={()=> setExpandedGroups(prev=>({ ...prev, [key]: !prev[key] }))}
+                                    style={{ border:'1px solid rgba(0,0,0,0.12)', background:'#fff', padding:'6px 10px', borderRadius:6, cursor:'pointer' }}
+                                  >{isExpanded ? 'Свернуть' : 'Показать ещё'}</button>
+                                </div>
+                              )}
                             </div>
                           )
                         })}
@@ -601,6 +622,48 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
             )}
             <div style={{ fontSize:13, opacity:.8 }}>{getSnippet(hoverPreview.html, 180)}</div>
           </div>
+        )}
+        {/* Right TOC for grouped view */}
+        {notionMode && readerId === null && !isLoading && !error && (
+          <aside style={{ position:'fixed', right: 16, top: 96, width: 220, maxHeight: '70vh', overflow:'auto', background:'rgba(255,255,255,0.9)', border:'1px solid rgba(0,0,0,0.08)', borderRadius:8, padding:8 }}>
+            {(() => {
+              type Section = { title: string, subgroups: Array<{ subtitle: string, list: any[] }> }
+              const sectionMap = new Map<string, Section>()
+              const cityLabelById = new Map<number, string>((dicts.cities || []).map((c:any)=>[c.value, c.label]))
+              filtered.forEach((it: any) => {
+                let sectionKey = 'Общее'
+                const cats = (it.categories || []) as any[]
+                if (cats.length && cats[0]?.top_category?.name) sectionKey = cats[0].top_category.name
+                if (it.audience === 'city' || it.audience_city_id) sectionKey = 'Разделы по городам'
+                const section = sectionMap.get(sectionKey) || { title: sectionKey, subgroups: [] }
+                if (sectionKey === 'Разделы по городам') {
+                  const cid = Number(it.audience_city_id || 0)
+                  const subKey = cityLabelById.get(cid) || (cid ? `Город #${cid}` : 'Города')
+                  let sub = section.subgroups.find(s => s.subtitle === subKey)
+                  if (!sub) { sub = { subtitle: subKey, list: [] }; section.subgroups.push(sub) }
+                } else {
+                  let sub = section.subgroups.find(s => s.subtitle === '—')
+                  if (!sub) { sub = { subtitle: '—', list: [] }; section.subgroups.push(sub) }
+                }
+                sectionMap.set(sectionKey, section)
+              })
+              const sections = Array.from(sectionMap.values())
+              return (
+                <nav>
+                  {sections.map(sec => (
+                    <div key={sec.title} style={{ marginBottom:8 }}>
+                      <a href={`#sec-${slugify(sec.title)}`} onClick={(e)=>{ e.preventDefault(); document.getElementById(`sec-${slugify(sec.title)}`)?.scrollIntoView({ behavior:'smooth', block:'start' }) }} style={{ fontWeight:700, textDecoration:'none', color:'#111' }}>{sec.title}</a>
+                      {sec.subgroups.filter(s=>s.subtitle!=='—').slice(0,12).map(sub => (
+                        <div key={sub.subtitle}>
+                          <a href={`#sub-${slugify(sec.title)}-${slugify(sub.subtitle)}`} onClick={(e)=>{ e.preventDefault(); document.getElementById(`sub-${slugify(sec.title)}-${slugify(sub.subtitle)}`)?.scrollIntoView({ behavior:'smooth', block:'start' }) }} style={{ display:'block', marginLeft:10, fontSize:12, textDecoration:'none', color:'#333', opacity:.85 }}>{sub.subtitle}</a>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </nav>
+              )
+            })()}
+          </aside>
         )}
       </Container>
     </div>
