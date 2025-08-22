@@ -46,3 +46,4 @@ __pycache__/
 /create_admin.py
 /tests
 /.venv
+bz-front-development/api-tests/cleanup-jest-rules.mjs

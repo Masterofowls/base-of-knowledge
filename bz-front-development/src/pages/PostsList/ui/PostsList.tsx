@@ -63,6 +63,14 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   const headerPrevDisplay = useRef<string | null>(null)
   const [extraFilters, setExtraFilters] = useState<any>({})
 
+  // Student context (for header)
+  const isStudentRole = (typeof window !== 'undefined' ? (localStorage.getItem('user_role') || '').toLowerCase() === 'student' : false)
+  const selectedCityId = (typeof window !== 'undefined' ? localStorage.getItem('student_city_id') : null)
+  const selectedGroupName = (typeof window !== 'undefined' ? localStorage.getItem('student_group') : null)
+  const selectedGroupId = (typeof window !== 'undefined' ? localStorage.getItem('student_group_id') : null)
+  const selectedBase = (typeof window !== 'undefined' ? localStorage.getItem('student_base_class') : null)
+  const selectedCourse = (typeof window !== 'undefined' ? localStorage.getItem('student_course') : null)
+
   const pageFromURL = useMemo(() => Number(searchParams.get('page') ?? 1), [searchParams])
   useEffect(() => { setPage(pageFromURL) }, [pageFromURL])
 
@@ -343,6 +351,22 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   return (
     <div className='page-center-wrapper' style={{ paddingTop: 0 }}>
       <Container gap='0' width={containerWidth} direction='column' paddings='0' className={cls.list}>
+        {/* Student header with current context */}
+        {isStudentRole && readerId === null && (
+          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', background: 'var(--bg-card, #f8f9fa)', borderRadius: '12px', marginBottom: '16px', border: '1px solid var(--border-muted, rgba(0,0,0,0.06))' }}>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Лента студента</h1>
+            <div style={{ marginTop: 6, fontSize: 14, opacity: 0.8, display: 'flex', flexWrap: 'wrap' }}>
+              <span style={{ marginRight: 12 }}><strong>Город:</strong> {(() => {
+                const cid = Number(selectedCityId || 0)
+                const city = (dicts.cities || []).find((c:any) => c.value === cid)
+                return city?.label || (selectedCityId ? `#${selectedCityId}` : '—')
+              })()}</span>
+              <span><strong>Группа:</strong> {selectedGroupName || (selectedGroupId ? `#${selectedGroupId}` : '—')}</span>
+              <span style={{ marginLeft: 12 }}><strong>База:</strong> {selectedBase || '—'}</span>
+              <span style={{ marginLeft: 12 }}><strong>Курс:</strong> {selectedCourse || '—'}</span>
+            </div>
+          </div>
+        )}
         {/* header tabs/search removed; search lives in global header */}
         {/* Быстрые фильтры (скрыть в режиме чтения) */}
         <div style={{ display: (notionMode && readerId !== null) ? 'none' : 'flex', gap:8, alignItems:'center', padding:'8px 12px', flexWrap:'wrap' }}>
