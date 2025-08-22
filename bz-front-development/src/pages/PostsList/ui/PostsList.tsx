@@ -440,7 +440,56 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
         {(!notionMode || readerId === null) && isLoading && <div style={{ padding: 16 }}>Загрузка…</div>}
         {(!notionMode || readerId === null) && error && <div style={{ padding: 16, color: '#E44A77' }}>{error}</div>}
 
-        {(!notionMode || readerId === null) && !isLoading && !error && (
+        {/* Notion-like grouped sections when notionMode and not reading */}
+        {notionMode && readerId === null && !isLoading && !error && (
+          <div style={{ padding: '0 12px 8px' }}>
+            {(() => {
+              const groups = new Map<string, any[]>()
+              filtered.forEach((it: any) => {
+                let key = 'Общее'
+                const cats = (it.categories || []) as any[]
+                if (it.audience === 'city' || it.audience_city_id) key = 'Разделы по городам'
+                if (cats.length && cats[0]?.top_category?.name) key = cats[0].top_category.name
+                const arr = groups.get(key) || []
+                arr.push(it)
+                groups.set(key, arr)
+              })
+              const sections = Array.from(groups.entries())
+              if (sections.length === 0) return <div style={{ color: '#888', padding: 16 }}>Посты не найдены</div>
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24 }}>
+                  {sections.map(([title, list]) => {
+                    const left: any[] = []
+                    const right: any[] = []
+                    list.forEach((a: any, idx: number) => (idx % 2 === 0 ? left : right).push(a))
+                    const renderCol = (arr: any[]) => (
+                      <div>
+                        {arr.map(a => (
+                          <div key={a.id} style={{ display:'flex', alignItems:'flex-start', gap:8, padding:'4px 0' }}>
+                            <span style={{ fontSize:12, lineHeight: '20px' }}>📄</span>
+                            <a href={`/post/${a.id}`} data-article-id={a.id} onClick={e=>{ e.preventDefault(); openReader(a.id) }} style={{ color:'#111', textDecoration:'none' }}>{a.title}</a>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                    return (
+                      <section key={title}>
+                        <h2 style={{ margin:'0 0 8px 0', fontSize:18, fontWeight:800 }}>{title}</h2>
+                        <div style={{ display:'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                          {renderCol(left)}
+                          {renderCol(right)}
+                        </div>
+                      </section>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
+        {/* Default list when not using grouped mode or in reader */}
+        {(!notionMode || readerId !== null) && !isLoading && !error && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 0 }}>
             {!isLoading && filtered.length === 0 && <div style={{ color: '#888', padding: 16 }}>Посты не найдены</div>}
             {filtered.length > 0 && (
