@@ -218,6 +218,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   function openReader(id: number) {
     setReaderId(id)
     setReaderLoading(true)
+    setHoverPreview(null)
     http.get(`/api/articles/${id}`).then(res => {
       setReaderArticle(res.data)
       loadReactionsFor([id])
@@ -234,6 +235,7 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   function closeReader() {
     setReaderId(null)
     setReaderArticle(null)
+    setHoverPreview(null)
     setOutline([])
     setActiveOutlineId(null)
     setRelated([])
@@ -573,11 +575,6 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
                         <small style={{ opacity: .6 }}>{new Date(item.created_at).toLocaleDateString('ru-RU')}</small>
-                        <div style={{display:'flex', gap:16, alignItems:'center'}}>
-                          <Tooltip title="Нравится"><span><IconButton size='small' onClick={()=>sendReaction(item.id,'❤️')}><FavoriteBorderIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[item.id]?.['❤️'] ?? 0) || ''}</small></span></Tooltip>
-                          <Tooltip title="Огонь"><span><IconButton size='small' onClick={()=>sendReaction(item.id,'🔥')}><WhatshotIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[item.id]?.['🔥'] ?? 0) || ''}</small></span></Tooltip>
-                          <Tooltip title="Класс"><span><IconButton size='small' onClick={()=>sendReaction(item.id,'👍')}><ThumbUpOffAltIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[item.id]?.['👍'] ?? 0) || ''}</small></span></Tooltip>
-                        </div>
                       </div>
                     </div>
                   )
@@ -622,11 +619,19 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
               {!readerLoading && readerArticle && (
                 <article ref={contentRef} className='article-content' style={{ lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: (readerArticle as any).content }} />
               )}
+              {/* Reactions shown only in reader view */}
+              {!!readerId && (
+                <div style={{ display:'flex', gap:16, alignItems:'center', marginTop:16 }}>
+                  <Tooltip title="Нравится"><span><IconButton size='small' onClick={()=>sendReaction(readerId!,'❤️')}><FavoriteBorderIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[readerId!]?.['❤️'] ?? 0) || ''}</small></span></Tooltip>
+                  <Tooltip title="Огонь"><span><IconButton size='small' onClick={()=>sendReaction(readerId!,'🔥')}><WhatshotIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[readerId!]?.['🔥'] ?? 0) || ''}</small></span></Tooltip>
+                  <Tooltip title="Класс"><span><IconButton size='small' onClick={()=>sendReaction(readerId!,'👍')}><ThumbUpOffAltIcon fontSize='small' /></IconButton><small style={{opacity:.7}}>{(reactionCounts[readerId!]?.['👍'] ?? 0) || ''}</small></span></Tooltip>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
         {/* Hover preview card */}
-        {hoverPreview && (
+        {hoverPreview && readerId === null && (
           <div style={{ position:'fixed', top: Math.min(hoverPos.y + 12, window.innerHeight - 240), left: Math.min(hoverPos.x + 12, window.innerWidth - 360), width: 320, background:'#fff', border:'1px solid rgba(0,0,0,0.1)', borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', padding:12, zIndex:9999, pointerEvents:'none' }}>
             <div style={{ fontWeight:700, marginBottom:6 }}>{hoverPreview.title}</div>
             {hoverPreview.img && (
