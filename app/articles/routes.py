@@ -4,6 +4,7 @@ from app.articles import articles_bp
 from app.models import Article, Category, TopCategory, Subcategory, Group, User, ArticleAuthor, ArticleCategory, ArticleMedia, ArticleMediaLink
 from app.models import SchoolClass
 from app.models import ArticleReaction, ReactionEmoji
+from app.models import ArticleView
 from app.models import City, Speciality, Group  # for bulk
 from app import db
 from datetime import datetime
@@ -671,6 +672,13 @@ def delete_article(article_id):
         return jsonify({'error': 'Unauthorized'}), 403
     
     try:
+        # Clean up related rows to avoid FK constraint errors on delete
+        ArticleCategory.query.filter_by(article_id=article.id).delete(synchronize_session=False)
+        ArticleMediaLink.query.filter_by(article_id=article.id).delete(synchronize_session=False)
+        ArticleAuthor.query.filter_by(article_id=article.id).delete(synchronize_session=False)
+        ArticleReaction.query.filter_by(article_id=article.id).delete(synchronize_session=False)
+        ArticleView.query.filter_by(article_id=article.id).delete(synchronize_session=False)
+
         db.session.delete(article)
         db.session.commit()
         

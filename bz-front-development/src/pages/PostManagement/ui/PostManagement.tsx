@@ -112,8 +112,11 @@ export default function PostManagement() {
             
             // Remove from local state
             setArticles(prev => prev.filter(article => article.id !== articleId));
-        } catch (error) {
-            console.error('Failed to delete article:', error);
+        } catch (error: any) {
+            const status = error?.response?.status
+            const data = error?.response?.data
+            const msg = error?.message
+            console.error('Failed to delete article:', { status, data, msg });
             setError('Не удалось удалить пост');
         }
     };
