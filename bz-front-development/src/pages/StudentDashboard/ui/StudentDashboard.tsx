@@ -44,26 +44,7 @@ export default function StudentDashboard() {
 
     return (
         <main style={{display: 'flex', flexDirection: 'column'}} className={classNames('container', {}, [])}>
-            {/* Header */}
-            <div style={{
-                display: 'flex', 
-                flexDirection: 'column', 
-                padding: '16px',
-                background: 'var(--bg-card, #f8f9fa)',
-                borderRadius: '12px',
-                marginBottom: '16px',
-                border: '1px solid var(--border-muted, rgba(0,0,0,0.06))'
-            }}>
-                <h1 style={{margin: 0, fontSize: '22px', fontWeight: 800}}>
-                    Лента студента
-                </h1>
-                <div style={{marginTop: 6, fontSize: '14px', opacity: .8}}>
-                    <span style={{marginRight: 12}}><strong>Город:</strong> {studentInfo.city}</span>
-                    <span><strong>Группа:</strong> {studentInfo.group}</span>
-                    <span style={{marginLeft: 12}}><strong>База:</strong> {studentInfo.baseClass}</span>
-                    <span style={{marginLeft: 12}}><strong>Курс:</strong> {studentInfo.course}</span>
-                </div>
-            </div>
+            {/* Header removed; PostsList now renders the student context header */}
 
             {/* Feed only, full available width */}
             <div style={{display:'flex', justifyContent:'center', width:'100%'}}>
