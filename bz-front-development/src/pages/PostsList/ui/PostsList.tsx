@@ -62,6 +62,8 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
   const [related, setRelated] = useState<Array<{ id: number, title: string }>>([])
   const headerPrevDisplay = useRef<string | null>(null)
   const [extraFilters, setExtraFilters] = useState<any>({})
+  const [hoverPreview, setHoverPreview] = useState<{ title: string, html: string, img?: string } | null>(null)
+  const [hoverPos, setHoverPos] = useState<{ x: number, y: number }>({ x: 0, y: 0 })
 
   // Student context (for header)
   const isStudentRole = (typeof window !== 'undefined' ? (localStorage.getItem('user_role') || '').toLowerCase() === 'student' : false)
@@ -444,44 +446,76 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
         {notionMode && readerId === null && !isLoading && !error && (
           <div style={{ padding: '0 12px 8px' }}>
             {(() => {
-              const groups = new Map<string, any[]>()
+              type Section = { title: string, subgroups: Array<{ subtitle: string, list: any[] }> }
+              const sectionMap = new Map<string, Section>()
+              const cityLabelById = new Map<number, string>((dicts.cities || []).map((c:any)=>[c.value, c.label]))
+
               filtered.forEach((it: any) => {
-                let key = 'Общее'
+                let sectionKey = 'Общее'
                 const cats = (it.categories || []) as any[]
-                if (it.audience === 'city' || it.audience_city_id) key = 'Разделы по городам'
-                if (cats.length && cats[0]?.top_category?.name) key = cats[0].top_category.name
-                const arr = groups.get(key) || []
-                arr.push(it)
-                groups.set(key, arr)
+                if (cats.length && cats[0]?.top_category?.name) sectionKey = cats[0].top_category.name
+                if (it.audience === 'city' || it.audience_city_id) sectionKey = 'Разделы по городам'
+
+                const section = sectionMap.get(sectionKey) || { title: sectionKey, subgroups: [] }
+                if (sectionKey === 'Разделы по городам') {
+                  const cid = Number(it.audience_city_id || 0)
+                  const subKey = cityLabelById.get(cid) || (cid ? `Город #${cid}` : 'Города')
+                  let sub = section.subgroups.find(s => s.subtitle === subKey)
+                  if (!sub) { sub = { subtitle: subKey, list: [] }; section.subgroups.push(sub) }
+                  sub.list.push(it)
+                } else {
+                  let sub = section.subgroups.find(s => s.subtitle === '—')
+                  if (!sub) { sub = { subtitle: '—', list: [] }; section.subgroups.push(sub) }
+                  sub.list.push(it)
+                }
+                sectionMap.set(sectionKey, section)
               })
-              const sections = Array.from(groups.entries())
+
+              const sections = Array.from(sectionMap.values())
               if (sections.length === 0) return <div style={{ color: '#888', padding: 16 }}>Посты не найдены</div>
               return (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24 }}>
-                  {sections.map(([title, list]) => {
-                    const left: any[] = []
-                    const right: any[] = []
-                    list.forEach((a: any, idx: number) => (idx % 2 === 0 ? left : right).push(a))
-                    const renderCol = (arr: any[]) => (
-                      <div>
-                        {arr.map(a => (
-                          <div key={a.id} style={{ display:'flex', alignItems:'flex-start', gap:8, padding:'4px 0' }}>
-                            <span style={{ fontSize:12, lineHeight: '20px' }}>📄</span>
-                            <a href={`/post/${a.id}`} data-article-id={a.id} onClick={e=>{ e.preventDefault(); openReader(a.id) }} style={{ color:'#111', textDecoration:'none' }}>{a.title}</a>
-                          </div>
-                        ))}
+                  {sections.map((section) => (
+                    <section key={section.title}>
+                      <h2 style={{ margin:'0 0 8px 0', fontSize:18, fontWeight:800 }}>{section.title}</h2>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:16 }}>
+                        {section.subgroups.map((sg) => {
+                          const left: any[] = []
+                          const right: any[] = []
+                          sg.list.forEach((a: any, idx: number) => (idx % 2 === 0 ? left : right).push(a))
+                          const renderCol = (arr: any[]) => (
+                            <div>
+                              {arr.map(a => (
+                                <div key={a.id} style={{ display:'flex', alignItems:'flex-start', gap:8, padding:'4px 4px', borderRadius:6 }}>
+                                  <span style={{ fontSize:12, lineHeight: '20px' }}>📄</span>
+                                  <a
+                                    href={`/post/${a.id}`}
+                                    data-article-id={a.id}
+                                    onClick={e=>{ e.preventDefault(); openReader(a.id) }}
+                                    onMouseEnter={(e)=>{ setHoverPos({ x: e.clientX, y: e.clientY }); setHoverPreview({ title: a.title, html: a.content, img: getFirstImageSrc(a.content) || undefined }) }}
+                                    onMouseLeave={()=> setHoverPreview(null)}
+                                    style={{ color:'#111', textDecoration:'none' }}
+                                  >
+                                    {a.title}
+                                  </a>
+                                  <small style={{ marginLeft:8, opacity:.5 }}>{new Date(a.created_at).toLocaleDateString('ru-RU')}</small>
+                                </div>
+                              ))}
+                            </div>
+                          )
+                          return (
+                            <div key={sg.subtitle}>
+                              {sg.subtitle !== '—' && <h3 style={{ margin:'6px 0', fontSize:14, fontWeight:700, opacity:.85 }}>{sg.subtitle}</h3>}
+                              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+                                {renderCol(left)}
+                                {renderCol(right)}
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
-                    )
-                    return (
-                      <section key={title}>
-                        <h2 style={{ margin:'0 0 8px 0', fontSize:18, fontWeight:800 }}>{title}</h2>
-                        <div style={{ display:'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                          {renderCol(left)}
-                          {renderCol(right)}
-                        </div>
-                      </section>
-                    )
-                  })}
+                    </section>
+                  ))}
                 </div>
               )
             })()}
@@ -554,6 +588,18 @@ export default function PostsList({ expandAllDefault = false, fullscreen = false
                 <article ref={contentRef} className='article-content' style={{ lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: (readerArticle as any).content }} />
               )}
             </div>
+          </div>
+        )}
+        {/* Hover preview card */}
+        {hoverPreview && (
+          <div style={{ position:'fixed', top: Math.min(hoverPos.y + 12, window.innerHeight - 240), left: Math.min(hoverPos.x + 12, window.innerWidth - 360), width: 320, background:'#fff', border:'1px solid rgba(0,0,0,0.1)', borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', padding:12, zIndex:9999, pointerEvents:'none' }}>
+            <div style={{ fontWeight:700, marginBottom:6 }}>{hoverPreview.title}</div>
+            {hoverPreview.img && (
+              <div style={{ width:'100%', height:140, overflow:'hidden', borderRadius:6, marginBottom:8 }}>
+                <img src={hoverPreview.img} alt='' style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+              </div>
+            )}
+            <div style={{ fontSize:13, opacity:.8 }}>{getSnippet(hoverPreview.html, 180)}</div>
           </div>
         )}
       </Container>
