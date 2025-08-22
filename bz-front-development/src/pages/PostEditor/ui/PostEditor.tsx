@@ -13,7 +13,7 @@ import 'quill/dist/quill.snow.css'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import QuillBetterTable from 'quill-table-better'
-import 'quill-table-better/dist/quill-better-table.css'
+// Note: CSS from quill-table-better is not resolved in our build; omit import to avoid Rollup error
 import ArrowIcon from "shared/assets/icons/ArrrowLeft.svg?react";
 import SaveIcon from "shared/assets/icons/Plus.svg?react";
 import { Accordion, AccordionSummary, AccordionDetails, FormControlLabel, Checkbox, Autocomplete, TextField, IconButton } from '@mui/material'
