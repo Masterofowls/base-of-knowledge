@@ -10,6 +10,7 @@ from app import db
 from datetime import datetime
 import re
 from sqlalchemy import or_, asc, desc
+import requests
 
 @articles_bp.route('/', methods=['GET'])
 def get_articles():
@@ -722,6 +723,67 @@ def publish_article(article_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to publish article'}), 500
+
+
+@articles_bp.route('/import/weeek', methods=['POST'])
+@jwt_required()
+def import_from_weeek():
+    """Import articles from Weeek share link using provided API key.
+    Request JSON: { url: string, api_key?: string }
+    Creates draft articles with tag 'imported'.
+    """
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    share_url = data.get('url')
+    api_key = data.get('api_key') or request.headers.get('X-WEEEK-API-KEY')
+    if not share_url or not api_key:
+        return jsonify({'error': 'url and api_key are required'}), 400
+
+    try:
+        # Minimal fetch. In real Weeek API you would call their REST to list pages.
+        # Here we GET the shared document as HTML and extract sections into articles.
+        res = requests.get(share_url, timeout=15)
+        if res.status_code >= 400:
+            return jsonify({'error': 'Failed to fetch from Weeek', 'status': res.status_code}), 502
+        html = res.text or ''
+
+        # Naive split by <section ... id="..."> as separate articles
+        import re as _re
+        chunks = _re.split(r'<section[^>]*id="([^"]+)"[^>]*>', html)
+        created_ids = []
+        # chunks format: [before, id1, rest1, id2, rest2, ...]
+        for i in range(1, len(chunks), 2):
+            sec_id = chunks[i]
+            sec_html = chunks[i+1] if (i+1) < len(chunks) else ''
+            # Title from first h2/h1
+            m = _re.search(r'<h[12][^>]*>(.*?)</h[12]>', sec_html, _re.IGNORECASE | _re.DOTALL)
+            title = _re.sub(r'<[^>]+>', '', m.group(1)).strip() if m else f'Imported {sec_id}'
+
+            article = Article(
+                title=title[:255] or 'Imported',
+                content=sec_html,
+                is_published=False,
+                is_for_staff=False,
+                is_actual=False,
+                tag='imported',
+                audience=None,
+            )
+            try:
+                db.session.add(article)
+                db.session.flush()
+                db.session.add(ArticleAuthor(article_id=article.id, user_id=user.id))
+                created_ids.append(article.id)
+            except Exception:
+                db.session.rollback()
+        db.session.commit()
+        return jsonify({ 'imported_count': len(created_ids), 'article_ids': created_ids }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Import failed'}), 500
 
 @articles_bp.route('/<int:article_id>/unpublish', methods=['POST'])
 @jwt_required()

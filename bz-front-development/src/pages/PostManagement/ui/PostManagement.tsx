@@ -10,6 +10,7 @@ import ArrowIcon from "shared/assets/icons/ArrrowLeft.svg?react";
 import PlusIcon from "shared/assets/icons/Plus.svg?react";
 import PenIcon from "shared/assets/icons/Pen.svg?react";
 import PublishIcon from "shared/assets/icons/circle-check-solid.svg?react";
+import { useState as useReactState } from 'react'
 
 interface Article {
     id: number;
@@ -51,6 +52,8 @@ export default function PostManagement() {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [showOnlyDrafts, setShowOnlyDrafts] = useState(false);
+    const [weeekUrl, setWeeekUrl] = useState('');
+    const [isImporting, setIsImporting] = useState(false);
 
     useEffect(() => {
         fetchArticles();
@@ -84,6 +87,21 @@ export default function PostManagement() {
             setLoading(false);
         }
     };
+
+    const handleWeeekImport = async () => {
+        if (!weeekUrl.trim()) return;
+        try {
+            setIsImporting(true);
+            await http.post('/api/articles/import/weeek', { url: weeekUrl, api_key: '98df0f84-a51f-4c37-88b7-61a99a681f03' });
+            setWeeekUrl('');
+            await fetchArticles();
+        } catch (e:any) {
+            console.error('Import failed', e?.response?.data || e?.message);
+            setError('Не удалось импортировать из Weeek');
+        } finally {
+            setIsImporting(false);
+        }
+    }
 
     const handlePublishToggle = async (articleId: number, currentStatus: boolean) => {
         try {
@@ -204,6 +222,20 @@ export default function PostManagement() {
                         />
                         <span>Только черновики</span>
                     </label>
+                </div>
+
+                {/* Weeek Import */}
+                <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:16 }}>
+                    <Input
+                        type="text"
+                        placeholder="Вставьте ссылку Weeek для импорта..."
+                        value={weeekUrl}
+                        onChange={(value)=> setWeeekUrl(value)}
+                        style={{ width: '420px' }}
+                    />
+                    <Button onClick={handleWeeekImport} width='160px' backgroundColor='#92DA63' theme={ThemeButton.CLEAR}>
+                        <span>{isImporting ? 'Импорт...' : 'Импорт Weeek'}</span>
+                    </Button>
                 </div>
 
                 {/* Error Display */}
