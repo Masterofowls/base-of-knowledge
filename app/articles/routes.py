@@ -686,7 +686,7 @@ def delete_article(article_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': 'Failed to delete article'}), 500
+        return jsonify({'error': 'Failed to delete article', 'details': str(e)}), 500
 
 @articles_bp.route('/<int:article_id>/publish', methods=['POST'])
 @jwt_required()
