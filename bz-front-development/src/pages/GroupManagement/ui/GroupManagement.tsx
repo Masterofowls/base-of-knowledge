@@ -248,7 +248,7 @@ export default function GroupManagement() {
         if (!createForm.institution_type_id) { setError('Тип учреждения обязателен'); return }
         if (isSchool) {
             if (!createForm.school_class_id) { setError('Класс обязателен для школы'); return }
-            if (!createForm.admission_year_id) { setError('Год поступления обязателен для школы'); return }
+            // год поступления для школы не обязателен
             // ensure forbidden fields are null
             createForm.speciality_id = null
             createForm.education_form_id = null

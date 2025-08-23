@@ -696,17 +696,25 @@ def create_group():
     is_school = inst.name.lower() == 'школа'
 
     if is_school:
-        # Schools: only allow class, city, name, admission_year.
+        # Schools: only allow class, city, name, admission_year (optional: default to current year).
         if speciality_id is not None or education_form_id is not None:
             return jsonify({'error': 'Do not provide speciality_id or education_form_id for schools'}), 400
         if not school_class_id:
             return jsonify({'error': 'school_class_id is required for schools'}), 400
         if not SchoolClass.query.get(school_class_id):
             return jsonify({'error': 'School class not found'}), 404
-        if not admission_year_id:
-            return jsonify({'error': 'admission_year_id is required for schools'}), 400
-        if not AdmissionYear.query.get(admission_year_id):
-            return jsonify({'error': 'Admission year not found'}), 404
+        # Admission year optional: use provided or default to current year for school
+        if admission_year_id:
+            if not AdmissionYear.query.get(admission_year_id):
+                return jsonify({'error': 'Admission year not found'}), 404
+        else:
+            current_year = datetime.utcnow().year
+            ay = AdmissionYear.query.filter_by(institution_type_id=inst.id, year=current_year).first()
+            if not ay:
+                ay = AdmissionYear(year=current_year, institution_type_id=inst.id)
+                db.session.add(ay)
+                db.session.flush()
+            admission_year_id = ay.id
         # Derive defaults for mandatory non-null columns
         # Speciality: create/get 'SCH' for schools
         sch_spec = Speciality.query.filter_by(institution_type_id=inst.id, code='SCH').first()
@@ -1142,7 +1150,7 @@ def ensure_lookups():
                 created['admission_years'] += 1
 
     # School classes: school 9/10/11
-    for n in ['9', '10', '11']:
+    for n in ['5', '6', '7', '8', '9', '10', '11']:
         _, was = get_or_create(SchoolClass, name=n, institution_type_id=inst_map['Школа'].id)
         if was:
             created['school_classes'] += 1

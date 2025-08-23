@@ -91,7 +91,7 @@ def ensure_specialities(types):
 
 def ensure_school_classes(types):
     result = {}
-    for name in ['9', '10', '11']:
+    for name in ['5','6','7','8','9','10','11']:
         sc, _ = get_or_create(SchoolClass, name=name, institution_type_id=types['Школа'].id)
         result[name] = sc
     # College base-of classes
