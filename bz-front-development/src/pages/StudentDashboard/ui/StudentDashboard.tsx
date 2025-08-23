@@ -18,8 +18,11 @@ export default function StudentDashboard() {
         const studentCity = localStorage.getItem('student_city');
         const studentGroup = localStorage.getItem('student_group');
         const course = localStorage.getItem('student_course');
+        const instId = localStorage.getItem('student_institution_type_id');
+        const baseClass = localStorage.getItem('student_base_class');
+        const isSchool = Boolean(instId && baseClass);
 
-        if (userRole !== 'student' || !studentGroup) {
+        if (userRole !== 'student' || (!studentGroup && !isSchool)) {
             // Redirect to choice page if not properly logged in as student
             navigate('/');
             return;
@@ -27,8 +30,8 @@ export default function StudentDashboard() {
 
         setStudentInfo({
             city: studentCity || undefined,
-            group: studentGroup,
-            course: course
+            group: studentGroup || 'Школа',
+            course: course || undefined
         });
     }, [navigate]);
 
