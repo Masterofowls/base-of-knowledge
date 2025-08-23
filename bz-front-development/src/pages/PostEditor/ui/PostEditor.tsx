@@ -299,6 +299,19 @@ export default function PostEditor() {
         const html = quillRef.current?.root.innerHTML ?? formData.content
         if (!html || html === '<p><br></p>') { setError('Содержание поста обязательно'); return; }
         const ps = formData.publish_scope || {}
+        // Валидация обязательных шагов
+        if (!selectedInstitution) { setError('Выберите тип учреждения'); return }
+        const instName = selectedInstitution.name?.toLowerCase()
+        if (instName === 'школа') {
+            if (!selectedSchoolClasses.length) { setError('Выберите класс'); return }
+            if (!selectedCities.length) { setError('Выберите город'); return }
+        } else if (instName === 'колледж') {
+            if (!selectedCities.length) { setError('Выберите город'); return }
+            if (!selectedCourses.length) { setError('Выберите курс'); return }
+        } else if (instName === 'вуз') {
+            if (!selectedCourses.length) { setError('Выберите курс'); return }
+            if (!selectedCities.length) { setError('Выберите город'); return }
+        }
         try {
             setSaving(true);
             setError(null);
@@ -322,9 +335,10 @@ export default function PostEditor() {
                 }))
             }
             if (selectedInstitution) augmentedScope.institution_type_id = selectedInstitution.value
-            if (selectedSchoolClass) augmentedScope.school_class_id = selectedSchoolClass.value
+            // единичный school_class больше не используем — работаем через массив
+            if (selectedSchoolClass) delete (augmentedScope as any).school_class_id
             const postData = { ...formData, tag: infoTag, content: html, category_ids: categoryIds, publish_scope: augmentedScope };
-            if (isEditing) await http.put(`/api/articles/${id}`, postData); else await http.post('/api/articles', postData);
+            if (isEditing) await http.put(`/articles/${id}`, postData); else await http.post('/articles', postData);
             navigate('/admin/posts');
         } catch (error: any) {
             console.error('Failed to save post:', error);
