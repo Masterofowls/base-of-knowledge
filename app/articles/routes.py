@@ -470,7 +470,8 @@ def create_article():
                                                 db.session.add(ArticleCategory(article_id=art.id, category_id=category_id))
                                         created_ids.append(art.id)
             db.session.commit()
-            return jsonify({'message': f'Created {len(created_ids)} articles', 'ids': created_ids}), 201
+            if len(created_ids) > 0:
+                return jsonify({'message': f'Created {len(created_ids)} articles', 'ids': created_ids}), 201
         except Exception:
             db.session.rollback()
             return jsonify({'error': 'Failed to create articles from rules'}), 500
@@ -495,7 +496,9 @@ def create_article():
             elif isinstance(arr_courses, list) and len(arr_courses) > 0:
                 publish_scope['course'] = arr_courses[0]
                 derived_audience = 'course'
-            # classes only affect base_class below; audience remains None
+            # classes: pass first as single for base_class resolution below
+            if isinstance(arr_classes, list) and len(arr_classes) > 0 and not publish_scope.get('school_class_id'):
+                publish_scope['school_class_id'] = arr_classes[0]
         except Exception:
             pass
 
