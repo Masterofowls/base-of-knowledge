@@ -395,13 +395,15 @@ def create_article():
         mm_spec = publish_scope.get('speciality_ids') if isinstance(publish_scope.get('speciality_ids'), list) else []
         mm_year = publish_scope.get('admission_year_ids') if isinstance(publish_scope.get('admission_year_ids'), list) else []
         mm_courses = publish_scope.get('courses') if isinstance(publish_scope.get('courses'), list) else []
-        if any([mm_city, mm_form, mm_spec, mm_year, mm_courses]):
+        mm_class = publish_scope.get('school_class_ids') if isinstance(publish_scope.get('school_class_ids'), list) else []
+        if any([mm_city, mm_form, mm_spec, mm_year, mm_courses, mm_class]):
             rules = [{
                 'city_ids': mm_city,
                 'education_form_ids': mm_form,
                 'speciality_ids': mm_spec,
                 'admission_year_ids': mm_year,
                 'courses': mm_courses,
+                'school_class_ids': mm_class,
             }]
     if isinstance(rules, list) and len(rules) > 0:
         try:
@@ -413,11 +415,13 @@ def create_article():
                 cities = r.get('city_ids') or [None]
                 years = r.get('admission_year_ids') or [None]
                 courses = r.get('courses') if isinstance(r.get('courses'), list) else ([r.get('course')] if r.get('course') is not None else [None])
+                classes = r.get('school_class_ids') if isinstance(r.get('school_class_ids'), list) else [None]
                 for ef in edu_forms:
                     for sp in specs:
                         for ct in cities:
                             for yr in years:
                                 for crs in courses:
+                                    for scid in classes:
                                     # derive audience
                                     local_aud = None
                                     if r.get('publish_for_all'):
@@ -447,6 +451,14 @@ def create_article():
                                         art.education_mode = ru_mode_map[edu_mode]
                                     else:
                                         art.education_mode = edu_mode
+                                    # school base class if provided
+                                    if scid:
+                                        try:
+                                            sc = SchoolClass.query.get(scid)
+                                            if sc and sc.name and str(sc.name).isdigit():
+                                                art.base_class = int(sc.name)
+                                        except Exception:
+                                            pass
 
                                     db.session.add(art)
                                     db.session.flush()
@@ -915,6 +927,17 @@ def student_feed():
     from sqlalchemy import and_
     group_id = request.args.get('group_id', type=int)
     course = request.args.get('course', type=int)
+    # Optional arrays from request (student context)
+    def _to_ints(name: str):
+        try:
+            return [int(x) for x in request.args.getlist(name) if str(x).isdigit()]
+        except Exception:
+            return []
+    req_city_ids = _to_ints('city_ids')
+    req_courses = _to_ints('courses')
+    req_spec_ids = _to_ints('speciality_ids')
+    req_form_ids = _to_ints('education_form_ids')
+    req_year_ids = _to_ints('admission_year_ids')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     if not group_id:
@@ -976,12 +999,48 @@ def student_feed():
             )
         )
 
-    # Sort newest first
+    # Fetch candidates and apply array-based student context matching
     query = query.order_by(desc(Article.created_at))
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    candidates = query.all()
+
+    student_city_ids = req_city_ids or ([city_id] if city_id else [])
+    student_courses = req_courses or ([course] if course else [])
+    student_spec_ids = req_spec_ids or ([speciality_id] if speciality_id else [])
+    student_form_ids = req_form_ids or ([education_form_id] if education_form_id else [])
+    student_year_ids = req_year_ids or ([admission_year_id] if admission_year_id else [])
+    student_base_classes = ([base_class] if base_class is not None else [])
+
+    def _matches(a: Article) -> bool:
+        # audience checks were already applied for city/course. Here enforce arrays if present in article
+        if a.base_class is not None and student_base_classes and a.base_class not in student_base_classes:
+            return False
+        if a.speciality_id is not None and student_spec_ids and a.speciality_id not in student_spec_ids:
+            return False
+        if a.education_form_id is not None and student_form_ids and a.education_form_id not in student_form_ids:
+            return False
+        if a.audience_admission_year_id is not None and student_year_ids and a.audience_admission_year_id not in student_year_ids:
+            return False
+        # audience_courses JSON array
+        try:
+            import json as _json
+            arr = _json.loads(a.audience_courses or 'null')
+            if isinstance(arr, list) and student_courses:
+                if not any((isinstance(x, int) and x in student_courses) for x in arr):
+                    return False
+        except Exception:
+            pass
+        return True
+
+    filtered = [a for a in candidates if _matches(a)]
+
+    # manual pagination
+    total = len(filtered)
+    start = (page - 1) * per_page
+    end = start + per_page
+    page_items = filtered[start:end]
 
     items = []
-    for article in pagination.items:
+    for article in page_items:
         categories = []
         for ac in article.categories:
             c = ac.category
@@ -1002,10 +1061,10 @@ def student_feed():
         'pagination': {
             'page': page,
             'per_page': per_page,
-            'total': pagination.total,
-            'pages': pagination.pages,
-            'has_next': pagination.has_next,
-            'has_prev': pagination.has_prev,
+            'total': total,
+            'pages': (total + per_page - 1) // per_page,
+            'has_next': end < total,
+            'has_prev': start > 0,
         }
     }), 200
 

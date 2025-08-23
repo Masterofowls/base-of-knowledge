@@ -156,12 +156,14 @@ export default function PostEditor() {
     const [audienceMode, setAudienceMode] = useState<'all'|'city'|'all_except_city'|'study'>('all')
     const [selectedCities, setSelectedCities] = useState<Array<{value:number,label:string}>>([])
     const [exceptCities, setExceptCities] = useState<Array<{value:number,label:string}>>([])
+    const [selectedCourses, setSelectedCourses] = useState<Array<{value:number,label:string}>>([])
 
     // Institution & School class controls
     const [institutionTypes, setInstitutionTypes] = useState<{value:number,label:string,name:string}[]>([])
     const [selectedInstitution, setSelectedInstitution] = useState<{value:number,label:string,name:string} | null>(null)
     const [schoolClasses, setSchoolClasses] = useState<{value:number,label:string}[]>([])
     const [selectedSchoolClass, setSelectedSchoolClass] = useState<{value:number,label:string} | null>(null)
+    const [selectedSchoolClasses, setSelectedSchoolClasses] = useState<Array<{value:number,label:string}>>([])
     
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -247,6 +249,7 @@ export default function PostEditor() {
                 const classesResponse = await http.get('/api/categories/school-classes', { params: { institution_type_id: instId } })
                 setSchoolClasses(classesResponse.data.map((cl:any)=>({ value:cl.id, label:cl.name })))
                 setSelectedSchoolClass(null)
+                setSelectedSchoolClasses([])
                 if (selectedInstitution.name.toLowerCase()==='школа') {
                     setFormData(prev=> ({...prev, publish_scope: { ...(prev.publish_scope||{}), course: undefined }}))
                 }
@@ -649,16 +652,7 @@ export default function PostEditor() {
                                       renderInput={(p)=>(<TextField {...p} label='Исключить города' placeholder='Выберите города, которые исключить' size='small'/>)}
                                   />
                                 )}
-                                <Autocomplete
-                                    options={courseOptions}
-                                    ListboxComponent={VirtualListbox as any}
-                                    value={courseOptions.find(c=> c.value === (formData.publish_scope?.course || 0)) || null}
-                                    onChange={(_, v)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, course: v?.value}}))}
-                                    isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-                                    getOptionLabel={(o)=>o?.label ?? ''}
-                                    renderInput={(p)=>(<TextField {...p} label='Курс (не обязательно)' placeholder='— Все курсы —' size='small'/>)}
-                                    disabled={audienceMode!=='study'}
-                                />
+                                {/* удалено: старый одиночный выбор курса */}
                                 <Autocomplete
                                     options={admissionYears}
                                     ListboxComponent={VirtualListbox as any}
@@ -669,19 +663,9 @@ export default function PostEditor() {
                                     renderInput={(p)=>(<TextField {...p} label='Год поступления (не обязательно)' placeholder='— Все годы —' size='small'/>)}
                                     disabled={audienceMode!=='study'}
                                 />
-                                {audienceMode==='study' && selectedInstitution?.name?.toLowerCase()==='школа' && (
-                                  <Autocomplete
-                                    options={schoolClasses}
-                                    ListboxComponent={VirtualListbox as any}
-                                    value={selectedSchoolClass}
-                                    onChange={(_, v)=> setSelectedSchoolClass(v)}
-                                    isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-                                    getOptionLabel={(o)=>o?.label ?? ''}
-                                    renderInput={(p)=>(<TextField {...p} label='Класс (не обязательно)' placeholder='— Все классы —' size='small'/>)}
-                                  />
-                                )}
+                                {/* дальше идут обязательные шаги ниже */}
 
-                                {/* Компактные мультивыборы */}
+                                {/* Дополнительные необязательные фильтры */}
                                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                                   <Autocomplete multiple options={cities} value={(formData.publish_scope as any)?.city_ids?.map((id:number)=> cities.find(c=>c.value===id)).filter(Boolean) || []} onChange={(_,v)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_ids: v.map((o:any)=>o.value), city_id: undefined }}))} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Города (множественный выбор)' placeholder='Начните вводить город' size='small'/>)}/>
                                   <Autocomplete multiple options={educationForms} value={(formData.publish_scope as any)?.education_form_ids?.map((id:number)=> educationForms.find(f=>f.value===id)).filter(Boolean) || []} onChange={(_,v)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, education_form_ids: v.map((o:any)=>o.value), education_form_id: undefined }}))} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Формы обучения (мульти)' placeholder='Очная, Заочная…' size='small'/>)}/>
