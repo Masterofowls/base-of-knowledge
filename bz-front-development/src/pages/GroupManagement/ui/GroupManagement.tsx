@@ -7,7 +7,7 @@ import { ThemeButton } from "shared/ui/Button/ui/Button.tsx";
 import { Input } from "shared/ui/Input/Input.tsx";
 import { InputSelect } from "shared/ui/InputSelect/InputSelect.tsx";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import http from "shared/api/http";
 import ArrowIcon from "shared/assets/icons/ArrrowLeft.svg?react";
 import PlusIcon from "shared/assets/icons/Plus.svg?react";
