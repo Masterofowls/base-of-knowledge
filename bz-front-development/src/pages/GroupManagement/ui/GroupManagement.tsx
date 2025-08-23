@@ -123,6 +123,12 @@ export default function GroupManagement() {
     const [selectedSchoolClass, setSelectedSchoolClass] = useState<any>(null);
     const [selectedInstitutionType, setSelectedInstitutionType] = useState<any>(null);
 
+    const institutionTypeMap = useMemo(() => {
+        const map: Record<number, string> = {}
+        institutionTypes.forEach(t => { map[t.id] = t.name })
+        return map
+    }, [institutionTypes])
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -524,13 +530,13 @@ export default function GroupManagement() {
                                 </div>
 
                                 <PropertyList spacing={1} style={{ fontSize: 14, color: '#555' }}>
-                                  {group.speciality && (
+                                  {group.speciality && institutionTypeMap[group.institution_type_id] !== 'Школа' && (
                                     <Property>
                                       <PropertyLabel>Специальность</PropertyLabel>
                                       <PropertyValue>{group.speciality.code} - {group.speciality.name}</PropertyValue>
                                     </Property>
                                   )}
-                                  {group.education_form && (
+                                  {group.education_form && institutionTypeMap[group.institution_type_id] !== 'Школа' && (
                                     <Property>
                                       <PropertyLabel>Форма обучения</PropertyLabel>
                                       <PropertyValue>{group.education_form.name}</PropertyValue>
@@ -550,7 +556,7 @@ export default function GroupManagement() {
                                   )}
                                   {group.school_class && (
                                     <Property>
-                                      <PropertyLabel>Курс</PropertyLabel>
+                                      <PropertyLabel>Класс</PropertyLabel>
                                       <PropertyValue>{group.school_class.name}</PropertyValue>
                                     </Property>
                                   )}
