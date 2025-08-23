@@ -368,22 +368,28 @@ def get_groups():
     
     query = Group.query
     
-    # Diagram rules:
-    # - If city chosen, prioritize only city filter
-    # - If institution is School, only class filter is relevant
+    # Apply institution filter first to avoid cross-leaks
+    inst = InstitutionType.query.get(institution_type_id) if institution_type_id else None
+    is_school = bool(inst and inst.name.lower() == 'школа')
+    if institution_type_id:
+        query = query.filter_by(institution_type_id=institution_type_id)
+
     if city_id:
         query = query.filter_by(city_id=city_id)
-    else:
-        if institution_type_id:
-            query = query.filter_by(institution_type_id=institution_type_id)
-            # Detect school by name to simplify (id-based check could be done on client as well)
-            inst = InstitutionType.query.get(institution_type_id)
-            is_school = bool(inst and inst.name.lower() == 'школа')
-        else:
-            is_school = False
-
         if is_school:
-            # For schools we only consider class. Other academic filters are ignored.
+            if school_class_id:
+                query = query.filter_by(school_class_id=school_class_id)
+        else:
+            if speciality_id:
+                query = query.filter_by(speciality_id=speciality_id)
+            if education_form_id:
+                query = query.filter_by(education_form_id=education_form_id)
+            if admission_year_id:
+                query = query.filter_by(admission_year_id=admission_year_id)
+            if school_class_id:
+                query = query.filter_by(school_class_id=school_class_id)
+    else:
+        if is_school:
             if school_class_id:
                 query = query.filter_by(school_class_id=school_class_id)
         else:
