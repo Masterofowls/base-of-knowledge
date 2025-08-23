@@ -387,8 +387,22 @@ def create_article():
         'Заочное': 'distance',
         'Очно-заочное': 'mixed'
     }
-    # New: support multi-rule audience (publish_scope.rules)
+    # Normalize arrays -> rules if compact multi-select provided
     rules = publish_scope.get('rules') if isinstance(publish_scope, dict) else None
+    if not rules and isinstance(publish_scope, dict):
+        mm_city = publish_scope.get('city_ids') if isinstance(publish_scope.get('city_ids'), list) else []
+        mm_form = publish_scope.get('education_form_ids') if isinstance(publish_scope.get('education_form_ids'), list) else []
+        mm_spec = publish_scope.get('speciality_ids') if isinstance(publish_scope.get('speciality_ids'), list) else []
+        mm_year = publish_scope.get('admission_year_ids') if isinstance(publish_scope.get('admission_year_ids'), list) else []
+        mm_courses = publish_scope.get('courses') if isinstance(publish_scope.get('courses'), list) else []
+        if any([mm_city, mm_form, mm_spec, mm_year, mm_courses]):
+            rules = [{
+                'city_ids': mm_city,
+                'education_form_ids': mm_form,
+                'speciality_ids': mm_spec,
+                'admission_year_ids': mm_year,
+                'courses': mm_courses,
+            }]
     if isinstance(rules, list) and len(rules) > 0:
         try:
             created_ids = []
@@ -398,7 +412,7 @@ def create_article():
                 specs = r.get('speciality_ids') or [None]
                 cities = r.get('city_ids') or [None]
                 years = r.get('admission_year_ids') or [None]
-                courses = [r.get('course')] if r.get('course') is not None else [None]
+                courses = r.get('courses') if isinstance(r.get('courses'), list) else ([r.get('course')] if r.get('course') is not None else [None])
                 for ef in edu_forms:
                     for sp in specs:
                         for ct in cities:
