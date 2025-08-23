@@ -422,52 +422,52 @@ def create_article():
                             for yr in years:
                                 for crs in courses:
                                     for scid in classes:
-                                    # derive audience
-                                    local_aud = None
-                                    if r.get('publish_for_all'):
-                                        local_aud = 'all'
-                                    elif ct:
-                                        local_aud = 'city'
-                                    elif crs is not None:
-                                        local_aud = 'course'
-                                    art = Article(
-                                        title=title,
-                                        content=content,
-                                        is_published=is_published,
-                                        is_for_staff=is_for_staff,
-                                        is_actual=is_actual,
-                                        tag=None,
-                                        base_class=None,
-                                        audience=local_aud,
-                                        audience_city_id=(ct if local_aud == 'city' else None),
-                                        audience_course=(crs if local_aud == 'course' else None),
-                                        audience_admission_year_id=(yr if local_aud not in ('all','city') else None)
-                                    )
-                                    # optional fields
-                                    art.education_form_id = ef
-                                    art.speciality_id = sp
-                                    edu_mode = r.get('education_mode')
-                                    if isinstance(edu_mode, str) and edu_mode in ru_mode_map:
-                                        art.education_mode = ru_mode_map[edu_mode]
-                                    else:
-                                        art.education_mode = edu_mode
-                                    # school base class if provided
-                                    if scid:
-                                        try:
-                                            sc = SchoolClass.query.get(scid)
-                                            if sc and sc.name and str(sc.name).isdigit():
-                                                art.base_class = int(sc.name)
-                                        except Exception:
-                                            pass
+                                        # derive audience
+                                        local_aud = None
+                                        if r.get('publish_for_all'):
+                                            local_aud = 'all'
+                                        elif ct:
+                                            local_aud = 'city'
+                                        elif crs is not None:
+                                            local_aud = 'course'
+                                        art = Article(
+                                            title=title,
+                                            content=content,
+                                            is_published=is_published,
+                                            is_for_staff=is_for_staff,
+                                            is_actual=is_actual,
+                                            tag=None,
+                                            base_class=None,
+                                            audience=local_aud,
+                                            audience_city_id=(ct if local_aud == 'city' else None),
+                                            audience_course=(crs if local_aud == 'course' else None),
+                                            audience_admission_year_id=(yr if local_aud not in ('all','city') else None)
+                                        )
+                                        # optional fields
+                                        art.education_form_id = ef
+                                        art.speciality_id = sp
+                                        edu_mode = r.get('education_mode')
+                                        if isinstance(edu_mode, str) and edu_mode in ru_mode_map:
+                                            art.education_mode = ru_mode_map[edu_mode]
+                                        else:
+                                            art.education_mode = edu_mode
+                                        # school base class if provided
+                                        if scid:
+                                            try:
+                                                sc = SchoolClass.query.get(scid)
+                                                if sc and sc.name and str(sc.name).isdigit():
+                                                    art.base_class = int(sc.name)
+                                            except Exception:
+                                                pass
 
-                                    db.session.add(art)
-                                    db.session.flush()
-                                    db.session.add(ArticleAuthor(article_id=art.id, user_id=user.id))
-                                    for category_id in category_ids:
-                                        category = Category.query.get(category_id)
-                                        if category:
-                                            db.session.add(ArticleCategory(article_id=art.id, category_id=category_id))
-                                    created_ids.append(art.id)
+                                        db.session.add(art)
+                                        db.session.flush()
+                                        db.session.add(ArticleAuthor(article_id=art.id, user_id=user.id))
+                                        for category_id in category_ids:
+                                            category = Category.query.get(category_id)
+                                            if category:
+                                                db.session.add(ArticleCategory(article_id=art.id, category_id=category_id))
+                                        created_ids.append(art.id)
             db.session.commit()
             return jsonify({'message': f'Created {len(created_ids)} articles', 'ids': created_ids}), 201
         except Exception:
