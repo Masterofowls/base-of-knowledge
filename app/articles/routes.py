@@ -405,7 +405,8 @@ def create_article():
                 'courses': mm_courses,
                 'school_class_ids': mm_class,
             }]
-    if isinstance(rules, list) and len(rules) > 0:
+    used_rules = isinstance(rules, list) and len(rules) > 0
+    if used_rules:
         try:
             created_ids = []
             for r in rules:
@@ -473,6 +474,7 @@ def create_article():
         except Exception:
             db.session.rollback()
             return jsonify({'error': 'Failed to create articles from rules'}), 500
+        # safety net: if no articles produced from rules, fall through to single creation below
     # Derive audience per diagram: 'all' → hide others; else if city → 'city' and hide other audience fields; else if course → 'course'
     derived_audience = None
     if publish_scope.get('publish_for_all'):
@@ -481,6 +483,21 @@ def create_article():
         derived_audience = 'city'
     elif publish_scope.get('course'):
         derived_audience = 'course'
+    # Fallback: derive from arrays when no singular fields provided
+    if derived_audience is None and isinstance(publish_scope, dict):
+        try:
+            arr_city = publish_scope.get('city_ids')
+            arr_courses = publish_scope.get('courses')
+            arr_classes = publish_scope.get('school_class_ids')
+            if isinstance(arr_city, list) and len(arr_city) > 0:
+                publish_scope['city_id'] = arr_city[0]
+                derived_audience = 'city'
+            elif isinstance(arr_courses, list) and len(arr_courses) > 0:
+                publish_scope['course'] = arr_courses[0]
+                derived_audience = 'course'
+            # classes only affect base_class below; audience remains None
+        except Exception:
+            pass
 
     article = Article(
         title=title,
