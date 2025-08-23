@@ -928,6 +928,7 @@ def student_feed():
     base_class = getattr(group, 'base_class', None)
     edu_mode = None
     education_form_id = getattr(group, 'education_form_id', None)
+    student_inst_type_id = getattr(group, 'institution_type_id', None)
 
     query = Article.query.filter(Article.is_published.is_(True))
 
@@ -954,6 +955,26 @@ def student_feed():
         query = query.filter(or_(Article.audience_admission_year_id.is_(None), Article.audience_admission_year_id == admission_year_id))
     if edu_mode is not None:
         query = query.filter(or_(Article.education_mode.is_(None), Article.education_mode == edu_mode))
+
+    # Institution constraint via linked groups (if present):
+    # If article has linked group categories, at least one must match student's institution type.
+    if student_inst_type_id is not None:
+        from sqlalchemy import exists, select
+        AC = ArticleCategory
+        Cat = Category
+        G = Group
+        query = query.filter(
+            or_(
+                ~exists(select(1).where(AC.article_id == Article.id)),
+                exists(
+                    select(1)
+                    .select_from(AC)
+                    .join(Cat, AC.category_id == Cat.id)
+                    .join(G, Cat.group_id == G.id)
+                    .where(AC.article_id == Article.id, G.institution_type_id == student_inst_type_id)
+                )
+            )
+        )
 
     # Sort newest first
     query = query.order_by(desc(Article.created_at))
