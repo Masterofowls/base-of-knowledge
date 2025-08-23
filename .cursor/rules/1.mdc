@@ -1,0 +1,680 @@
+# Complete Cursor IDE AI Rules for Full-Stack Development
+
+## General Development Rules
+
+- Follow consistent naming conventions: camelCase for JavaScript/TypeScript, snake_case for Python/SQL
+- Always include comprehensive error handling and input validation in all functions
+- Write self-documenting code with meaningful variable and function names
+- Add proper documentation: JSDoc for JavaScript, docstrings for Python, comments for SQL
+- Use environment variables for all configuration settings, never hardcode sensitive data
+- Maintain clear separation between frontend, backend, and database layers
+- Organize imports at the top of files, grouped by type: built-in, third-party, local
+- Implement proper logging using appropriate logging libraries, not print/console statements
+- Use type hints and interfaces wherever possible for better code maintainability
+- Follow language-specific style guides: PEP 8 for Python, Airbnb for JavaScript
+
+## SQL Rules
+
+### Database Design & Queries
+- Always use parameterized queries to prevent SQL injection attacks
+- Include proper primary keys and foreign key relationships in all tables
+- Use descriptive table and column names that clearly indicate their purpose
+- Include created_at and updated_at timestamps on tables that track changes
+- Implement appropriate data types and constraints at the database level
+- Suggest proper indexing for frequently queried columns
+- Use EXPLAIN ANALYZE for complex queries to identify performance bottlenecks
+- Prefer JOINs over subqueries when possible for better query performance
+- Normalize database schema appropriately to reduce data redundancy
+- Include data validation rules at the database level using constraints
+
+### Query Optimization
+- Write efficient WHERE clauses that can utilize indexes effectively
+- Use LIMIT clauses for queries that could return large result sets
+- Avoid SELECT * in production code, specify only needed columns
+- Use appropriate aggregate functions and GROUP BY clauses correctly
+- Implement proper transaction handling for data consistency
+- Use database-specific features like window functions when appropriate
+- Monitor query execution plans and optimize slow-running queries
+- Implement proper connection pooling for database connections
+
+## Python Rules
+
+### Backend Development
+- Use type hints for all function parameters, return types, and class attributes
+- Implement proper exception handling with specific exception types
+- Use dataclasses or Pydantic models for structured data representation
+- Follow RESTful API conventions when designing web endpoints
+- Implement proper authentication and authorization mechanisms
+- Use virtual environments and requirements.txt or pyproject.toml for dependencies
+- Structure applications with clear separation of concerns: models, views, controllers
+- Implement proper async/await patterns for I/O operations
+- Use context managers for resource management (files, database connections)
+- Follow the principle of least privilege when designing API endpoints
+
+### Error Handling & Logging
+- Log errors with appropriate context and stack traces
+- Return consistent error response formats across all API endpoints
+- Implement graceful degradation for external service failures
+- Use structured logging with appropriate log levels (DEBUG, INFO, WARNING, ERROR)
+- Include request IDs for tracing requests across microservices
+- Implement proper timeout handling for external API calls
+- Use circuit breaker patterns for unreliable external dependencies
+- Handle edge cases and validate all input data thoroughly
+
+## JavaScript/TypeScript Rules
+
+### Frontend Development
+- Use TypeScript for type safety in medium to large projects
+- Implement proper state management using Redux, Zustand, or Context API
+- Use modern ES6+ features: async/await, destructuring, arrow functions, template literals
+- Implement proper error boundaries in React applications
+- Use semantic HTML and follow accessibility best practices (WCAG guidelines)
+- Implement responsive design principles for mobile-first development
+- Use CSS-in-JS or CSS modules for component-scoped styling
+- Optimize bundle size using code splitting and lazy loading techniques
+- Implement proper SEO practices including meta tags and structured data
+- Use performance optimization techniques like memoization and virtualization
+
+### API Integration & State Management
+- Always handle loading, success, and error states for API calls
+- Implement request/response interceptors for common functionality like authentication
+- Use proper HTTP status codes and implement comprehensive error handling
+- Implement retry logic with exponential backoff for failed requests
+- Cache API responses appropriately to reduce unnecessary network calls
+- Implement optimistic updates for better user experience
+- Use debouncing for search inputs and throttling for scroll events
+- Validate API response data before using it in components
+- Implement proper CSRF protection for state-changing requests
+
+## Docker Rules
+
+### Container Best Practices
+- Use multi-stage builds to minimize final image size and improve security
+- Run containers as non-root users to follow security best practices
+- Use specific version tags instead of 'latest' for reproducible builds
+- Create comprehensive .dockerignore files to exclude unnecessary files
+- Implement health checks for all containerized services
+- Use appropriate base images: Alpine for smaller size, official images for reliability
+- Set proper resource limits (CPU, memory) for containers
+- Use COPY instead of ADD unless you specifically need ADD's features
+- Minimize the number of layers by combining RUN commands when appropriate
+- Keep containers stateless and store persistent data in volumes
+
+### Docker Compose & Orchestration
+- Use environment files for different deployment environments
+- Implement proper service networking and communication
+- Use named volumes for persistent data storage
+- Include restart policies appropriate for each service
+- Implement proper service dependencies using depends_on with health checks
+- Use secrets management for sensitive configuration data
+- Implement proper logging configuration for containerized applications
+- Use override files for environment-specific configurations
+- Implement proper backup strategies for persistent volumes
+
+## Debugging Rules
+
+### Systematic Debugging Approach
+- Always reproduce issues with minimal test cases before investigating
+- Use appropriate debugging tools: browser DevTools, Python debugger, VS Code debugger
+- Implement comprehensive logging at different levels throughout the application
+- Add performance monitoring and metrics collection to identify bottlenecks
+- Use assertions and unit tests to catch issues early in development
+- Document known issues and their solutions in a troubleshooting guide
+- Create debugging runbooks for common production issues
+- Implement feature flags to quickly disable problematic functionality
+
+### Error Investigation Process
+- Start by checking application logs and error tracking systems
+- Verify network requests and responses using browser developer tools
+- Check database query performance and examine query execution plans
+- Validate input data and verify environmental configuration
+- Test components in isolation to identify the exact failure point
+- Use git bisect to identify when bugs were introduced
+- Check system resources: CPU, memory, disk space, network connectivity
+- Verify third-party service status and API rate limits
+
+### Production Debugging
+- Implement structured logging with correlation IDs for request tracing
+- Use application performance monitoring (APM) tools for production insights
+- Set up proper alerting for critical application metrics and errors
+- Implement distributed tracing for microservices architectures
+- Create debugging dashboards with key application metrics
+- Maintain separate debugging environments that mirror production
+- Implement feature toggles for quick rollback of problematic features
+- Use blue-green deployments to minimize debugging complexity
+
+## Quick Error Resolution Rules
+
+### Common Error Patterns
+- Check logs first: application logs, system logs, web server logs, database logs
+- Verify environment variables and configuration files are correctly set
+- Check service status and restart services if necessary using systemctl or service commands
+- Validate network connectivity and firewall rules for blocked connections
+- Check disk space, memory usage, and CPU utilization for resource exhaustion
+- Verify file permissions and ownership for access denied errors
+- Check DNS resolution and hosts file configuration for connection issues
+- Validate SSL certificates and expiration dates for HTTPS errors
+- Clear cache and temporary files when encountering stale data issues
+- Check for port conflicts and ensure required ports are available and not blocked
+
+### Rapid Diagnosis Techniques
+- Use curl or wget to test API endpoints and network connectivity directly
+- Check process lists with ps aux or top to identify resource-heavy processes
+- Use netstat or ss to verify which ports are listening and which connections are active
+- Examine error messages carefully for specific error codes and stack traces
+- Test with minimal configurations to isolate problematic components
+- Use strace or equivalent tools to trace system calls for low-level debugging
+- Check recent changes in version control to identify potential causes
+- Verify third-party service status using status pages or health check endpoints
+- Test in different environments to isolate environment-specific issues
+- Use binary search approach to isolate the exact point of failure
+
+## Remote Server Management Rules
+
+### Server Connection & Access
+- Keep SSH connection alive with ServerAliveInterval and ClientAliveInterval settings
+- Use SSH key-based authentication with proper key management and rotation
+- Implement connection multiplexing to reduce SSH connection overhead
+- Use screen or tmux for persistent sessions that survive connection drops
+- Set up SSH config files with host aliases for quick server access
+- Implement proper sudo configuration with minimal required privileges
+- Use SSH tunneling for secure access to internal services and databases
+- Keep backup access methods available in case primary access fails
+- Monitor server access logs for suspicious activity and unauthorized access attempts
+- Implement proper user management with role-based access control
+
+### Server Monitoring & Maintenance
+- Monitor system resources continuously: CPU, memory, disk space, network I/O
+- Set up automated alerts for critical thresholds: disk space, memory usage, CPU load
+- Implement log rotation to prevent disk space exhaustion from growing log files
+- Monitor service health and implement automatic service restart policies
+- Keep system packages and security updates current with automated update policies
+- Monitor network connectivity and latency to identify connectivity issues early
+- Implement proper backup strategies with regular backup testing and restoration procedures
+- Monitor SSL certificate expiration and implement automatic renewal
+- Track application-specific metrics and performance indicators
+- Implement proper time synchronization across all servers using NTP
+
+### Remote Troubleshooting
+- Use journalctl to examine systemd service logs and identify service failures
+- Monitor real-time logs with tail -f to observe live application behavior
+- Use htop or similar tools to identify resource-intensive processes
+- Check system boot logs and kernel messages with dmesg for hardware issues
+- Use iftop or nethogs to monitor network usage by process
+- Examine crontab and system scheduled tasks for automated job failures
+- Check system file integrity and disk errors using fsck when appropriate
+- Monitor database connections and slow query logs for performance issues
+- Use lsof to identify which processes are using specific files or ports
+- Check firewall rules and iptables configuration for blocked connections
+
+## PowerShell & Shell Script Rules
+
+### PowerShell Best Practices
+- Use approved verbs for PowerShell function names following Verb-Noun convention
+- Implement proper error handling with try-catch-finally blocks and $ErrorActionPreference
+- Use Write-Output, Write-Warning, Write-Error instead of Write-Host for better pipeline integration
+- Implement parameter validation with ValidateSet, ValidateRange, and ValidateScript attributes
+- Use PowerShell modules to organize and distribute reusable functions
+- Implement proper help documentation with comment-based help for all functions
+- Use splatting for parameters to improve readability in complex command calls
+- Implement proper logging using Write-EventLog or custom logging functions
+- Use pipeline processing with begin, process, and end blocks for efficient data handling
+- Follow PowerShell naming conventions and use PascalCase for function names
+
+### Shell Script Best Practices
+- Always include proper shebang lines and use bash strict mode with set -euo pipefail
+- Quote variables properly to handle spaces and special characters in file paths
+- Use meaningful variable names and declare variables with local scope when appropriate
+- Implement proper exit codes and error handling with trap for cleanup operations
+- Use functions to organize code and avoid repetition of common operations
+- Implement proper argument parsing and validation for script parameters
+- Use here documents for multi-line strings and complex command construction
+- Implement proper logging with timestamps and different log levels
+- Make scripts idempotent so they can be run multiple times safely
+- Use shellcheck for static analysis and to identify common scripting errors
+
+### Cross-Platform Scripting
+- Use cross-platform commands when possible or provide platform-specific alternatives
+- Handle different path separators and file system conventions appropriately
+- Check for command availability before using platform-specific tools
+- Use environment variables appropriately for cross-platform compatibility
+- Implement proper encoding handling for international character support
+- Test scripts on all target platforms and operating system versions
+- Use appropriate line ending conventions for different platforms
+- Handle different default shells and shell behaviors across platforms
+- Implement proper permissions and executable bit handling for different systems
+- Use standard exit codes and signal handling for consistent behavior
+
+## Git, GitHub & GitLab Rules
+
+### Git Workflow Management
+- Use descriptive commit messages following conventional commit format
+- Create feature branches for all new development and use meaningful branch names
+- Implement proper merge strategies: merge commits for features, rebase for clean history
+- Use git hooks for automated testing and code quality checks before commits
+- Keep commits atomic and focused on single logical changes
+- Use git rebase interactive for cleaning up commit history before merging
+- Implement proper branching strategies: GitFlow, GitHub Flow, or GitLab Flow
+- Use signed commits for security and authenticity verification
+- Regularly clean up merged branches and stale references
+- Use git bisect for identifying when bugs were introduced in the codebase
+
+### Repository Management
+- Create comprehensive README files with project overview, setup instructions, and basic usage
+- Use .gitignore files appropriate for your technology stack and IDE
+- Implement proper tagging strategy for releases and version management
+- Use git submodules or git subtree for managing external dependencies
+- Implement proper branch protection rules to prevent direct pushes to main branches
+- Use pull request templates to ensure consistent code review processes
+- Set up automated CI/CD pipelines triggered by git events
+- Implement proper conflict resolution strategies for merge conflicts
+- Use git LFS for large binary files and assets
+- Maintain clean repository structure with logical directory organization
+
+### Collaboration & Code Review
+- Write clear pull request descriptions with context and testing instructions
+- Use code review checklists to ensure consistent review quality
+- Implement automated code quality checks in pull request workflows
+- Use draft pull requests for work in progress and early feedback
+- Reference issues and use closing keywords to link pull requests to issues
+- Implement proper reviewer assignment and code ownership using CODEOWNERS files
+- Use inline comments effectively during code review process
+- Resolve all discussions and feedback before merging pull requests
+- Use squash and merge for clean commit history in main branches
+- Implement proper testing requirements before allowing merges
+
+## Server-Side Application Development Rules
+
+### API Design & Architecture
+- Follow RESTful principles and use appropriate HTTP methods and status codes
+- Implement proper API versioning strategies for backward compatibility
+- Use consistent JSON response formats across all endpoints
+- Implement comprehensive input validation and sanitization for all endpoints
+- Design APIs with proper pagination for endpoints that return large datasets
+- Use appropriate authentication methods: JWT, OAuth2, or API keys
+- Implement rate limiting and request throttling to prevent abuse
+- Design APIs to be stateless and horizontally scalable
+- Use proper HTTP caching headers to improve performance and reduce server load
+- Implement comprehensive API documentation using OpenAPI/Swagger specifications
+
+### Service Architecture
+- Implement proper separation of concerns with layered architecture patterns
+- Use dependency injection for better testability and maintainability
+- Implement proper logging and monitoring throughout the application stack
+- Design services to be fault-tolerant with proper error handling and recovery
+- Use message queues for asynchronous processing and service decoupling
+- Implement proper health checks and readiness probes for all services
+- Use circuit breaker patterns for external service dependencies
+- Implement proper database connection pooling and transaction management
+- Design for horizontal scaling with stateless service design
+- Use configuration management for environment-specific settings
+
+### Data Management
+- Implement proper database migration strategies with rollback capabilities
+- Use appropriate caching strategies to reduce database load and improve performance
+- Implement proper data validation at both application and database levels
+- Use database transactions appropriately for data consistency
+- Implement proper backup and disaster recovery procedures for data protection
+- Monitor database performance and optimize slow queries regularly
+- Use appropriate indexing strategies for query performance optimization
+- Implement proper data archiving and retention policies
+- Use connection pooling and prepared statements for database efficiency
+- Implement proper audit logging for sensitive data operations
+
+## Testing Rules
+
+### Backend Testing Strategies
+- Write unit tests for all business logic with high code coverage targets
+- Implement integration tests for API endpoints and database operations
+- Use test doubles (mocks, stubs, spies) appropriately to isolate units under test
+- Implement contract testing for API interfaces and external service dependencies
+- Write performance tests for critical paths and resource-intensive operations
+- Use test databases that mirror production schema and constraints
+- Implement proper test data management with fixtures and factories
+- Test error conditions and edge cases thoroughly
+- Use parameterized tests to cover multiple input scenarios efficiently
+- Implement proper test cleanup and isolation to prevent test interdependencies
+
+### Frontend Testing Strategies
+- Write component tests for all React/Vue/Angular components with proper isolation
+- Implement end-to-end tests for critical user journeys and workflows
+- Test responsive design across different screen sizes and devices
+- Implement accessibility testing to ensure WCAG compliance
+- Test cross-browser compatibility for all supported browsers
+- Use visual regression testing for UI consistency across changes
+- Test form validation and user input handling thoroughly
+- Implement performance testing for loading times and rendering performance
+- Test offline functionality and network error scenarios
+- Use testing libraries appropriate for your framework: Jest, Cypress, Playwright
+
+### Test Automation & CI/CD
+- Implement automated test execution in CI/CD pipelines for every code change
+- Use parallel test execution to reduce overall test execution time
+- Implement proper test reporting and failure notification systems
+- Use test coverage reporting to identify untested code paths
+- Implement smoke tests for quick validation after deployments
+- Use feature flags to test new functionality in production safely
+- Implement proper test environment management with isolated test data
+- Use database seeding and migration testing for data-dependent tests
+- Implement security testing and vulnerability scanning in automation pipelines
+- Use chaos engineering principles to test system resilience
+
+## Data Fetching & API Integration Rules
+
+### HTTP Client Configuration
+- Implement proper timeout settings for all HTTP requests to prevent hanging
+- Use connection pooling and keep-alive connections for better performance
+- Implement retry logic with exponential backoff for transient failures
+- Use appropriate HTTP headers for content negotiation and caching
+- Implement proper SSL certificate validation and security headers
+- Use request/response interceptors for common functionality like authentication
+- Implement proper error handling for different HTTP status codes
+- Use appropriate HTTP methods and follow REST conventions
+- Implement request cancellation for user-initiated cancellations
+- Monitor and log HTTP request performance and failure rates
+
+### Data Caching Strategies
+- Implement client-side caching for frequently accessed data
+- Use appropriate cache invalidation strategies to ensure data freshness
+- Implement proper cache headers for HTTP responses
+- Use in-memory caching for frequently computed results
+- Implement distributed caching for scalable multi-instance applications
+- Cache database query results appropriately with proper invalidation
+- Use CDN caching for static assets and public API responses
+- Implement proper cache warming strategies for critical data
+- Monitor cache hit rates and effectiveness regularly
+- Use appropriate cache storage solutions: Redis, Memcached, or local storage
+
+### Real-time Data Handling
+- Use WebSockets for real-time bidirectional communication when appropriate
+- Implement proper connection management and reconnection logic for WebSocket connections
+- Use Server-Sent Events for server-to-client real-time updates
+- Implement proper message queuing for real-time data processing
+- Use appropriate protocols for real-time communication: WebRTC for peer-to-peer
+- Implement proper error handling and fallback mechanisms for real-time connections
+- Use heartbeat mechanisms to detect and handle connection failures
+- Implement proper authentication and authorization for real-time connections
+- Handle connection state management and user presence tracking
+- Optimize real-time data payload sizes for better performance
+
+## Documentation Writing Rules
+
+### Code Documentation Standards
+- Write clear, concise docstrings and comments that explain why, not what
+- Use consistent documentation formats: JSDoc for JavaScript, Sphinx for Python, GoDoc for Go
+- Document API endpoints with request/response examples and error codes
+- Include setup instructions that can be followed by new team members without assistance
+- Document environment variables, configuration options, and their default values
+- Keep documentation close to code using inline comments and README files in relevant directories
+- Document breaking changes and migration guides for version upgrades
+- Include troubleshooting sections for common issues and their solutions
+- Write documentation that answers the question "why does this exist" not just "what does this do"
+- Update documentation immediately when code changes, not as an afterthought
+
+### Technical Documentation Best Practices
+- Use clear headings and logical structure with numbered sections for complex procedures
+- Include practical examples and real-world use cases rather than abstract explanations
+- Write step-by-step guides with verification steps to confirm each step worked correctly
+- Use diagrams and flowcharts for complex system architectures and data flows
+- Include code examples that can be copy-pasted and executed without modification
+- Write documentation for your audience: technical level appropriate for intended readers
+- Use consistent terminology throughout all documentation and maintain a glossary
+- Include prerequisites and assumptions clearly at the beginning of documents
+- Write installation and deployment guides that work on clean systems
+- Document recovery procedures and rollback steps for critical operations
+
+### Repository Documentation Structure
+- Create comprehensive README files with project overview, setup, and basic usage
+- Include CONTRIBUTING guidelines for code style, testing, and pull request process
+- Document project structure and explain the purpose of major directories and files
+- Create API documentation that stays synchronized with actual API implementation
+- Include changelog that follows semantic versioning and documents all changes
+- Document deployment procedures with environment-specific instructions
+- Include security considerations and known vulnerabilities with mitigation steps
+- Create runbooks for operational procedures and incident response
+- Document testing procedures including how to run different types of tests
+- Include license information and third-party attribution where required
+
+## Repository Formatting & Organization Rules
+
+### Project Structure Standards
+- Organize code into logical directories that reflect application architecture
+- Keep configuration files in appropriate locations: root for global, subdirectories for component-specific
+- Use consistent naming conventions for files and directories across the entire project
+- Separate source code, tests, documentation, and build artifacts into distinct directories
+- Keep dependency files (package.json, requirements.txt, go.mod) in appropriate locations
+- Organize assets (images, fonts, static files) in dedicated directories with clear structure
+- Use meaningful file names that clearly indicate the file's purpose and content
+- Keep related files together and maintain consistent directory depth
+- Separate public and private components with clear directory boundaries
+- Use standard project layouts for your technology stack and framework
+
+### Clean Repository Practices
+- Maintain comprehensive .gitignore files to exclude build artifacts, dependencies, and temporary files
+- Remove commented-out code and dead code regularly during development
+- Keep commit history clean with meaningful commit messages and logical grouping
+- Remove unused dependencies and imports regularly to reduce project bloat
+- Use consistent indentation and formatting across all files in the repository
+- Remove debug statements and console logs before committing to version control
+- Keep file sizes reasonable and split large files into smaller, focused modules
+- Organize imports and dependencies in consistent order: standard library, third-party, local
+- Remove outdated TODO comments and replace with proper issue tracking
+- Keep sensitive information out of version control using environment variables and secrets management
+
+### Code Organization Efficiency
+- Group related functionality together and maintain high cohesion within modules
+- Keep functions and classes focused on single responsibilities
+- Use meaningful names for variables, functions, and classes without unnecessary abbreviations
+- Organize code to minimize dependencies and maintain loose coupling between components
+- Keep configuration centralized and avoid scattered configuration throughout codebase
+- Use consistent patterns and conventions throughout the entire codebase
+- Separate business logic from presentation logic with clear boundaries
+- Keep utility functions and helpers in dedicated modules for reusability
+- Organize tests to mirror source code structure for easy navigation
+- Use consistent error handling patterns throughout the application
+
+## Minimal AI Commentary Rules
+
+### Concise Communication Style
+- Provide direct answers without unnecessary explanations or background information
+- Skip introductory phrases like "Great question" or "I'd be happy to help"
+- Focus on actionable solutions rather than theoretical discussions
+- Provide specific commands and code without verbose explanations unless requested
+- Avoid repeating information already provided in previous responses
+- Give precise technical answers without marketing language or sales-like enthusiasm
+- Use bullet points for lists instead of paragraph format when appropriate
+- Provide only the most relevant information needed to solve the specific problem
+- Skip obvious statements and assumptions that experienced developers would know
+- Get straight to the technical solution without process explanations unless asked
+
+### Efficient Response Format
+- Lead with the solution, follow with brief explanation only if necessary
+- Use code blocks for commands and configurations without extensive commentary
+- Provide minimal working examples that demonstrate the concept clearly
+- Skip alternative approaches unless specifically requested or highly relevant
+- Use clear, direct language without hedging or uncertainty markers
+- Provide specific version numbers and exact syntax without general guidance
+- Skip warnings about best practices unless they directly impact the solution
+- Focus on what to do, not what not to do, unless specifically relevant
+- Use technical terminology appropriate for experienced developers
+- Provide ready-to-use solutions that require minimal modification
+
+## Latest Libraries & Methods Rules
+
+### Modern Technology Stack
+- Always use the latest stable versions of frameworks and libraries unless specifically constrained
+- Recommend current best practices and modern patterns over legacy approaches
+- Use modern JavaScript features: async/await, destructuring, optional chaining, nullish coalescing
+- Prefer modern CSS features: CSS Grid, Flexbox, custom properties, container queries
+- Use current Python features: f-strings, pathlib, dataclasses, type hints, match statements
+- Recommend modern React patterns: hooks, functional components, context API, concurrent features
+- Use current Node.js features: ES modules, top-level await, AbortController, fetch API
+- Prefer modern database features: JSON columns, CTEs, window functions, upsert operations
+- Use current Docker features: multi-stage builds, BuildKit, Docker Compose v2 syntax
+- Recommend modern Git workflows: GitHub Actions, GitLab CI, modern merge strategies
+
+### API and Framework Updates
+- Use the latest API endpoints and methods provided by services and frameworks
+- Prefer modern authentication methods: OAuth 2.1, PKCE, JWT with proper security
+- Use current HTTP/2 and HTTP/3 features when available and beneficial
+- Recommend modern testing frameworks and approaches: Vitest over Jest, Playwright over Selenium
+- Use current bundling tools: Vite, esbuild, SWC over older alternatives when appropriate
+- Prefer modern state management: Zustand, Jotai over Redux when complexity doesn't warrant it
+- Use current CSS-in-JS solutions or modern CSS features over legacy styling approaches
+- Recommend modern deployment platforms and their latest features
+- Use current monitoring and observability tools with their latest integrations
+- Prefer modern database ORMs and query builders with their latest features
+
+### Dependency Management
+- Keep all dependencies updated to their latest stable versions regularly
+- Remove deprecated dependencies and replace with modern alternatives
+- Use package managers' latest features: npm workspaces, pnpm, Yarn PnP
+- Prefer libraries with active maintenance and regular updates
+- Choose dependencies with TypeScript support and modern JavaScript features
+- Avoid libraries that haven't been updated in the last year unless absolutely necessary
+- Use security scanning tools to identify vulnerable dependencies
+- Prefer smaller, focused libraries over large, monolithic ones when appropriate
+- Use native browser APIs when available instead of polyfills and library alternatives
+- Choose libraries with good documentation and active community support
+
+## Efficiency & Streamlining Rules
+
+### Avoid Unnecessary Steps
+- Skip redundant validation steps when data is already validated upstream
+- Combine related operations into single database transactions when possible
+- Use bulk operations instead of individual operations for multiple similar tasks
+- Skip intermediate variables when direct returns or assignments are clear
+- Avoid unnecessary file I/O operations by keeping data in memory when appropriate
+- Use caching to avoid repeated expensive computations or network requests
+- Skip unnecessary type conversions and data transformations
+- Combine multiple API calls into batch requests when supported by the service
+- Use efficient algorithms and data structures appropriate for the problem size
+- Avoid premature abstractions that don't provide clear benefits
+
+### Streamlined Development Process
+- Use code generators and scaffolding tools for boilerplate code creation
+- Implement hot reloading and fast refresh for rapid development cycles
+- Use IDE features effectively: auto-completion, refactoring tools, debugger integration
+- Skip manual testing steps that can be automated with unit or integration tests
+- Use development databases with realistic data sets for effective testing
+- Implement efficient build processes with caching and incremental builds
+- Use container development environments for consistent setup across team members
+- Skip manual deployment steps by implementing proper CI/CD automation
+- Use feature flags to skip lengthy testing cycles for experimental features
+- Implement proper logging to skip time-consuming debugging sessions
+
+### Performance-First Approach
+- Choose algorithms and data structures based on actual performance requirements
+- Profile applications to identify real bottlenecks rather than optimizing prematurely
+- Use appropriate caching strategies at all layers: browser, CDN, application, database
+- Implement lazy loading and code splitting to reduce initial load times
+- Use efficient serialization formats: Protocol Buffers, MessagePack over JSON when appropriate
+- Choose database queries that minimize data transfer and processing time
+- Use connection pooling and persistent connections for external services
+- Implement proper indexing strategies based on actual query patterns
+- Use content compression and minification for all static assets
+- Choose hosting and infrastructure solutions optimized for your specific use case
+
+### Automated Quality Assurance
+- Use automated code formatting tools to skip manual formatting tasks
+- Implement comprehensive linting rules to catch issues during development
+- Use automated security scanning to identify vulnerabilities without manual review
+- Implement automated performance testing to catch regressions early
+- Use automated accessibility testing to ensure compliance without manual checks
+- Implement automated dependency updates with proper testing integration
+- Use automated code review tools to catch common issues before human review
+- Implement automated documentation generation from code comments and annotations
+- Use automated testing for all critical paths to skip manual testing steps
+- Implement automated monitoring and alerting to identify issues proactively
+
+## Productivity Boosting Rules
+
+### Development Workflow Optimization
+- Use IDE shortcuts and keyboard navigation to reduce mouse usage
+- Create custom code snippets and templates for frequently used patterns
+- Use version control effectively with meaningful commits and branch management
+- Implement hot reloading and live reloading for faster development cycles
+- Use linting and formatting tools for consistent code quality
+- Implement pre-commit hooks for automated code quality checks
+- Use task runners and build tools for automated repetitive tasks
+- Create development scripts for common setup and maintenance tasks
+- Use containerization for consistent development environments across team members
+- Implement proper IDE configuration sharing across team members
+
+### Automation & Tooling
+- Automate deployment processes with CI/CD pipelines and infrastructure as code
+- Use code generation tools for boilerplate code and repetitive patterns
+- Implement automated testing to catch issues early in development cycle
+- Use monitoring and alerting tools to identify issues proactively
+- Automate database migrations and schema changes with proper rollback procedures
+- Use dependency management tools to keep libraries and packages updated
+- Implement automated security scanning and vulnerability detection
+- Use performance monitoring tools to identify bottlenecks automatically
+- Automate backup and disaster recovery procedures
+- Use project scaffolding tools for consistent project structure across teams
+
+### Team Collaboration Enhancement
+- Use consistent coding standards and style guides across all team members
+- Implement proper documentation practices with living documentation that stays current
+- Use pair programming and code review practices to share knowledge
+- Implement proper knowledge sharing sessions and technical discussions
+- Use project management tools effectively for task tracking and sprint planning
+- Create runbooks and troubleshooting guides for common operations
+- Use communication tools effectively for asynchronous and synchronous collaboration
+- Implement proper onboarding processes for new team members
+- Use shared development environments and configuration for consistency
+- Create clear escalation procedures for critical issues and incidents
+
+## Performance & Optimization Rules
+
+### Frontend Optimization
+- Implement lazy loading for images and components to improve initial load time
+- Use code splitting to create smaller, more targeted JavaScript bundles
+- Optimize images using appropriate formats (WebP, AVIF) and compression
+- Implement service workers for offline functionality and caching
+- Minimize and optimize CSS and JavaScript files for production
+- Use CDNs for static asset delivery to reduce server load
+- Implement proper browser caching headers for static resources
+- Optimize web fonts loading using font-display and preload strategies
+
+### Backend Optimization
+- Implement database connection pooling to efficiently manage connections
+- Use caching strategies: Redis for session storage, CDN for static content
+- Implement proper database indexing and query optimization
+- Use asynchronous processing for time-consuming operations
+- Implement rate limiting to protect against abuse and ensure fair usage
+- Use compression for API responses to reduce bandwidth usage
+- Implement proper pagination for large data sets
+- Monitor and optimize memory usage to prevent memory leaks
+
+### Security Best Practices
+- Implement proper input validation and sanitization for all user inputs
+- Use HTTPS everywhere and implement proper SSL/TLS configuration
+- Implement proper authentication and authorization mechanisms
+- Use secure HTTP headers: CSP, HSTS, X-Frame-Options, X-Content-Type-Options
+- Implement proper CORS policies for cross-origin requests
+- Regular security updates for all dependencies and base images
+- Implement proper secrets management and never commit secrets to version control
+- Use security scanning tools in CI/CD pipelines to identify vulnerabilities
+
+## Monitoring & Maintenance Rules
+
+### Application Monitoring
+- Implement comprehensive health checks for all application components
+- Monitor key application metrics: response times, error rates, throughput
+- Set up alerting for critical issues with appropriate escalation procedures
+- Implement log aggregation and centralized log management
+- Monitor database performance and query execution times
+- Track user experience metrics and application performance indicators
+- Implement proper error tracking and reporting systems
+- Monitor third-party service dependencies and their performance impact
+
+### Maintenance Procedures
+- Regularly update dependencies and security patches
+- Implement automated testing to catch regressions early
+- Perform regular database maintenance: vacuuming, reindexing, statistics updates
+- Clean up old logs and temporary files to prevent disk space issues
+- Review and optimize slow database queries regularly
+- Conduct regular security audits and penetration testing
+- Maintain up-to-date documentation for all systems and procedures
+- Plan and execute regular disaster recovery drills

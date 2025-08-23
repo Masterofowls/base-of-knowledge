@@ -695,27 +695,48 @@ def create_group():
 
     is_school = inst.name.lower() == 'школа'
 
-    # For schools: require school_class_id; other academic refs are ignored
     if is_school:
+        # Schools: only allow class, city, name, admission_year.
+        if speciality_id is not None or education_form_id is not None:
+            return jsonify({'error': 'Do not provide speciality_id or education_form_id for schools'}), 400
         if not school_class_id:
             return jsonify({'error': 'school_class_id is required for schools'}), 400
         if not SchoolClass.query.get(school_class_id):
             return jsonify({'error': 'School class not found'}), 404
-        # Normalize: ignore speciality/form/year for schools
-        speciality_id = None
-        education_form_id = None
-        admission_year_id = None
+        if not admission_year_id:
+            return jsonify({'error': 'admission_year_id is required for schools'}), 400
+        if not AdmissionYear.query.get(admission_year_id):
+            return jsonify({'error': 'Admission year not found'}), 404
+        # Derive defaults for mandatory non-null columns
+        # Speciality: create/get 'SCH' for schools
+        sch_spec = Speciality.query.filter_by(institution_type_id=inst.id, code='SCH').first()
+        if not sch_spec:
+            sch_spec = Speciality(code='SCH', name='Школьная программа', institution_type_id=inst.id)
+            db.session.add(sch_spec)
+            db.session.flush()
+        speciality_id = sch_spec.id
+        # Education form: default 'Очная' for schools
+        sch_form = EducationForm.query.filter_by(institution_type_id=inst.id, name='Очная').first()
+        if not sch_form:
+            sch_form = EducationForm(name='Очная', institution_type_id=inst.id)
+            db.session.add(sch_form)
+            db.session.flush()
+        education_form_id = sch_form.id
     else:
-        # For college/university: require education_form_id and at least one of speciality/admission_year
+        # College/University: require speciality, form, year; reject class
+        if school_class_id is not None:
+            return jsonify({'error': 'Do not provide school_class_id for non-school institutions'}), 400
+        if not speciality_id:
+            return jsonify({'error': 'speciality_id is required'}), 400
         if not education_form_id:
-            return jsonify({'error': 'education_form_id is required for non-school institutions'}), 400
+            return jsonify({'error': 'education_form_id is required'}), 400
+        if not admission_year_id:
+            return jsonify({'error': 'admission_year_id is required'}), 400
+        if not Speciality.query.get(speciality_id):
+            return jsonify({'error': 'Speciality not found'}), 404
         if not EducationForm.query.get(education_form_id):
             return jsonify({'error': 'Education form not found'}), 404
-        if not (speciality_id or admission_year_id):
-            return jsonify({'error': 'Provide speciality_id or admission_year_id'}), 400
-        if speciality_id and not Speciality.query.get(speciality_id):
-            return jsonify({'error': 'Speciality not found'}), 404
-        if admission_year_id and not AdmissionYear.query.get(admission_year_id):
+        if not AdmissionYear.query.get(admission_year_id):
             return jsonify({'error': 'Admission year not found'}), 404
     
     if city_id and not City.query.get(city_id):
@@ -766,16 +787,39 @@ def update_group(group_id):
         if len(name) < 3:
             return jsonify({'error': 'Display name must be at least 3 characters long'}), 400
         group.display_name = name
-    if 'speciality_id' in data:
-        group.speciality_id = data['speciality_id']
-    if 'education_form_id' in data:
-        group.education_form_id = data['education_form_id']
-    if 'admission_year_id' in data:
-        group.admission_year_id = data['admission_year_id']
+    # Enforce per-institution constraints on update
+    target_inst_id = data.get('institution_type_id', group.institution_type_id)
+    inst = InstitutionType.query.get(target_inst_id)
+    is_school = bool(inst and (inst.name or '').lower() == 'школа')
+
+    if is_school:
+        if any(k in data for k in ['speciality_id', 'education_form_id']):
+            return jsonify({'error': 'Cannot set speciality_id or education_form_id for schools'}), 400
+        if 'school_class_id' in data:
+            if not SchoolClass.query.get(data['school_class_id']):
+                return jsonify({'error': 'School class not found'}), 404
+            group.school_class_id = data['school_class_id']
+        if 'admission_year_id' in data:
+            if not AdmissionYear.query.get(data['admission_year_id']):
+                return jsonify({'error': 'Admission year not found'}), 404
+            group.admission_year_id = data['admission_year_id']
+    else:
+        if 'school_class_id' in data and data['school_class_id'] is not None:
+            return jsonify({'error': 'Cannot set school_class_id for non-school institutions'}), 400
+        if 'speciality_id' in data:
+            if not Speciality.query.get(data['speciality_id']):
+                return jsonify({'error': 'Speciality not found'}), 404
+            group.speciality_id = data['speciality_id']
+        if 'education_form_id' in data:
+            if not EducationForm.query.get(data['education_form_id']):
+                return jsonify({'error': 'Education form not found'}), 404
+            group.education_form_id = data['education_form_id']
+        if 'admission_year_id' in data:
+            if not AdmissionYear.query.get(data['admission_year_id']):
+                return jsonify({'error': 'Admission year not found'}), 404
+            group.admission_year_id = data['admission_year_id']
     if 'institution_type_id' in data:
         group.institution_type_id = data['institution_type_id']
-    if 'school_class_id' in data:
-        group.school_class_id = data['school_class_id']
     if 'city_id' in data:
         group.city_id = data['city_id']
     if 'base_class' in data and hasattr(group, 'base_class'):
@@ -1097,13 +1141,9 @@ def ensure_lookups():
             if was:
                 created['admission_years'] += 1
 
-    # School classes: school 9/10/11; college base-of 9/11
+    # School classes: school 9/10/11
     for n in ['9', '10', '11']:
         _, was = get_or_create(SchoolClass, name=n, institution_type_id=inst_map['Школа'].id)
-        if was:
-            created['school_classes'] += 1
-    for n in ['на базе 9-го класса', 'на базе 11-го класса']:
-        _, was = get_or_create(SchoolClass, name=n, institution_type_id=inst_map['Колледж'].id)
         if was:
             created['school_classes'] += 1
 
