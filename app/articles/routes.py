@@ -536,6 +536,14 @@ def create_article():
     # Accept either publish_scope.school_class_id or publish_scope.base_class (9/11)
     base_class = None
     sc_id = publish_scope.get('school_class_id')
+    # Also accept array form: school_class_ids -> take the first
+    if not sc_id:
+        try:
+            arr_sc = publish_scope.get('school_class_ids')
+            if isinstance(arr_sc, list) and len(arr_sc) > 0:
+                sc_id = arr_sc[0]
+        except Exception:
+            sc_id = sc_id
     if sc_id:
         sc = SchoolClass.query.get(sc_id)
         try:
