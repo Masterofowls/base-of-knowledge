@@ -304,18 +304,12 @@ export default function PostEditor() {
             setError(null);
             const categoryIds = [ ...selectedGroups.map(group => group.value) ];
             const augmentedScope = { ...(formData.publish_scope||{}) }
-            // Применяем режим аудитории
-            if (audienceMode === 'all') {
-                augmentedScope.publish_for_all = true
-                augmentedScope.city_id = undefined
-                augmentedScope.course = undefined
-            } else if (audienceMode === 'city') {
-                augmentedScope.publish_for_all = false
-                augmentedScope.course = undefined
-            } else {
-                augmentedScope.publish_for_all = false
-                augmentedScope.city_id = undefined
-            }
+            // Пошаговый режим без радиокнопок: derive из выбранных полей
+            augmentedScope.publish_for_all = false
+            // массивы от шага
+            if (selectedCities?.length) augmentedScope.city_ids = selectedCities.map(o=>o.value)
+            if (selectedCourses?.length) augmentedScope.courses = selectedCourses.map(o=>o.value)
+            if (selectedSchoolClasses?.length) augmentedScope.school_class_ids = selectedSchoolClasses.map(o=>o.value)
             if (audienceRules.length > 0) {
                 augmentedScope.rules = audienceRules.map((r:any)=>({
                     institution_type_ids: (r.institution_type_ids||[]).map((o:any)=>o.value),
@@ -580,90 +574,29 @@ export default function PostEditor() {
                         </label>
                     </div>
 
-                    {/* Аудитория */}
+                    {/* Аудитория: пошаговый выбор */}
                     <Accordion defaultExpanded>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Фильтры</AccordionSummary>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Аудитория (обязательные шаги)</AccordionSummary>
                         <AccordionDetails>
                             <div style={{display:'grid', gridTemplateColumns:'1fr', gap:12}}>
-                                <label style={{ display:'block', fontWeight:500 }}>Режим аудитории</label>
-                                <RadioGroup row value={audienceMode} onChange={(e)=>{
-                                    const v = (e.target as HTMLInputElement).value as any
-                                    setAudienceMode(v)
-                                    setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: v==='city' ? prev.publish_scope?.city_id : undefined, course: v==='study' ? prev.publish_scope?.course : undefined }}))
-                                }}>
-                                    <FormControlLabel value="all" control={<Radio/>} label="Для всех" />
-                                    <FormControlLabel value="city" control={<Radio/>} label="По городу" />
-                                    <FormControlLabel value="all_except_city" control={<Radio/>} label="Для всех, кроме (города)" />
-                                    <FormControlLabel value="study" control={<Radio/>} label="Учебные фильтры" />
-                                </RadioGroup>
-
-                                {audienceMode==='study' && (
+                                {selectedInstitution?.name?.toLowerCase()==='школа' && (
                                   <>
-                                    <Autocomplete
-                                        options={specialities}
-                                        ListboxComponent={VirtualListbox as any}
-                                        value={specialities.find(s=> s.value === (formData.publish_scope?.speciality_id || 0)) || null}
-                                        onChange={async (_, v)=>{
-                                            const val = v?.value
-                                            setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, speciality_id: val}}))
-                                            if (v?.institution_type_id) {
-                                                try { const resp = await http.get('/api/categories/education-forms', { params: { institution_type_id: v.institution_type_id } }); setEducationForms(resp.data.map((f:any)=>({value:f.id,label:f.name}))) } catch {}
-                                            }
-                                        }}
-                                        isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-                                        getOptionLabel={(o)=>o?.label ?? ''}
-                                        renderInput={(p)=>(<TextField {...p} label='Специальность (не обязательно)' placeholder='— Все специальности —' size='small'/>)}
-                                    />
-                                    <Autocomplete
-                                        options={educationForms}
-                                        ListboxComponent={VirtualListbox as any}
-                                        value={educationForms.find(f=> f.value === (formData.publish_scope?.education_form_id || 0)) || null}
-                                        onChange={(_, v)=>{
-                                            const val = v?.value
-                                            setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, education_form_id: val}}))
-                                        }}
-                                        isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-                                        getOptionLabel={(o)=>o?.label ?? ''}
-                                        renderInput={(p)=>(<TextField {...p} label='Форма обучения (не обязательно)' placeholder='— Все форматы —' size='small'/>)}
-                                    />
+                                    <Autocomplete multiple options={schoolClasses} ListboxComponent={VirtualListbox as any} value={selectedSchoolClasses} onChange={(_, v)=> setSelectedSchoolClasses(v as any)} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label ?? ''} renderInput={(p)=>(<TextField {...p} label='Класс *' placeholder='Выберите один или несколько классов' size='small'/>)}/>
+                                    <Autocomplete multiple options={cities} ListboxComponent={VirtualListbox as any} value={selectedCities} onChange={(_, v)=> setSelectedCities(v as any)} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label ?? ''} renderInput={(p)=>(<TextField {...p} label='Город *' placeholder='Выберите один или несколько городов' size='small'/>)}/>
                                   </>
                                 )}
-                                {audienceMode==='city' && (
-                                  <Autocomplete
-                                      multiple
-                                      options={cities}
-                                      ListboxComponent={VirtualListbox as any}
-                                      value={selectedCities}
-                                      onChange={(_, v)=> setSelectedCities(v as any)}
-                                      isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-                                      getOptionLabel={(o)=>o?.label ?? ''}
-                                      renderInput={(p)=>(<TextField {...p} label='Города (обязательно)' placeholder='Выберите один или несколько городов' size='small'/>)}
-                                  />
+                                {selectedInstitution?.name?.toLowerCase()==='колледж' && (
+                                  <>
+                                    <Autocomplete multiple options={cities} ListboxComponent={VirtualListbox as any} value={selectedCities} onChange={(_, v)=> setSelectedCities(v as any)} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label ?? ''} renderInput={(p)=>(<TextField {...p} label='Город *' placeholder='Выберите один или несколько городов' size='small'/>)}/>
+                                    <Autocomplete multiple options={courseOptions} ListboxComponent={VirtualListbox as any} value={selectedCourses} onChange={(_, v)=> setSelectedCourses(v as any)} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label ?? ''} renderInput={(p)=>(<TextField {...p} label='Курс *' placeholder='1, 2, 3' size='small'/>)}/>
+                                  </>
                                 )}
-                                {audienceMode==='all_except_city' && (
-                                  <Autocomplete
-                                      multiple
-                                      options={cities}
-                                      ListboxComponent={VirtualListbox as any}
-                                      value={exceptCities}
-                                      onChange={(_, v)=> setExceptCities(v as any)}
-                                      isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-                                      getOptionLabel={(o)=>o?.label ?? ''}
-                                      renderInput={(p)=>(<TextField {...p} label='Исключить города' placeholder='Выберите города, которые исключить' size='small'/>)}
-                                  />
+                                {selectedInstitution?.name?.toLowerCase()==='вуз' && (
+                                  <>
+                                    <Autocomplete multiple options={courseOptions} ListboxComponent={VirtualListbox as any} value={selectedCourses} onChange={(_, v)=> setSelectedCourses(v as any)} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label ?? ''} renderInput={(p)=>(<TextField {...p} label='Курс *' placeholder='1, 2, 3, 4' size='small'/>)}/>
+                                    <Autocomplete multiple options={cities} ListboxComponent={VirtualListbox as any} value={selectedCities} onChange={(_, v)=> setSelectedCities(v as any)} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label ?? ''} renderInput={(p)=>(<TextField {...p} label='Город *' placeholder='Выберите один или несколько городов' size='small'/>)}/>
+                                  </>
                                 )}
-                                {/* удалено: старый одиночный выбор курса */}
-                                <Autocomplete
-                                    options={admissionYears}
-                                    ListboxComponent={VirtualListbox as any}
-                                    value={admissionYears.find(y=> y.value === (formData.publish_scope?.admission_year_id || 0)) || null}
-                                    onChange={(_, v)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, admission_year_id: v?.value}}))}
-                                    isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
-                                    getOptionLabel={(o)=>o?.label ?? ''}
-                                    renderInput={(p)=>(<TextField {...p} label='Год поступления (не обязательно)' placeholder='— Все годы —' size='small'/>)}
-                                    disabled={audienceMode!=='study'}
-                                />
-                                {/* дальше идут обязательные шаги ниже */}
 
                                 {/* Дополнительные необязательные фильтры */}
                                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
