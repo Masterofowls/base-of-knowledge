@@ -145,14 +145,42 @@ export default function StudentLoginPage() {
             const { token, context } = resp.data || {}
             if (token) localStorage.setItem('student_ctx_token', token)
             // Store selections for feed
+            // City label/id for header and feed params
+            if (selectedCity) {
+                localStorage.setItem('student_city', selectedCity.label)
+                localStorage.setItem('student_city_id', String(selectedCity.value))
+            } else {
+                localStorage.removeItem('student_city'); localStorage.removeItem('student_city_id')
+            }
             if (!isSchool && selectedGroup) {
                 localStorage.setItem('student_group', selectedGroup.label)
                 localStorage.setItem('student_group_id', String(selectedGroup.value))
             }
+            if (isSchool) {
+                // Для школы пытаемся подобрать группу по городу и классу, чтобы использовать student-feed
+                try {
+                    const params:any = { institution_type_id: selectedInstitution.value }
+                    if (selectedCity) params.city_id = selectedCity.value
+                    if (selectedSchoolClass) params.school_class_id = selectedSchoolClass.value
+                    const g = await http.get('/api/categories/groups', { params })
+                    const first = (g.data || [])[0]
+                    if (first) {
+                        localStorage.setItem('student_group', first.display_name || 'Группа')
+                        localStorage.setItem('student_group_id', String(first.id))
+                    } else {
+                        localStorage.removeItem('student_group'); localStorage.removeItem('student_group_id')
+                    }
+                } catch {
+                    localStorage.removeItem('student_group'); localStorage.removeItem('student_group_id')
+                }
+            }
             if (selectedInstitution) localStorage.setItem('student_institution_type_id', String(selectedInstitution.value))
             if (selectedEducationForm) localStorage.setItem('student_education_form_id', String(selectedEducationForm.value))
-            if (selectedCity) localStorage.setItem('student_city_id', String(selectedCity.value))
             if (isSchool && selectedSchoolClass) localStorage.setItem('student_base_class', selectedSchoolClass.label)
+            if (isSchool) {
+                // курс очищаем для школы
+                localStorage.removeItem('student_course')
+            }
             localStorage.setItem('user_role', 'student')
             localStorage.setItem('strict_audience', '1')
             navigate('/student')
