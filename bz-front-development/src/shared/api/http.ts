@@ -1,8 +1,8 @@
 // HTTP client for Knowledge Base API
 import axios from 'axios';
 
-// Normalize base URL. In production we use "/api" and proxy it via Nginx to backend.
-const API_BASE_URL = (import.meta.env?.VITE_API_URL || 'https://kb-backend-astral-e2a00aff.fly.dev').replace(/\/+$/, '');
+// Normalize base URL. Default to same-origin "/api" (proxied by Nginx to backend).
+const API_BASE_URL = (import.meta.env?.VITE_API_URL || `${window.location.origin}/api`).replace(/\/+$/, '');
 
 // Create axios instance
 const http = axios.create({

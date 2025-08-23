@@ -33,7 +33,7 @@ function Navbar({className}: NavbarProps) {
     const handleLogout = async () => {
       try {
         const token = localStorage.getItem('jwt_token')
-        if (token) await (await import('shared/api/http')).default.post('/api/auth/logout')
+        if (token) await (await import('shared/api/http')).default.post('/auth/logout')
         if (import.meta.env.DEV) console.log('[auth] logout success')
       } catch (e) { if (import.meta.env.DEV) console.log('[auth] logout error', e) }
       localStorage.removeItem('jwt_token')
