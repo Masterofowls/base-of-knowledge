@@ -38,7 +38,7 @@ def ensure_institution_types():
 
 
 def ensure_cities():
-    names = ['Москва', 'Санкт-Петербург']
+    names = ['Москва', 'Санкт-Петербург', 'Екатеринбург', 'Новосибирск', 'Ростов-на-Дону']
     result = []
     for n in names:
         city, _ = get_or_create(City, name=n)
@@ -48,8 +48,13 @@ def ensure_cities():
 
 def ensure_education_forms(types):
     result = {}
-    for inst_name in ['Школа', 'Колледж', 'Вуз']:
-        for form in ['Очная', 'Заочная', 'Очно-заочная']:
+    forms_map = {
+        'Школа': ['Очная'],
+        'Колледж': ['Очная', 'Заочная', 'Очно-заочная', 'Дистанционная'],
+        'Вуз': ['Очная', 'Заочная', 'Очно-заочная'],
+    }
+    for inst_name, forms in forms_map.items():
+        for form in forms:
             ef, _ = get_or_create(EducationForm, name=form, institution_type_id=types[inst_name].id)
             result[(inst_name, form)] = ef
     return result
@@ -58,8 +63,23 @@ def ensure_education_forms(types):
 def ensure_specialities(types):
     spec_map = {
         'Школа': [('SCH', 'Школьная программа')],
-        'Колледж': [('09.02.07', 'Информационные системы и программирование')],
-        'Вуз': [('01.03.01', 'Математика')],
+        'Колледж': [
+            ('09.02.07', 'Информационные системы и программирование'),
+            ('42.02.01', 'Реклама'),
+            ('09.02.06', 'Сетевое и системное администрирование'),
+            ('54.02.01', 'Дизайн по отраслям'),
+            ('09.02.10', 'Разработка компьютерных игр, дополненной и виртуальной реальности'),
+            ('54.01.20', 'Графический дизайнер'),
+            ('09.02.13', 'Интеграция решений с применением технологий искусственного интеллекта'),
+            ('49.02.03', 'Киберспорт'),
+            ('10.02.05', 'Обеспечение информационной безопасности автоматизированных систем'),
+            ('15.02.18', 'Техническая эксплуатация и обслуживание роботизированного производств'),
+        ],
+        'Вуз': [
+            ('09.03.03', 'Прикладная информатика'),
+            ('42.03.01', 'Реклама и связи с общественностью'),
+            ('54.03.01', 'Дизайн'),
+        ],
     }
     result = {}
     for inst, items in spec_map.items():
@@ -74,12 +94,18 @@ def ensure_school_classes(types):
     for name in ['9', '10', '11']:
         sc, _ = get_or_create(SchoolClass, name=name, institution_type_id=types['Школа'].id)
         result[name] = sc
+    # College base-of classes
+    for name in ['на базе 9-го класса', 'на базе 11-го класса']:
+        sc, _ = get_or_create(SchoolClass, name=name, institution_type_id=types['Колледж'].id)
+        result[name] = sc
     return result
 
 
 def ensure_admission_years(types):
     result = {}
-    for year in [2023, 2024]:
+    year_now = datetime.utcnow().year
+    years = [year_now - 3, year_now - 2, year_now - 1, year_now, year_now + 1]
+    for year in years:
         for inst in ['Школа', 'Колледж', 'Вуз']:
             ay, _ = get_or_create(AdmissionYear, year=year, institution_type_id=types[inst].id)
             result[(inst, year)] = ay
@@ -146,9 +172,9 @@ def ensure_groups(types, cities, forms, specs, classes, years):
         Group,
         display_name='MATH-101',
         defaults={
-            'speciality_id': specs[('Вуз', '01.03.01')].id,
+            'speciality_id': specs[('Вуз', '09.03.03')].id,
             'education_form_id': forms[('Вуз', 'Очная')].id,
-            'admission_year_id': years[('Вуз', 2023)].id,
+            'admission_year_id': years[('Вуз', max(y for (k, y) in years.keys() if k == 'Вуз'))].id,
             'school_class_id': None,
             'city_id': cities[1].id,
             'institution_type_id': types['Вуз'].id,

@@ -4,6 +4,7 @@ from app.categories import categories_bp
 from app.models import TopCategory, Subcategory, Category, Group, InstitutionType, Speciality, EducationForm, AdmissionYear, City, SchoolClass, User
 from app import db
 import re
+from datetime import datetime
 
 @categories_bp.route('/top-categories', methods=['GET'])
 def get_top_categories():
@@ -973,16 +974,142 @@ def get_audience_options():
 # Aux endpoints to support student login fields
 @categories_bp.route('/base-classes', methods=['GET'])
 def get_base_classes():
-    """Return available base classes for admission (9 or 11)."""
+    """Return available base classes for admission: 9 or 11."""
     return jsonify([9, 11]), 200
 
 @categories_bp.route('/courses', methods=['GET'])
 def get_courses():
-    """Return available course numbers. Optional ?max= param (default 4)."""
-    try:
-        max_val = int(request.args.get('max') or 4)
-    except Exception:
-        max_val = 4
+    """Return available course numbers. Prefer institution_type_id rule: college=3, university=4.
+    Fallback to ?max= for manual override.
+    """
+    inst_id = request.args.get('institution_type_id', type=int)
+    max_val = None
+    if inst_id:
+        inst = InstitutionType.query.get(inst_id)
+        if inst:
+            name = (inst.name or '').lower()
+            if name == 'колледж':
+                max_val = 3
+            elif name == 'вуз':
+                max_val = 4
+    if not max_val:
+        try:
+            max_val = int(request.args.get('max') or 4)
+        except Exception:
+            max_val = 4
     if max_val < 1:
         max_val = 1
     return jsonify(list(range(1, max_val + 1))), 200
+
+
+@categories_bp.route('/lookups/ensure', methods=['POST'])
+@jwt_required()
+def ensure_lookups():
+    """Ensure required lookup data exist (admin only).
+    Creates (idempotently): institution types, cities, education forms, specialities,
+    admission years (current-3..current+1), and school classes including college base options.
+    """
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or user.role.name not in ['Администратор', 'Редактор']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    def get_or_create(model, defaults=None, **kwargs):
+        inst = model.query.filter_by(**kwargs).first()
+        if inst:
+            return inst, False
+        params = dict(kwargs)
+        if defaults:
+            params.update(defaults)
+        inst = model(**params)
+        db.session.add(inst)
+        return inst, True
+
+    created = {
+        'institution_types': 0,
+        'cities': 0,
+        'education_forms': 0,
+        'specialities': 0,
+        'admission_years': 0,
+        'school_classes': 0,
+    }
+
+    # Institution types
+    inst_names = ['Школа', 'Колледж', 'Вуз']
+    inst_map = {}
+    for n in inst_names:
+        inst, was = get_or_create(InstitutionType, name=n)
+        inst_map[n] = inst
+        if was:
+            created['institution_types'] += 1
+
+    # Cities
+    city_names = ['Москва', 'Санкт-Петербург', 'Екатеринбург', 'Новосибирск', 'Ростов-на-Дону']
+    for n in city_names:
+        _, was = get_or_create(City, name=n)
+        if was:
+            created['cities'] += 1
+
+    # Education forms
+    forms_map = {
+        'Школа': ['Очная'],
+        'Колледж': ['Очная', 'Заочная', 'Очно-заочная', 'Дистанционная'],
+        'Вуз': ['Очная', 'Заочная', 'Очно-заочная'],
+    }
+    for inst_name, forms in forms_map.items():
+        for fname in forms:
+            _, was = get_or_create(EducationForm, name=fname, institution_type_id=inst_map[inst_name].id)
+            if was:
+                created['education_forms'] += 1
+
+    # Specialities (codes + names)
+    specs_map = {
+        'Колледж': [
+            ('09.02.07', 'Информационные системы и программирование'),
+            ('42.02.01', 'Реклама'),
+            ('09.02.06', 'Сетевое и системное администрирование'),
+            ('54.02.01', 'Дизайн по отраслям'),
+            ('09.02.10', 'Разработка компьютерных игр, дополненной и виртуальной реальности'),
+            ('54.01.20', 'Графический дизайнер'),
+            ('09.02.13', 'Интеграция решений с применением технологий искусственного интеллекта'),
+            ('49.02.03', 'Киберспорт'),
+            ('10.02.05', 'Обеспечение информационной безопасности автоматизированных систем'),
+            ('15.02.18', 'Техническая эксплуатация и обслуживание роботизированного производств'),
+        ],
+        'Вуз': [
+            ('09.03.03', 'Прикладная информатика'),
+            ('42.03.01', 'Реклама и связи с общественностью'),
+            ('54.03.01', 'Дизайн'),
+        ],
+    }
+    for inst_name, items in specs_map.items():
+        for code, sname in items:
+            _, was = get_or_create(Speciality, code=code, institution_type_id=inst_map[inst_name].id, defaults={'name': sname})
+            if was:
+                created['specialities'] += 1
+
+    # Admission years: current-3..current+1 per institution
+    year_now = datetime.utcnow().year
+    years = [year_now - 3, year_now - 2, year_now - 1, year_now, year_now + 1]
+    for inst_name in inst_names:
+        for y in years:
+            _, was = get_or_create(AdmissionYear, year=y, institution_type_id=inst_map[inst_name].id)
+            if was:
+                created['admission_years'] += 1
+
+    # School classes: school 9/10/11; college base-of 9/11
+    for n in ['9', '10', '11']:
+        _, was = get_or_create(SchoolClass, name=n, institution_type_id=inst_map['Школа'].id)
+        if was:
+            created['school_classes'] += 1
+    for n in ['на базе 9-го класса', 'на базе 11-го класса']:
+        _, was = get_or_create(SchoolClass, name=n, institution_type_id=inst_map['Колледж'].id)
+        if was:
+            created['school_classes'] += 1
+
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Lookup data ensured', 'created': created}), 200
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to ensure lookups'}), 500
