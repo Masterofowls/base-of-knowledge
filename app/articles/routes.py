@@ -969,6 +969,14 @@ def student_feed():
     admission_year_id = getattr(group, 'admission_year_id', None)
     city_id = getattr(group, 'city_id', None)
     base_class = getattr(group, 'base_class', None)
+    # Derive base_class from group's school_class_id if not present
+    try:
+        if base_class is None and getattr(group, 'school_class_id', None):
+            sc = SchoolClass.query.get(group.school_class_id)
+            if sc and sc.name and str(sc.name).isdigit():
+                base_class = int(sc.name)
+    except Exception:
+        base_class = base_class
     edu_mode = None
     education_form_id = getattr(group, 'education_form_id', None)
     student_inst_type_id = getattr(group, 'institution_type_id', None)
