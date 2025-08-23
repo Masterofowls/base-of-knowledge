@@ -1003,28 +1003,31 @@ def student_feed():
         conds.append(and_(Article.audience == 'course', Article.audience_course == course))
     query = query.filter(or_(*conds))
 
-    # Additional constraints: if article specified a field, it must match; None means general and should pass
-    if base_class is not None:
-        query = query.filter(or_(Article.base_class.is_(None), Article.base_class == base_class))
-    if speciality_id is not None:
-        query = query.filter(or_(Article.speciality_id.is_(None), Article.speciality_id == speciality_id))
-    if education_form_id is not None:
-        query = query.filter(or_(Article.education_form_id.is_(None), Article.education_form_id == education_form_id))
-    if admission_year_id is not None:
-        query = query.filter(or_(Article.audience_admission_year_id.is_(None), Article.audience_admission_year_id == admission_year_id))
-    if edu_mode is not None:
-        query = query.filter(or_(Article.education_mode.is_(None), Article.education_mode == edu_mode))
+    # Additional constraints: if article specified a field, it must match student's context.
+    # Apply unconditionally to avoid leaking targeted posts into unrelated institutions.
+    query = query.filter(or_(Article.base_class.is_(None), Article.base_class == base_class))
+    query = query.filter(or_(Article.speciality_id.is_(None), Article.speciality_id == speciality_id))
+    query = query.filter(or_(Article.education_form_id.is_(None), Article.education_form_id == education_form_id))
+    query = query.filter(or_(Article.audience_admission_year_id.is_(None), Article.audience_admission_year_id == admission_year_id))
+    query = query.filter(or_(Article.education_mode.is_(None), Article.education_mode == edu_mode))
 
-    # Institution constraint via linked groups (if present):
-    # If article has linked group categories, at least one must match student's institution type.
+    # Institution hard constraint: targeted posts must not leak across institution types.
+    # If article is targeted (audience != 'all' or any audience_* set), enforce institution match
     if student_inst_type_id is not None:
         from sqlalchemy import exists, select
         AC = ArticleCategory
         Cat = Category
         G = Group
+        targeted = or_(
+            Article.audience.isnot(None),
+            Article.base_class.isnot(None),
+            Article.speciality_id.isnot(None),
+            Article.education_form_id.isnot(None),
+            Article.audience_admission_year_id.isnot(None)
+        )
         query = query.filter(
             or_(
-                ~exists(select(1).where(AC.article_id == Article.id)),
+                ~targeted,
                 exists(
                     select(1)
                     .select_from(AC)
