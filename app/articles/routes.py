@@ -372,6 +372,8 @@ def create_article():
     is_actual = data.get('is_actual', True)
     category_ids = data.get('category_ids', [])
     publish_scope = data.get('publish_scope') or {}
+    # Optional display-only label: 'study' | 'group'
+    incoming_tag = data.get('tag')
     
     # Validate title
     if len(title) < 3:
@@ -460,7 +462,7 @@ def create_article():
         is_published=is_published,
         is_for_staff=is_for_staff,
         is_actual=is_actual,
-        tag=None,
+        tag=(incoming_tag if incoming_tag in ('study','group') else None),
         base_class=None,
         audience=derived_audience,
         audience_city_id=(publish_scope.get('city_id') if derived_audience == 'city' else None),

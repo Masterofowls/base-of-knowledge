@@ -16,7 +16,7 @@ import QuillBetterTable from 'quill-table-better'
 // Note: CSS from quill-table-better is not resolved in our build; omit import to avoid Rollup error
 import ArrowIcon from "shared/assets/icons/ArrrowLeft.svg?react";
 import SaveIcon from "shared/assets/icons/Plus.svg?react";
-import { Accordion, AccordionSummary, AccordionDetails, FormControlLabel, Checkbox, Autocomplete, TextField, IconButton } from '@mui/material'
+import { Accordion, AccordionSummary, AccordionDetails, FormControlLabel, Checkbox, Autocomplete, TextField, IconButton, RadioGroup, Radio } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import UploadIcon from '@mui/icons-material/Upload'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -149,12 +149,11 @@ export default function PostEditor() {
     const [courseOptions, setCourseOptions] = useState<{value:number,label:string}[]>([])
     // Мульти-правила публикации (экспериментальный конструктор)
     const [audienceRules, setAudienceRules] = useState<Array<any>>([])
-    const currentCategoryType = useMemo(() => {
-        const ps = formData.publish_scope || {}
-        if (ps?.publish_for_all) return 'all'
-        if (ps?.city_id !== undefined) return 'city'
-        return 'study'
-    }, [formData.publish_scope])
+    const [multiSelect, setMultiSelect] = useState<boolean>(false)
+    // Метка типа информации: 'study' | 'group' (только для отображения)
+    const [infoTag, setInfoTag] = useState<'study'|'group'>('group')
+    // Режим аудитории: 'all' | 'city' | 'study'
+    const [audienceMode, setAudienceMode] = useState<'all'|'city'|'study'>('all')
 
     // Institution & School class controls
     const [institutionTypes, setInstitutionTypes] = useState<{value:number,label:string,name:string}[]>([])
@@ -262,6 +261,7 @@ export default function PostEditor() {
             const response = await http.get(`/api/articles/${id}`);
             const article = response.data;
             setFormData({ title: article.title, content: article.content, is_published: article.is_published, is_for_staff: article.is_for_staff, is_actual: article.is_actual, category_ids: article.categories.map((cat: Category) => cat.id) });
+            if (article.tag === 'study' || article.tag === 'group') setInfoTag(article.tag)
             if (quillRef.current) quillRef.current.setText('')
             if (quillRef.current && article.content) {
                 quillRef.current.setText('')
@@ -290,21 +290,23 @@ export default function PostEditor() {
         const html = quillRef.current?.root.innerHTML ?? formData.content
         if (!html || html === '<p><br></p>') { setError('Содержание поста обязательно'); return; }
         const ps = formData.publish_scope || {}
-        if (!ps.publish_for_all) {
-            const hasCity = !!ps.city_id
-            const hasCourse = typeof ps.course === 'number' && !Number.isNaN(ps.course)
-            const isSchool = selectedInstitution?.name?.toLowerCase() === 'школа'
-            const hasStudyDetail = isSchool || !!ps.speciality_id || !!ps.education_form_id || !!ps.admission_year_id || !!selectedSchoolClass
-            if (!hasCity && !(hasCourse || hasStudyDetail)) {
-                setError('Укажите аудиторию: Город или Учебная информация (курс/класс/профиль/форма/год), либо выберите "Для всех"')
-                return
-            }
-        }
         try {
             setSaving(true);
             setError(null);
             const categoryIds = [ ...selectedGroups.map(group => group.value) ];
             const augmentedScope = { ...(formData.publish_scope||{}) }
+            // Применяем режим аудитории
+            if (audienceMode === 'all') {
+                augmentedScope.publish_for_all = true
+                augmentedScope.city_id = undefined
+                augmentedScope.course = undefined
+            } else if (audienceMode === 'city') {
+                augmentedScope.publish_for_all = false
+                augmentedScope.course = undefined
+            } else {
+                augmentedScope.publish_for_all = false
+                augmentedScope.city_id = undefined
+            }
             if (audienceRules.length > 0) {
                 augmentedScope.rules = audienceRules.map((r:any)=>({
                     institution_type_ids: (r.institution_type_ids||[]).map((o:any)=>o.value),
@@ -318,7 +320,7 @@ export default function PostEditor() {
             }
             if (selectedInstitution) augmentedScope.institution_type_id = selectedInstitution.value
             if (selectedSchoolClass) augmentedScope.school_class_id = selectedSchoolClass.value
-            const postData = { ...formData, content: html, category_ids: categoryIds, publish_scope: augmentedScope };
+            const postData = { ...formData, tag: infoTag, content: html, category_ids: categoryIds, publish_scope: augmentedScope };
             if (isEditing) await http.put(`/api/articles/${id}`, postData); else await http.post('/api/articles', postData);
             navigate('/admin/posts');
         } catch (error: any) {
@@ -531,15 +533,16 @@ export default function PostEditor() {
                         )}
                     </div>
 
-                    {/* Categories single audience type */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
-                        <div>
-                            <label style={{ display:'block', marginBottom:6, fontWeight:500 }}>Аудитория</label>
-                            <small style={{ display:'block', marginBottom:6, opacity:.7 }}>Выберите город или учебные фильтры ниже. Разделение на «Новости/Объявления» отключено.</small>
-                        </div>
+                    {/* Тип информации (метка) */}
+                    <div>
+                        <label style={{ display:'block', marginBottom:6, fontWeight:500 }}>Тип информации (отображение)</label>
+                        <RadioGroup row value={infoTag} onChange={(e)=> setInfoTag((e.target as HTMLInputElement).value as any)}>
+                            <FormControlLabel value="group" control={<Radio/>} label="Общая для группы" />
+                            <FormControlLabel value="study" control={<Radio/>} label="Учебная" />
+                        </RadioGroup>
                     </div>
 
-                    {/* Checkboxes */}
+                    {/* Чекбоксы общие */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                             <input type="checkbox" checked={formData.is_published} onChange={(e) => handleInputChange('is_published', e.target.checked)} />
@@ -555,14 +558,24 @@ export default function PostEditor() {
                         </label>
                     </div>
 
-                    {/* Audience */}
+                    {/* Аудитория */}
                     <Accordion defaultExpanded>
                         <AccordionSummary expandIcon={<ExpandMoreIcon/>}>Фильтры</AccordionSummary>
                         <AccordionDetails>
                             <div style={{display:'grid', gridTemplateColumns:'1fr', gap:12}}>
-                                <FormControlLabel control={<Checkbox checked={!!formData.publish_scope?.publish_for_all} onChange={(e)=> setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, publish_for_all: e.target.checked, city_id: undefined, course: undefined }}))}/>} label='Для всех' />
-                                {!formData.publish_scope?.publish_for_all && (
-                                <>
+                                <label style={{ display:'block', fontWeight:500 }}>Режим аудитории</label>
+                                <RadioGroup row value={audienceMode} onChange={(e)=>{
+                                    const v = (e.target as HTMLInputElement).value as any
+                                    setAudienceMode(v)
+                                    setFormData(prev=> ({...prev, publish_scope:{...prev.publish_scope, city_id: v==='city' ? prev.publish_scope?.city_id : undefined, course: v==='study' ? prev.publish_scope?.course : undefined }}))
+                                }}>
+                                    <FormControlLabel value="all" control={<Radio/>} label="Для всех" />
+                                    <FormControlLabel value="city" control={<Radio/>} label="По городу" />
+                                    <FormControlLabel value="study" control={<Radio/>} label="Учебные фильтры" />
+                                </RadioGroup>
+
+                                {audienceMode==='study' && (
+                                  <>
                                     <Autocomplete
                                         options={specialities}
                                         ListboxComponent={VirtualListbox as any}
@@ -590,7 +603,8 @@ export default function PostEditor() {
                                         getOptionLabel={(o)=>o?.label ?? ''}
                                         renderInput={(p)=>(<TextField {...p} label='Форма обучения (не обязательно)' placeholder='— Все форматы —' size='small'/>)}
                                     />
-                                </>) }
+                                  </>
+                                )}
                                 <Autocomplete
                                     options={cities}
                                     ListboxComponent={VirtualListbox as any}
@@ -599,6 +613,7 @@ export default function PostEditor() {
                                     isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
                                     getOptionLabel={(o)=>o?.label ?? ''}
                                     renderInput={(p)=>(<TextField {...p} label='Город (не обязательно)' placeholder='— Все города —' size='small'/>)}
+                                    disabled={audienceMode!=='city'}
                                 />
                                 <Autocomplete
                                     options={courseOptions}
@@ -608,7 +623,7 @@ export default function PostEditor() {
                                     isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
                                     getOptionLabel={(o)=>o?.label ?? ''}
                                     renderInput={(p)=>(<TextField {...p} label='Курс (не обязательно)' placeholder='— Все курсы —' size='small'/>)}
-                                    disabled={!!formData.publish_scope?.city_id}
+                                    disabled={audienceMode!=='study'}
                                 />
                                 <Autocomplete
                                     options={admissionYears}
@@ -618,8 +633,9 @@ export default function PostEditor() {
                                     isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value}
                                     getOptionLabel={(o)=>o?.label ?? ''}
                                     renderInput={(p)=>(<TextField {...p} label='Год поступления (не обязательно)' placeholder='— Все годы —' size='small'/>)}
+                                    disabled={audienceMode!=='study'}
                                 />
-                                {selectedInstitution?.name?.toLowerCase()==='школа' && (
+                                {audienceMode==='study' && selectedInstitution?.name?.toLowerCase()==='школа' && (
                                   <Autocomplete
                                     options={schoolClasses}
                                     ListboxComponent={VirtualListbox as any}
@@ -633,6 +649,9 @@ export default function PostEditor() {
 
                                 {/* Конструктор правил публикации (множественные условия) */}
                                 <div style={{ border:'1px dashed var(--border-muted, rgba(0,0,0,0.15))', borderRadius:8, padding:12 }}>
+                                  <FormControlLabel control={<Checkbox checked={multiSelect} onChange={(e)=> setMultiSelect(e.target.checked)} />} label='Множественный выбор (добавить правила)' />
+                                  {multiSelect && (
+                                  <>
                                   <label style={{ display:'block', fontWeight:600, marginBottom:8 }}>Правила публикации (опционально)</label>
                                   <small style={{ display:'block', opacity:.7, marginBottom:12 }}>Добавляйте несколько правил: «для всех заочников», «для всех вузов города», «для всех поступивших в этом году по направлению» и т.д.</small>
                                   {audienceRules.map((rule:any, idx:number)=> (
@@ -640,28 +659,28 @@ export default function PostEditor() {
                                       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                                         <Autocomplete multiple options={institutionTypes} value={rule.institution_type_ids||[]} onChange={(_,v)=>{
                                           const next=[...audienceRules]; next[idx] = { ...(rule||{}), institution_type_ids: v }; setAudienceRules(next)
-                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Типы учреждений' placeholder='Колледж / Вуз / Школа' size='small'/>)} />
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Типы учреждений' placeholder='Колледж / Вуз / Школа' size='small'/>)}/> 
                                         <Autocomplete multiple options={educationForms} value={rule.education_form_ids||[]} onChange={(_,v)=>{
                                           const next=[...audienceRules]; next[idx] = { ...(rule||{}), education_form_ids: v }; setAudienceRules(next)
-                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Формы обучения' placeholder='Очная / Заочная / Дистант' size='small'/>)} />
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Формы обучения' placeholder='Очная / Заочная / Дистант' size='small'/>)}/>
                                         <Autocomplete multiple options={specialities} value={rule.speciality_ids||[]} onChange={(_,v)=>{
                                           const next=[...audienceRules]; next[idx] = { ...(rule||{}), speciality_ids: v }; setAudienceRules(next)
-                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Специальности' placeholder='— Любые —' size='small'/>)} />
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Специальности' placeholder='— Любые —' size='small'/>)}/>
                                         <Autocomplete multiple options={cities} value={rule.city_ids||[]} onChange={(_,v)=>{
                                           const next=[...audienceRules]; next[idx] = { ...(rule||{}), city_ids: v }; setAudienceRules(next)
-                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Города' placeholder='— Любые —' size='small'/>)} />
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Города' placeholder='— Любые —' size='small'/>)}/>
                                         <Autocomplete multiple options={admissionYears} value={rule.admission_year_ids||[]} onChange={(_,v)=>{
                                           const next=[...audienceRules]; next[idx] = { ...(rule||{}), admission_year_ids: v }; setAudienceRules(next)
-                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Годы поступления' placeholder='Текущий / Прошлый / …' size='small'/>)} />
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Годы поступления' placeholder='Текущий / Прошлый / …' size='small'/>)}/>
                                       </div>
                                       <div style={{ display:'flex', gap:8, marginTop:8 }}>
                                         <Autocomplete options={courseOptions} value={rule.course||null} onChange={(_,v)=>{
                                           const next=[...audienceRules]; next[idx] = { ...(rule||{}), course: v }; setAudienceRules(next)
-                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Курс (необязательно)' placeholder='— Любой —' size='small'/>)} />
+                                        }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Курс (необязательно)' placeholder='— Любой —' size='small'/>)}/>
                                         {selectedInstitution?.name?.toLowerCase()==='школа' && (
                                           <Autocomplete options={schoolClasses} value={rule.school_class_id||null} onChange={(_,v)=>{
                                             const next=[...audienceRules]; next[idx] = { ...(rule||{}), school_class_id: v }; setAudienceRules(next)
-                                          }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Класс (необязательно)' placeholder='— Любой —' size='small'/>)} />
+                                          }} ListboxComponent={VirtualListbox as any} isOptionEqualToValue={(o:any,v:any)=>o?.value===v?.value} getOptionLabel={(o)=>o?.label??''} renderInput={(p)=>(<TextField {...p} label='Класс (необязательно)' placeholder='— Любой —' size='small'/>)}/>
                                         )}
                                         <Button width='auto' backgroundColor='#fee2e2' theme={ThemeButton.CLEAR} onClick={()=>{
                                           const next=[...audienceRules]; next.splice(idx,1); setAudienceRules(next)
@@ -672,6 +691,7 @@ export default function PostEditor() {
                                   <Button width='auto' backgroundColor='#e0f2fe' theme={ThemeButton.CLEAR} onClick={()=>{
                                     setAudienceRules(prev=>[...prev, { institution_type_ids:[], education_form_ids:[], speciality_ids:[], city_ids:[], admission_year_ids:[], course:null, school_class_id:null }])
                                   }}><span>Добавить правило</span></Button>
+                                  </>)
                                 </div>
                             </div>
                         </AccordionDetails>
