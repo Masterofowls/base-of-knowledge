@@ -585,7 +585,24 @@ export default function GroupManagement() {
                                             try {
                                                 await http.delete(`/api/categories/groups/${group.id}`)
                                                 fetchData()
-                                            } catch(e){ console.error(e) }
+                                            } catch(e:any){
+                                                const status = e?.response?.status
+                                                if (status === 409) {
+                                                    const ok = confirm('У группы есть связанные категории. Архивировать группу вместо удаления?')
+                                                    if (ok) {
+                                                        try {
+                                                            await http.post(`/api/categories/groups/${group.id}/archive`)
+                                                            fetchData()
+                                                        } catch(ee:any){
+                                                            console.error(ee)
+                                                            setError(ee?.response?.data?.error || 'Не удалось архивировать группу')
+                                                        }
+                                                    }
+                                                } else {
+                                                    console.error(e)
+                                                    setError(e?.response?.data?.error || 'Не удалось удалить группу')
+                                                }
+                                            }
                                         }}
                                         width='120px'
                                         backgroundColor='#E44A77'
