@@ -127,6 +127,53 @@ export default function GroupManagement() {
         fetchData();
     }, []);
 
+    // Reload dependent dictionaries when institution type changes
+    useEffect(() => {
+        const run = async () => {
+            const instId = selectedInstitutionType?.value
+            if (!instId) {
+                // reset dependent lists
+                setSpecialities([])
+                setEducationForms([])
+                setAdmissionYears([])
+                setSchoolClasses([])
+                setSelectedSpeciality(null)
+                setSelectedEducationForm(null)
+                setSelectedAdmissionYear(null)
+                setSelectedSchoolClass(null)
+                return
+            }
+            try {
+                const [specs, forms, years, classes] = await Promise.all([
+                    http.get('/api/categories/specialities', { params: { institution_type_id: instId } }),
+                    http.get('/api/categories/education-forms', { params: { institution_type_id: instId } }),
+                    http.get('/api/categories/admission-years', { params: { institution_type_id: instId } }),
+                    http.get('/api/categories/school-classes', { params: { institution_type_id: instId } }),
+                ])
+                setSpecialities(specs.data || [])
+                setEducationForms(forms.data || [])
+                setAdmissionYears(years.data || [])
+                setSchoolClasses(classes.data || [])
+                // reset selections on type change
+                setSelectedSpeciality(null)
+                setSelectedEducationForm(null)
+                setSelectedAdmissionYear(null)
+                setSelectedSchoolClass(null)
+                setCreateForm(prev => ({
+                    ...prev,
+                    speciality_id: null,
+                    education_form_id: null,
+                    admission_year_id: null,
+                    school_class_id: null,
+                }))
+            } catch (e) {
+                // ignore
+            }
+        }
+        run()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedInstitutionType])
+
     useEffect(() => {
         fetchFilteredGroups();
     }, [searchTerm, selectedCity]);
@@ -196,14 +243,21 @@ export default function GroupManagement() {
     };
 
     const handleCreateGroup = async () => {
-        if (!createForm.display_name.trim()) {
-            setError('Название группы обязательно');
-            return;
-        }
-
-        if (!createForm.speciality_id || !createForm.education_form_id || !createForm.admission_year_id || !createForm.institution_type_id) {
-            setError('Специальность, форма обучения, год поступления и тип учреждения обязательны');
-            return;
+        const isSchool = (selectedInstitutionType?.label || '').toLowerCase() === 'школа'
+        if (!createForm.display_name.trim()) { setError('Название группы обязательно'); return }
+        if (!createForm.institution_type_id) { setError('Тип учреждения обязателен'); return }
+        if (isSchool) {
+            if (!createForm.school_class_id) { setError('Класс обязателен для школы'); return }
+            if (!createForm.admission_year_id) { setError('Год поступления обязателен для школы'); return }
+            // ensure forbidden fields are null
+            createForm.speciality_id = null
+            createForm.education_form_id = null
+        } else {
+            if (!createForm.speciality_id) { setError('Специальность обязательна'); return }
+            if (!createForm.education_form_id) { setError('Форма обучения обязательна'); return }
+            if (!createForm.admission_year_id) { setError('Год поступления обязателен'); return }
+            // ensure forbidden field is null
+            createForm.school_class_id = null
         }
 
         try {
@@ -254,7 +308,7 @@ export default function GroupManagement() {
     const cityOptions = cities.map(city => ({ value: city.id, label: city.name }));
     const specialityOptions = specialities.map(spec => ({ value: spec.id, label: `${spec.code} - ${spec.name}` }));
     const educationFormOptions = educationForms.map(form => ({ value: form.id, label: form.name }));
-    const admissionYearOptions = admissionYears.map(year => ({ value: year.id, label: `${year.year} (${year.description})` }));
+    const admissionYearOptions = admissionYears.map(year => ({ value: year.id, label: `${year.year}` }));
     const schoolClassOptions = schoolClasses.map(cls => ({ value: cls.id, label: cls.name }));
     const institutionTypeOptions = institutionTypes.map(type => ({ value: type.id, label: type.name }));
 
@@ -350,53 +404,54 @@ export default function GroupManagement() {
                             />
                         </div>
                         
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                            <InputSelect
-                                placeholder="Выберите специальность"
-                                label={<p>Специальность *</p>}
-                                options={specialityOptions}
-                                value={selectedSpeciality}
-                                onChange={(option) => {
-                                    setSelectedSpeciality(option);
-                                    handleFormFieldChange('speciality_id', option?.value || null);
-                                }}
-                            />
-                            
-                            <InputSelect
-                                placeholder="Выберите форму обучения"
-                                label={<p>Форма обучения *</p>}
-                                options={educationFormOptions}
-                                value={selectedEducationForm}
-                                onChange={(option) => {
-                                    setSelectedEducationForm(option);
-                                    handleFormFieldChange('education_form_id', option?.value || null);
-                                }}
-                            />
-                            
-                            <InputSelect
-                                placeholder="Выберите год поступления"
-                                label={<p>Год поступления *</p>}
-                                options={admissionYearOptions}
-                                value={selectedAdmissionYear}
-                                onChange={(option) => {
-                                    setSelectedAdmissionYear(option);
-                                    handleFormFieldChange('admission_year_id', option?.value || null);
-                                }}
-                            />
-                        </div>
+                        {selectedInstitutionType && (selectedInstitutionType.label.toLowerCase() !== 'школа') && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                              <InputSelect
+                                  placeholder="Выберите специальность"
+                                  label={<p>Специальность *</p>}
+                                  options={specialityOptions}
+                                  value={selectedSpeciality}
+                                  onChange={(option) => {
+                                      setSelectedSpeciality(option);
+                                      handleFormFieldChange('speciality_id', option?.value || null);
+                                  }}
+                              />
+                              <InputSelect
+                                  placeholder="Выберите форму обучения"
+                                  label={<p>Форма обучения *</p>}
+                                  options={educationFormOptions}
+                                  value={selectedEducationForm}
+                                  onChange={(option) => {
+                                      setSelectedEducationForm(option);
+                                      handleFormFieldChange('education_form_id', option?.value || null);
+                                  }}
+                              />
+                              <InputSelect
+                                  placeholder="Выберите год поступления"
+                                  label={<p>Год поступления *</p>}
+                                  options={admissionYearOptions}
+                                  value={selectedAdmissionYear}
+                                  onChange={(option) => {
+                                      setSelectedAdmissionYear(option);
+                                      handleFormFieldChange('admission_year_id', option?.value || null);
+                                  }}
+                              />
+                          </div>
+                        )}
                         
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                            <InputSelect
-                                placeholder="Выберите курс (опционально)"
-                                label={<p>Курс</p>}
-                                options={schoolClassOptions}
-                                value={selectedSchoolClass}
-                                onChange={(option) => {
-                                    setSelectedSchoolClass(option);
-                                    handleFormFieldChange('school_class_id', option?.value || null);
-                                }}
-                            />
-                            
+                            {selectedInstitutionType && (selectedInstitutionType.label.toLowerCase() === 'школа') && (
+                              <InputSelect
+                                  placeholder="Выберите класс"
+                                  label={<p>Класс *</p>}
+                                  options={schoolClassOptions}
+                                  value={selectedSchoolClass}
+                                  onChange={(option) => {
+                                      setSelectedSchoolClass(option);
+                                      handleFormFieldChange('school_class_id', option?.value || null);
+                                  }}
+                              />
+                            )}
                             <InputSelect
                                 placeholder="Выберите город (опционально)"
                                 label={<p>Город</p>}
