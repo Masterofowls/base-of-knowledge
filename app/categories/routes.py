@@ -1,7 +1,7 @@
 from flask import request, jsonify, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.categories import categories_bp
-from app.models import TopCategory, Subcategory, Category, Group, InstitutionType, Speciality, EducationForm, AdmissionYear, City, SchoolClass, User
+from app.models import TopCategory, Subcategory, Category, Group, InstitutionType, Speciality, EducationForm, AdmissionYear, City, SchoolClass, User, ArticleCategory
 from app import db
 import re
 from datetime import datetime
@@ -451,11 +451,12 @@ def delete_group(group_id):
     if not user or user.role.name != 'Администратор':
         return jsonify({'error': 'Unauthorized'}), 403
     group = Group.query.get_or_404(group_id)
-    # Prevent deletion if there are linked categories
-    linked = Category.query.filter_by(group_id=group.id).first()
-    if linked:
-        return jsonify({'error': 'Group has linked categories, archive or merge before deleting'}), 409
     try:
+        # Cascade delete: remove category links, then categories, then the group
+        category_ids = [cid for (cid,) in db.session.query(Category.id).filter_by(group_id=group.id).all()]
+        if category_ids:
+            db.session.query(ArticleCategory).filter(ArticleCategory.category_id.in_(category_ids)).delete(synchronize_session=False)
+            db.session.query(Category).filter(Category.id.in_(category_ids)).delete(synchronize_session=False)
         db.session.delete(group)
         db.session.commit()
         return jsonify({'message': 'Group deleted successfully'}), 200
