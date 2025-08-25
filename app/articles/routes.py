@@ -62,7 +62,7 @@ def get_articles():
     audience_admission_year_id = request.args.get('audience_admission_year_id', type=int)
     education_mode = request.args.get('education_mode', type=str)
     speciality_id = request.args.get('speciality_id', type=int)
-    
+
     # Sorting and audience options
     sort_by = request.args.get('sort_by', default='created_at', type=str)
     sort_dir = request.args.get('sort_dir', default='desc', type=str)
@@ -71,26 +71,26 @@ def get_articles():
 
     # Build query
     query = Article.query
-    
+
     # Apply filters
     if top_category_id:
         query = query.join(ArticleCategory).join(Category).filter(Category.top_category_id == top_category_id)
-    
+
     if subcategory_id:
         query = query.join(ArticleCategory).join(Category).filter(Category.subcategory_id == subcategory_id)
-    
+
     if group_id:
         query = query.join(ArticleCategory).join(Category).filter(Category.group_id == group_id)
-    
+
     if is_published is not None:
         query = query.filter(Article.is_published == is_published)
-    
+
     if is_for_staff is not None:
         query = query.filter(Article.is_for_staff == is_for_staff)
-    
+
     if is_actual is not None:
         query = query.filter(Article.is_actual == is_actual)
-    
+
     if search:
         like = f"%{search}%"
         query = query.filter(
@@ -146,7 +146,7 @@ def get_articles():
         query = query.filter(Article.education_mode == education_mode)
     if speciality_id:
         query = query.filter(Article.speciality_id == speciality_id)
-    
+
     # Enforce strict audience if requested (exclude fully general posts)
     if strict_audience:
         from sqlalchemy import and_
@@ -171,11 +171,11 @@ def get_articles():
     }
     sort_column = sort_map.get(sort_by, Article.created_at)
     query = query.order_by(desc(sort_column) if sort_dir.lower() == 'desc' else asc(sort_column))
-    
+
     # Paginate
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     articles = pagination.items
-    
+
     # Prepare response
     articles_data = []
     for article in articles:
@@ -189,29 +189,29 @@ def get_articles():
                 'subcategory': None,
                 'group': None
             }
-            
+
             if category.top_category:
                 category_data['top_category'] = {
                     'id': category.top_category.id,
                     'name': category.top_category.name,
                     'slug': category.top_category.slug
                 }
-            
+
             if category.subcategory:
                 category_data['subcategory'] = {
                     'id': category.subcategory.id,
                     'name': category.subcategory.name,
                     'slug': category.subcategory.slug
                 }
-            
+
             if category.group:
                 category_data['group'] = {
                     'id': category.group.id,
                     'display_name': category.group.display_name
                 }
-            
+
             categories.append(category_data)
-        
+
         # Get authors
         authors = []
         for author in article.authors:
@@ -220,18 +220,18 @@ def get_articles():
                 'full_name': author.user.full_name,
                 'email': author.user.email
             })
-        
+
         article_data = {
             'id': article.id,
             'title': article.title,
             'content': article.content,
-            'created_at': article.created_at.isoformat(),
-            'updated_at': article.updated_at.isoformat(),
+            'created_at': article.created_at.isoformat() if getattr(article, 'created_at', None) else None,
+            'updated_at': article.updated_at.isoformat() if getattr(article, 'updated_at', None) else None,
             'is_published': article.is_published,
             'is_for_staff': article.is_for_staff,
             'is_actual': article.is_actual,
-            'archive_at': article.archive_at.isoformat() if article.archive_at else None,
-            'archived_at': article.archived_at.isoformat() if article.archived_at else None,
+            'archive_at': article.archive_at.isoformat() if getattr(article, 'archive_at', None) else None,
+            'archived_at': article.archived_at.isoformat() if getattr(article, 'archived_at', None) else None,
             'tag': article.tag,
             'base_class': article.base_class,
             'audience': article.audience,
@@ -245,7 +245,7 @@ def get_articles():
             'authors': authors
         }
         articles_data.append(article_data)
-    
+
     return jsonify({
         'articles': articles_data,
         'pagination': {
@@ -262,7 +262,7 @@ def get_articles():
 def get_article(article_id):
     """Get a specific article by ID"""
     article = Article.query.get_or_404(article_id)
-    
+
     # Increment views metric (anonymous allowed)
     try:
         from app.models import ArticleView
@@ -285,29 +285,29 @@ def get_article(article_id):
             'subcategory': None,
             'group': None
         }
-        
+
         if category.top_category:
             category_data['top_category'] = {
                 'id': category.top_category.id,
                 'name': category.top_category.name,
                 'slug': category.top_category.slug
             }
-        
+
         if category.subcategory:
             category_data['subcategory'] = {
                 'id': category.subcategory.id,
                 'name': category.subcategory.name,
                 'slug': category.subcategory.slug
             }
-        
+
         if category.group:
             category_data['group'] = {
                 'id': category.group.id,
                 'display_name': category.group.display_name
             }
-        
+
         categories.append(category_data)
-    
+
     # Get authors
     authors = []
     for author in article.authors:
@@ -316,7 +316,7 @@ def get_article(article_id):
             'full_name': author.user.full_name,
             'email': author.user.email
         })
-    
+
     # Get media
     media = []
     for media_link in article.media_links:
@@ -328,24 +328,24 @@ def get_article(article_id):
             'caption': media_link.media.caption,
             'position': media_link.position
         })
-    
+
     article_data = {
         'id': article.id,
         'title': article.title,
         'content': article.content,
-        'created_at': article.created_at.isoformat(),
-        'updated_at': article.updated_at.isoformat(),
+        'created_at': article.created_at.isoformat() if getattr(article, 'created_at', None) else None,
+        'updated_at': article.updated_at.isoformat() if getattr(article, 'updated_at', None) else None,
         'is_published': article.is_published,
         'is_for_staff': article.is_for_staff,
         'is_actual': article.is_actual,
-        'archive_at': article.archive_at.isoformat() if article.archive_at else None,
-        'archived_at': article.archived_at.isoformat() if article.archived_at else None,
+        'archive_at': article.archive_at.isoformat() if getattr(article, 'archive_at', None) else None,
+        'archived_at': article.archived_at.isoformat() if getattr(article, 'archived_at', None) else None,
         'categories': categories,
         'authors': authors,
         'media': media,
         'views_count': getattr(article, 'views_count', None)
     }
-    
+
     return jsonify(article_data), 200
 
 @articles_bp.route('/', methods=['POST'])
@@ -354,20 +354,20 @@ def create_article():
     """Create a new article"""
     user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
-    
+
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    
+
     data = request.get_json()
-    
+
     if not data:
         return jsonify({'error': 'No data provided'}), 400
-    
+
     required_fields = ['title', 'content']
     for field in required_fields:
         if not data.get(field):
             return jsonify({'error': f'{field} is required'}), 400
-    
+
     title = data['title'].strip()
     content = data['content']
     is_published = data.get('is_published', False)
@@ -377,11 +377,11 @@ def create_article():
     publish_scope = data.get('publish_scope') or {}
     # Optional display-only label: 'study' | 'group'
     incoming_tag = data.get('tag')
-    
+
     # Validate title
     if len(title) < 3:
         return jsonify({'error': 'Title must be at least 3 characters long'}), 400
-    
+
     # Create article
     import json
     # Map RU education forms to internal codes if posted as text
@@ -559,30 +559,30 @@ def create_article():
         except Exception:
             base_class = None
     article.base_class = base_class
-    
+
     try:
         db.session.add(article)
         db.session.flush()  # Get the article ID
-        
+
         # Add author
         author = ArticleAuthor(article_id=article.id, user_id=user.id)
         db.session.add(author)
-        
+
         # Add categories
         for category_id in category_ids:
             category = Category.query.get(category_id)
             if category:
                 article_category = ArticleCategory(article_id=article.id, category_id=category_id)
                 db.session.add(article_category)
-        
+
         db.session.commit()
-        
+
         return jsonify({
             'id': article.id,
             'title': article.title,
             'message': 'Article created successfully'
         }), 201
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to create article'}), 500
@@ -593,40 +593,40 @@ def update_article(article_id):
     """Update an existing article"""
     user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
-    
+
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    
+
     article = Article.query.get_or_404(article_id)
-    
+
     # Check if user is author or has admin/editor role
     is_author = any(author.user_id == user.id for author in article.authors)
     is_admin_or_editor = user.role.name in ['Администратор', 'Редактор']
-    
+
     if not is_author and not is_admin_or_editor:
         return jsonify({'error': 'Unauthorized'}), 403
-    
+
     data = request.get_json()
-    
+
     if not data:
         return jsonify({'error': 'No data provided'}), 400
-    
+
     # Update fields if provided
     if 'title' in data:
         title = data['title'].strip()
         if len(title) < 3:
             return jsonify({'error': 'Title must be at least 3 characters long'}), 400
         article.title = title
-    
+
     if 'content' in data:
         article.content = data['content']
-    
+
     if 'is_published' in data:
         article.is_published = data['is_published']
-    
+
     if 'is_for_staff' in data:
         article.is_for_staff = data['is_for_staff']
-    
+
     if 'is_actual' in data:
         article.is_actual = data['is_actual']
     if 'publish_scope' in data and isinstance(data['publish_scope'], dict):
@@ -685,29 +685,29 @@ def update_article(article_id):
                 base_class = None
         if base_class is not None:
             article.base_class = base_class
-    
+
     if 'category_ids' in data:
         # Remove existing categories
         ArticleCategory.query.filter_by(article_id=article.id).delete()
-        
+
         # Add new categories
         for category_id in data['category_ids']:
             category = Category.query.get(category_id)
             if category:
                 article_category = ArticleCategory(article_id=article.id, category_id=category_id)
                 db.session.add(article_category)
-    
+
     article.updated_at = datetime.utcnow()
-    
+
     try:
         db.session.commit()
-        
+
         return jsonify({
             'id': article.id,
             'title': article.title,
             'message': 'Article updated successfully'
         }), 200
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to update article'}), 500
@@ -718,19 +718,19 @@ def delete_article(article_id):
     """Delete an article"""
     user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
-    
+
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    
+
     article = Article.query.get_or_404(article_id)
-    
+
     # Check if user is author or has admin role (avoid loading relationship)
     is_author = ArticleAuthor.query.filter_by(article_id=article.id, user_id=user.id).first() is not None
     is_admin = user.role.name == 'Администратор'
-    
+
     if not is_author and not is_admin:
         return jsonify({'error': 'Unauthorized'}), 403
-    
+
     try:
         # Clean up related rows to avoid FK constraint errors on delete
         ArticleCategory.query.filter_by(article_id=article.id).delete(synchronize_session=False)
@@ -741,9 +741,9 @@ def delete_article(article_id):
 
         db.session.delete(article)
         db.session.commit()
-        
+
         return jsonify({'message': 'Article deleted successfully'}), 200
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to delete article', 'details': str(e)}), 500
@@ -754,31 +754,31 @@ def publish_article(article_id):
     """Publish an article"""
     user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
-    
+
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    
+
     article = Article.query.get_or_404(article_id)
-    
+
     # Check if user is author or has admin/editor role (avoid loading relationship)
     is_author = ArticleAuthor.query.filter_by(article_id=article.id, user_id=user.id).first() is not None
     is_admin_or_editor = user.role.name in ['Администратор', 'Редактор']
-    
+
     if not is_author and not is_admin_or_editor:
         return jsonify({'error': 'Unauthorized'}), 403
-    
+
     article.is_published = True
     article.updated_at = datetime.utcnow()
-    
+
     try:
         db.session.commit()
-        
+
         return jsonify({
             'id': article.id,
             'title': article.title,
             'message': 'Article published successfully'
         }), 200
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to publish article'}), 500
@@ -850,31 +850,31 @@ def unpublish_article(article_id):
     """Unpublish an article"""
     user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
-    
+
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    
+
     article = Article.query.get_or_404(article_id)
-    
+
     # Check if user is author or has admin/editor role (avoid loading relationship)
     is_author = ArticleAuthor.query.filter_by(article_id=article.id, user_id=user.id).first() is not None
     is_admin_or_editor = user.role.name in ['Администратор', 'Редактор']
-    
+
     if not is_author and not is_admin_or_editor:
         return jsonify({'error': 'Unauthorized'}), 403
-    
+
     article.is_published = False
     article.updated_at = datetime.utcnow()
-    
+
     try:
         db.session.commit()
-        
+
         return jsonify({
             'id': article.id,
             'title': article.title,
             'message': 'Article unpublished successfully'
         }), 200
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to unpublish article'}), 500
