@@ -32,6 +32,14 @@ def init_filter_structure():
             else:
                 print(f"Используется существующее дерево фильтров: {filter_tree.name}")
 
+            # Если типы уже существуют для этого дерева, считаем структуру созданной
+            from app.models import FilterInstitutionType as _FIT
+            existing_fit = _FIT.query.filter_by(filter_tree_id=filter_tree.id, type_key='college').first()
+            if existing_fit:
+                print("Структура фильтров уже создана (найден 'college'). Пропуск инициализации.")
+                db.session.rollback()
+                return
+
             # Структура согласно вашей схеме
             structure = {
                 'college': {
