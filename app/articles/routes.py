@@ -113,10 +113,13 @@ def get_articles():
             pass
     if tag:
         query = query.filter(Article.tag == tag)
-    if institution_type_id:
-        query = query.filter(Article.speciality.has(Speciality.institution_type_id == institution_type_id))
-    elif institution_type_ids:
-        query = query.filter(Article.speciality.has(Speciality.institution_type_id.in_(institution_type_ids)))
+    # Institution type constraint via Speciality (no relationship on Article, so join explicitly)
+    if institution_type_id or institution_type_ids:
+        query = query.join(Speciality, Speciality.id == Article.speciality_id)
+        if institution_type_id:
+            query = query.filter(Speciality.institution_type_id == institution_type_id)
+        elif institution_type_ids:
+            query = query.filter(Speciality.institution_type_id.in_(institution_type_ids))
     if education_form_id:
         query = query.filter(Article.education_form_id == education_form_id)
     elif education_form_ids:
