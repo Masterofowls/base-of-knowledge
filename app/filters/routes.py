@@ -180,15 +180,23 @@ def get_filtered_articles():
         course = request.args.get('course')
         form = request.args.get('form')
 
-        from sqlalchemy import or_, and_
+        from sqlalchemy import or_, and_, cast, literal
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        def fp_contains(sub: dict):
+            try:
+                payload = json.dumps(sub, ensure_ascii=False)
+                return Article.filter_path.op('@>')(cast(literal(payload), JSONB))
+            except Exception:
+                # Fallback: always true no-op if cast fails
+                return Article.id.isnot(None)
 
         query = Article.query.filter(Article.is_published.is_(True))
 
         # City: accept either filter_path.city == city OR audience city match
         if city:
-            # filter_path intersection
-            fp_city = Article.filter_path.contains({'city': city})
-            # audience mapping: resolve city_key -> City id if possible via a lightweight map
+            fp_city = fp_contains({'city': city})
+            # audience mapping: resolve city_key -> City id
             from app.models import City
             resolved_id = None
             try:
@@ -212,20 +220,20 @@ def get_filtered_articles():
             query = query.filter(or_(fp_city, aud_city) if aud_city is not None else fp_city)
 
         if institution_type:
-            query = query.filter(Article.filter_path.contains({'institution_type': institution_type}))
+            query = query.filter(fp_contains({'institution_type': institution_type}))
         if program:
-            query = query.filter(Article.filter_path.contains({'program': program}))
+            query = query.filter(fp_contains({'program': program}))
         if course:
             # course may be numeric audience field or string in filter_path
             try:
                 course_num = int(course)
             except Exception:
                 course_num = None
-            fp_course = Article.filter_path.contains({'course': str(course)})
+            fp_course = fp_contains({'course': str(course)})
             aud_course = and_(Article.audience == 'course', Article.audience_course == course_num) if course_num is not None else None
             query = query.filter(or_(fp_course, aud_course) if aud_course is not None else fp_course)
         if form:
-            query = query.filter(Article.filter_path.contains({'form': form}))
+            query = query.filter(fp_contains({'form': form}))
 
         articles = query.order_by(Article.created_at.desc()).all()
         result = [{
