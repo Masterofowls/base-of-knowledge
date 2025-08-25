@@ -42,11 +42,11 @@ export const InputSelect : FC<InputSelectProps> = ({className, placeholder, labe
     return (
         <div className={classNames(cls.InputDiv, {}, [className, cls[theme]])} style={style}>
             {label && <label htmlFor="bread">{label}</label>}
-            <Select 
-                className={cls.Select} 
+            <Select
+                className={cls.Select}
                 placeholder={placeholder}
-                classNamePrefix="select" 
-                options={options} 
+                classNamePrefix="select"
+                options={options}
                 onChange={handleChange}
                 value={selected as any}
                 isMulti={isMulti}
