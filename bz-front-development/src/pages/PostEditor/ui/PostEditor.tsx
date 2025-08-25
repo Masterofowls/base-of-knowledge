@@ -261,18 +261,10 @@ export default function PostEditor() {
         setSuccess(null);
 
         try {
-            // Build publish_scope compatible with backend
+            // Build publish_scope: prefer city_key to let backend resolve real city_id, else publish_for_all
             let publish_scope: any = {};
-            if (!selectedFilters.institution_type || !selectedFilters.city) {
-                publish_scope.publish_for_all = true;
-            } else if (filterTree) {
-                const inst = filterTree[selectedFilters.institution_type];
-                const cityEntry = inst?.city?.[selectedFilters.city];
-                if (cityEntry && typeof cityEntry.id === 'number') {
-                    publish_scope.city_id = cityEntry.id;
-                } else {
-                    publish_scope.publish_for_all = true;
-                }
+            if (selectedFilters.city) {
+                publish_scope.city_key = selectedFilters.city;
             } else {
                 publish_scope.publish_for_all = true;
             }
