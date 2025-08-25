@@ -89,6 +89,27 @@ export default function PostEditor() {
 
     const editorRef = useRef<HTMLDivElement>(null);
 
+    const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
+        try {
+            const pastedText = event.clipboardData.getData('text');
+            if (!pastedText) return;
+            const yt = toYouTubeEmbed(pastedText);
+            const vk = toVkEmbed(pastedText);
+            const isPdf = isPdfUrl(pastedText);
+            if (yt || vk || isPdf) {
+                event.preventDefault();
+                const html = yt || vk || (isPdf ? `<a href="${pastedText}" target="_blank" rel="noopener noreferrer">${pastedText}</a>` : pastedText);
+                document.execCommand('insertHTML', false, html);
+                const container = editorRef.current;
+                if (container) {
+                    handleInputChange('content', container.innerHTML);
+                }
+            }
+        } catch (e) {
+            // no-op: fallback to default paste
+        }
+    };
+
     // Загрузка дерева фильтров
     useEffect(() => {
         const fetchFilterTree = async () => {

@@ -9,6 +9,7 @@ import {StudentDashboard} from "pages/StudentDashboard";
 import {SmartRouter} from "pages/SmartRouter";
 import {PostManagement} from "pages/PostManagement";
 import {PostEditor} from "pages/PostEditor";
+import React from 'react';
 import {GroupManagement} from "pages/GroupManagement";
 import {PostsList} from "pages/PostsList";
 import {PostView} from "pages/PostView";
@@ -89,11 +90,19 @@ export const routeConfig: Record<AppRouteKeys, RouteProps> = {
     },
     [AppRoutes.ADMIN_POST_CREATE]: {
         path: RoutePath[AppRoutes.ADMIN_POST_CREATE],
-        element: <PostEditor/>
+        element: (
+            <React.Suspense fallback={'Loading ...'}>
+                <PostEditor/>
+            </React.Suspense>
+        )
     },
     [AppRoutes.ADMIN_POST_EDIT]: {
         path: RoutePath[AppRoutes.ADMIN_POST_EDIT],
-        element: <PostEditor/>
+        element: (
+            <React.Suspense fallback={'Loading ...'}>
+                <PostEditor/>
+            </React.Suspense>
+        )
     },
     [AppRoutes.ADMIN_GROUPS]: {
         path: RoutePath[AppRoutes.ADMIN_GROUPS],
