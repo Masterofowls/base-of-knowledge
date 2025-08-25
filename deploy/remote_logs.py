@@ -18,6 +18,8 @@ client.connect(SERVER, username=USER, password=PASSWORD, timeout=30)
 commands = [
     "docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'",
     "docker logs --tail=200 kb-api || true",
+    # Explicitly run startup migrations inside the container
+    "docker exec kb-api sh -lc 'python - <<PY\nfrom app import create_app, db\nfrom app.db_migrations import run_startup_migrations\napp = create_app()\nwith app.app_context():\n  try:\n    run_startup_migrations(db)\n    print(\"startup migrations: OK\")\n  except Exception as e:\n    print(\"startup migrations: ERR\", e)\nPY' || true",
     # Use python inside the container to make a request (curl may be missing)
     "docker exec kb-api sh -lc "
     "'python - <<PY\nimport sys,urllib.request\ntry:\n  r=urllib.request.urlopen(\"http://127.0.0.1:8080/api/articles?per_page=1\", timeout=5)\n  print(r.status); print(r.read().decode())\nexcept Exception as e:\n  print(\"ERR:\", e)\nPY' || true",

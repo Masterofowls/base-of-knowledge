@@ -98,11 +98,7 @@ def run_startup_migrations(db):
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS filter_tree_id INT",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS filter_path JSON",
                 # MySQL: drop NOT NULL if exists
-                "SET @stmt := (SELECT IF(
-                    (SELECT IS_NULLABLE = 'NO' FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'filter_courses' AND COLUMN_NAME = 'city_id' LIMIT 1),
-                    'ALTER TABLE filter_courses MODIFY city_id INT NULL',
-                    NULL
-                ));",
+                "SET @stmt := (SELECT IF((SELECT IS_NULLABLE = 'NO' FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'filter_courses' AND COLUMN_NAME = 'city_id' LIMIT 1), 'ALTER TABLE filter_courses MODIFY city_id INT NULL', NULL));",
                 "PREPARE s FROM @stmt; EXECUTE s; DEALLOCATE PREPARE s;",
             ]
             for stmt in statements:
