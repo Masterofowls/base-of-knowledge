@@ -585,7 +585,10 @@ def create_article():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': 'Failed to create article'}), 500
+        try:
+            return jsonify({'error': 'Failed to create article', 'details': str(e)}), 500
+        except Exception:
+            return jsonify({'error': 'Failed to create article'}), 500
 
 @articles_bp.route('/<int:article_id>', methods=['PUT'])
 @jwt_required()

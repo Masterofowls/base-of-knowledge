@@ -25,6 +25,9 @@ commands = [
     "'python - <<PY\nimport sys,urllib.request\ntry:\n  r=urllib.request.urlopen(\"http://127.0.0.1:8080/api/articles?per_page=1\", timeout=5)\n  print(r.status); print(r.read().decode())\nexcept Exception as e:\n  print(\"ERR:\", e)\nPY' || true",
     # Tail logs again to capture traceback
     "docker logs --tail=200 kb-api || true",
+    # Try POST /api/articles with a generated JWT
+    "docker exec kb-api sh -lc 'python - <<PY\nfrom app import create_app\nfrom flask_jwt_extended import create_access_token\nimport urllib.request, json\napp = create_app()\nwith app.app_context():\n  try:\n    token = create_access_token(identity="2")\n    data = {"title":"Test Post","content":"<p>from remote_logs</p>","publish_scope":{"publish_for_all": True}}\n    req = urllib.request.Request("http://127.0.0.1:8080/api/articles/", data=json.dumps(data).encode("utf-8"), headers={"Content-Type":"application/json","Authorization":f"Bearer {token}"}, method="POST")\n    resp = urllib.request.urlopen(req, timeout=5)\n    print("POST /api/articles status:", resp.status)\n    print(resp.read().decode())\n  except Exception as e:\n    print("POST error:", e)\nPY' || true",
+    "docker logs --tail=200 kb-api || true",
 ]
 
 for cmd in commands:
