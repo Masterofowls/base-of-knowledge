@@ -258,10 +258,12 @@ def init_filter_structure():
 
                 # Создаем курсы для каждой программы
                 courses = ['1 course', '2 course', '3 course', '4 course']
+                # Привязываем курсы к базовому городу, чтобы избежать NOT NULL ограничений
+                default_city = city_filters.get('msk') or next(iter(city_filters.values()))
                 for course_key in courses:
                     course = FilterCourse(
                         study_program_id=program.id,
-                        city_id=None,  # Будет установлено позже
+                        city_id=(default_city.id if default_city else None),
                         course_key=course_key,
                         display_name=get_course_display_name(course_key),
                         sort_order=1

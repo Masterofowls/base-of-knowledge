@@ -5,7 +5,7 @@ import { Input } from 'shared/ui/Input/Input';
 import { InputSelect } from 'shared/ui/InputSelect/InputSelect';
 import Alert from '@mui/material/Alert';
 import http from 'shared/api/http';
-import './PostEditor.module.scss';
+// style import disabled in server build if missing
 
 // Новые интерфейсы для иерархической системы фильтров
 interface FilterTree {
