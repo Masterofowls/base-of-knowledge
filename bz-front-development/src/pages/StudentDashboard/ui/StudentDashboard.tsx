@@ -1,5 +1,6 @@
 import {classNames} from "shared/lib/classNames/classNames.ts";
 import PostsList from "pages/PostsList/ui/PostsList";
+import StudentTreeFilter from "widgets/StudentTreeFilter/ui/StudentTreeFilter";
 import {useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 
@@ -47,7 +48,8 @@ export default function StudentDashboard() {
 
     return (
         <main style={{display: 'flex', flexDirection: 'column'}} className={classNames('container', {}, [])}>
-            {/* Header removed; PostsList now renders the student context header */}
+            {/* Tree-based filter for student context */}
+            <StudentTreeFilter onApply={()=>{ /* re-render PostsList will pick localStorage values */ }} />
 
             {/* Feed only, full available width */}
             <div style={{display:'flex', justifyContent:'center', width:'100%'}}>
