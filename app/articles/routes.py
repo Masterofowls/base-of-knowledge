@@ -241,6 +241,7 @@ def get_articles():
             'audience_courses': article.audience_courses,
             'education_mode': article.education_mode,
             'speciality_id': article.speciality_id,
+            'filter_path': getattr(article, 'filter_path', None),
             'categories': categories,
             'authors': authors
         }

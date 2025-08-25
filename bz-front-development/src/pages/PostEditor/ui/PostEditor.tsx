@@ -103,7 +103,7 @@ export default function PostEditor() {
                     ['bold', 'italic', 'underline'],
                     [{ list: 'ordered' }, { list: 'bullet' }],
                     ['link', 'image'],
-                    ['clean']
+        ['clean']
                 ]
             }
         });
@@ -374,13 +374,13 @@ export default function PostEditor() {
                                 placeholder="Выберите форму обучения"
                             />
                         )}
-                    </div>
+                                </div>
                     </div>
 
                 <div className="form-group">
                     <label>Содержимое</label>
                     <div ref={quillContainerRef} className="content-editor" onPaste={handlePaste as any} />
-                </div>
+                    </div>
 
                 <div className="form-group">
                     <label>
@@ -401,8 +401,8 @@ export default function PostEditor() {
                             onChange={(e) => handleInputChange('is_for_staff', e.target.checked)}
                         />
                         Только для персонала
-                    </label>
-                            </div>
+                        </label>
+                    </div>
 
                 <div className="form-group">
                     <label>

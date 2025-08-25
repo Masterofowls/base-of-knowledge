@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import http from 'shared/api/http';
 import { InputSelect } from 'shared/ui/InputSelect/InputSelect';
-import { Button } from 'shared/ui/Button';
+import Button from '@mui/material/Button';
 
 interface FilterTree {
   [key: string]: {
@@ -28,9 +28,17 @@ interface SelectedPath {
   form?: string;
 }
 
-type Props = { onApply?: () => void; onResults?: (items: Array<{ id:number; title:string; content:string; created_at?: string }>) => void };
+type Props = {
+  onApply?: () => void;
+  onResults?: (items: Array<{ id:number; title:string; content:string; created_at?: string }>) => void;
+  onFilterChange?: (items: Array<{ id:number; title:string; content:string; created_at?: string }>) => void;
+  // Disable backend fetching of filtered articles; only emit selection changes
+  disableFetch?: boolean;
+  // Emit raw selection and resolved meta (e.g., city id, course number)
+  onSelectionChange?: (sel: SelectedPath, resolved: { cityId?: number; courseNum?: number }) => void;
+};
 
-const StudentTreeFilter: React.FC<Props> = ({ onApply, onResults }) => {
+const StudentTreeFilter: React.FC<Props> = ({ onApply, onResults, onFilterChange, disableFetch, onSelectionChange }) => {
   const [tree, setTree] = useState<FilterTree | null>(null);
   const [sel, setSel] = useState<SelectedPath>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -80,10 +88,33 @@ const StudentTreeFilter: React.FC<Props> = ({ onApply, onResults }) => {
     });
   }
 
-  // Fetch filtered articles incrementally on every selection
+  // Notify parent about selection changes
   useEffect(() => {
+    try {
+      let cityId: number | undefined = undefined;
+      if (sel.institution_type && sel.city) {
+        const c = tree?.[sel.institution_type]?.city?.[sel.city];
+        if (c && typeof c.id === 'number') cityId = c.id;
+      }
+      let courseNum: number | undefined = undefined;
+      if (sel.course) {
+        const m = sel.course.match(/^(\d+)/);
+        if (m) courseNum = Number(m[1]);
+      }
+      if (onSelectionChange) onSelectionChange(sel, { cityId, courseNum });
+    } catch {}
+  }, [sel, tree, onSelectionChange]);
+
+  // Fetch filtered articles incrementally on every selection (optional)
+  useEffect(() => {
+    if (disableFetch) {
+      if (onResults) onResults([]);
+      if (onFilterChange) onFilterChange([]);
+      return;
+    }
     if (!sel.institution_type && !sel.city && !sel.program && !sel.course && !sel.form) {
       if (onResults) onResults([]);
+      if (onFilterChange) onFilterChange([]);
       return;
     }
     const params: Record<string, any> = {};
@@ -99,11 +130,13 @@ const StudentTreeFilter: React.FC<Props> = ({ onApply, onResults }) => {
     http.get('/api/filters/articles', { params }).then(res => {
       const items = (res.data?.data || []) as Array<{ id:number; title:string; content:string; created_at?: string }>;
       if (onResults) onResults(items);
+      if (onFilterChange) onFilterChange(items);
     }).catch((e:any)=>{
       setErr(e?.response?.data?.error || 'Не удалось получить посты');
       if (onResults) onResults([]);
+      if (onFilterChange) onFilterChange([]);
     }).finally(()=> setFetching(false));
-  }, [sel, onResults]);
+  }, [sel, onResults, onFilterChange]);
 
   function apply() {
     try {
