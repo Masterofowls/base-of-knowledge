@@ -8,6 +8,7 @@
 - Root SSH доступ
 
 Установка Docker и плагина compose:
+
 ```bash
 apt-get update
 apt-get install -y ca-certificates curl gnupg
@@ -24,6 +25,7 @@ systemctl enable --now docker
 ```
 
 Опционально: swap 2ГБ, если сборка фронта падает по памяти:
+
 ```bash
 fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
 chmod 600 /swapfile
@@ -66,10 +68,12 @@ docker compose up -d
 ```
 
 DSN:
+
 - из backend-контейнера: `postgresql+psycopg2://kb_user:change_me_strong@kb-db:5432/knowledge_base`
 - с хоста: `postgresql+psycopg2://kb_user:change_me_strong@127.0.0.1:5432/knowledge_base`
 
 Проверка:
+
 ```bash
 docker exec -it kb-db psql -U kb_user -d knowledge_base -c '\l'
 ```
@@ -79,6 +83,7 @@ docker exec -it kb-db psql -U kb_user -d knowledge_base -c '\l'
 ## 2) Загрузка репозитория на сервер (только отслеживаемые файлы)
 
 С локальной машины (Windows PowerShell):
+
 ```powershell
 cd B:\base-of-knowledge
 # чистый архив Git без .git и локального мусора
@@ -90,12 +95,14 @@ git archive --format=tar HEAD | ssh root@SERVER_IP "mkdir -p /opt/kb/app && tar 
 ## 3) Backend (Flask/Gunicorn в Docker)
 
 Сборка образа:
+
 ```bash
 cd /opt/kb/app
 docker build -t kb-backend .
 ```
 
 Запуск (хост 9000 → контейнер 8080):
+
 ```bash
 docker rm -f kb-api 2>/dev/null || true
 
@@ -107,11 +114,13 @@ docker run -d --name kb-api --restart unless-stopped \
 ```
 
 Если первичная миграция дала ошибку — пометить схему актуальной (однократно):
+
 ```bash
 docker exec kb-api sh -c 'FLASK_APP=wsgi.py flask db stamp head'
 ```
 
 Проверка API:
+
 ```bash
 curl -sS http://127.0.0.1:9000/
 ```
@@ -121,6 +130,7 @@ curl -sS http://127.0.0.1:9000/
 ## 4) Frontend (Vite/React) и Nginx
 
 Node.js 20 через nvm:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"
@@ -130,6 +140,7 @@ node -v
 ```
 
 Сборка фронта с `VITE_API_URL="/api"`:
+
 ```bash
 cd /opt/kb/app/bz-front-development
 export VITE_API_URL="/api"
@@ -138,6 +149,7 @@ npm run build:ci
 ```
 
 Nginx-сайт:
+
 ```bash
 apt-get install -y nginx
 cat > /etc/nginx/sites-available/kb.conf <<'NGINX'
@@ -165,10 +177,12 @@ nginx -t && systemctl reload nginx
 ```
 
 Что помогло на практике:
+
 - Если фронт ранее собран с двойным `/api` — временно добавить:
   ```nginx
   rewrite ^/api/api/(.*)$ /api/$1 last;
   ```
+
   (убрать после пересборки с правильным `VITE_API_URL`)
 - Linux чувствителен к регистру импортов — исправить пути (`ItemList` vs `Itemlist`).
 - OOM при сборке Node — добавить swap и использовать `npm run build:ci`.
@@ -289,6 +303,7 @@ git archive --format=tar HEAD | ssh root@SERVER_IP 'tar -xf - -C /opt/kb/app'
 ```
 
 Фронтенд:
+
 ```bash
 cd /opt/kb/app/bz-front-development
 export VITE_API_URL="/api"
@@ -298,6 +313,7 @@ nginx -t && systemctl reload nginx
 ```
 
 Бэкенд (если менялись Python-файлы):
+
 ```bash
 cd /opt/kb/app
 docker build -t kb-backend .
@@ -324,4 +340,3 @@ curl -sS http://127.0.0.1/api/articles/ # пример API
 - Двойной `/api/api` → временный rewrite и пересборка фронта без дублирования.
 - Регистр путей в Linux → поправить импорты под верный регистр.
 - Недостаток памяти при сборке → добавить swap и использовать `build:ci`.
-
