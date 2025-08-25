@@ -91,7 +91,7 @@ class FilterCourse(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     study_program_id = db.Column(db.Integer, db.ForeignKey('filter_study_programs.id'), nullable=False)
-    city_id = db.Column(db.Integer, db.ForeignKey('filter_cities.id'), nullable=False)
+    city_id = db.Column(db.Integer, db.ForeignKey('filter_cities.id'), nullable=True)
     course_key = db.Column(db.String(20), nullable=False)  # '1 course', '2 course', '3 course', '4 course'
     display_name = db.Column(db.String(100), nullable=False)  # '1 курс', '2 курс', etc.
     is_active = db.Column(db.Boolean, default=True)

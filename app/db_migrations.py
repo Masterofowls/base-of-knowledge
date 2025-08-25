@@ -26,6 +26,8 @@ def run_startup_migrations(db):
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_mode VARCHAR(20)",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_form_id INTEGER",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS speciality_id INTEGER",
+                # Relax NOT NULL on filter_courses.city_id (unconditional safe try)
+                "ALTER TABLE IF EXISTS filter_courses ALTER COLUMN city_id DROP NOT NULL",
             ]
             for stmt in statements:
                 conn.execute(text(stmt))
@@ -87,6 +89,13 @@ def run_startup_migrations(db):
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_mode VARCHAR(20)",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_form_id INT",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS speciality_id INT",
+                # MySQL: drop NOT NULL if exists
+                "SET @stmt := (SELECT IF(
+                    (SELECT IS_NULLABLE = 'NO' FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'filter_courses' AND COLUMN_NAME = 'city_id' LIMIT 1),
+                    'ALTER TABLE filter_courses MODIFY city_id INT NULL',
+                    NULL
+                ));",
+                "PREPARE s FROM @stmt; EXECUTE s; DEALLOCATE PREPARE s;",
             ]
             for stmt in statements:
                 conn.execute(text(stmt))

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button } from '@/shared/ui/Button';
-import { Input } from '@/shared/ui/Input';
-import { InputSelect } from '@/shared/ui/InputSelect';
-import { Alert } from '@/shared/ui/Alert';
-import { http } from '@/shared/api/http';
+import { Button } from 'shared/ui/Button';
+import { Input } from 'shared/ui/Input/Input';
+import { InputSelect } from 'shared/ui/InputSelect/InputSelect';
+import Alert from '@mui/material/Alert';
+import http from 'shared/api/http';
 import './PostEditor.module.scss';
 
 // Новые интерфейсы для иерархической системы фильтров
