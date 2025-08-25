@@ -36,13 +36,20 @@ remote_script = f"""
 set -e
 cd {REMOTE_PATH}
 tar -xf {ARCHIVE_NAME}
+# Backend build & run
 docker build -t kb-backend .
 (docker rm -f kb-api >/dev/null 2>&1) || true
+# Run backend on port 9000 and link to postgres_default network
 docker run -d --name kb-api --restart unless-stopped \
   --network postgres_default -p 9000:8080 \
   -e DATABASE_URL='postgresql+psycopg2://kb_user:change_me_strong@kb-db:5432/knowledge_base' \
   -e JWT_SECRET_KEY='change-me' \
   kb-backend
+# DB migrations (try upgrade; if fails on first, stamp head then upgrade)
+docker exec kb-api sh -c 'FLASK_APP=wsgi.py flask db upgrade || (FLASK_APP=wsgi.py flask db stamp head && FLASK_APP=wsgi.py flask db upgrade)'
+# Initialize new filter structure (idempotent)
+docker exec kb-api sh -c 'python init_filters.py || true'
+# Frontend build
 cd bz-front-development
 export VITE_API_URL="/api"
 if [ -f "$HOME/.nvm/nvm.sh" ]; then . "$HOME/.nvm/nvm.sh"; fi

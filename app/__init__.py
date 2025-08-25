@@ -20,7 +20,7 @@ def create_app(config_name='development'):
     app = Flask(__name__)
     # Avoid trailing-slash redirects that break CORS preflight
     app.url_map.strict_slashes = False
-    
+
     # Конфигурация
     if config_name == 'development':
         # PostgreSQL по умолчанию (локально). Можно переопределить через переменную окружения DATABASE_URL
@@ -32,12 +32,12 @@ def create_app(config_name='development'):
         if not db_url:
             db_url = 'sqlite:///data.db'
         app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-    
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False  # Tokens don't expire for now
     app.config['JWT_TOKEN_LOCATION'] = ['headers']
-    
+
     # Initialize extensions with app
     db.init_app(app)
     migrate.init_app(app, db)
@@ -63,19 +63,21 @@ def create_app(config_name='development'):
         expose_headers=["Content-Type", "Authorization"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     )
-    
+
     # Register blueprints
     from app.auth import auth_bp
     from app.articles import articles_bp
     from app.categories import categories_bp
     from app.users import users_bp
     from app.media import media_bp
-    
+    from app.filters import filters_bp
+
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(articles_bp, url_prefix='/api/articles')
     app.register_blueprint(categories_bp, url_prefix='/api/categories')
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(media_bp, url_prefix='/api/media')
+    app.register_blueprint(filters_bp, url_prefix='/api/filters')
 
     # Ensure database tables exist (useful for SQLite/demo deployments)
     with app.app_context():
@@ -139,5 +141,5 @@ def create_app(config_name='development'):
             'version': '1.0',
             'docs': '/api/*',
         }), 200
-    
+
     return app

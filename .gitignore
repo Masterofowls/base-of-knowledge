@@ -47,3 +47,9 @@ __pycache__/
 /tests
 /.venv
 bz-front-development/api-tests/cleanup-jest-rules.mjs
+/.cursorignore
+.cursor/rules/rule.mdc
+
+sync_config.jsonc
+/.cursor/rules
+/Bz (1).filtr.drawio
