@@ -537,6 +537,24 @@ def create_article():
     if derived_audience == 'city' and not resolved_city_id:
         derived_audience = 'all'
 
+    # Build filter_path from publish_scope for flexible filtering
+    filter_path_payload = {}
+    try:
+        if isinstance(publish_scope, dict):
+            if isinstance(publish_scope.get('city_key'), str):
+                filter_path_payload['city'] = publish_scope.get('city_key')
+            if publish_scope.get('course') is not None:
+                # store as string for consistency with tree labels if needed
+                filter_path_payload['course'] = str(publish_scope.get('course'))
+            if isinstance(publish_scope.get('program'), str):
+                filter_path_payload['program'] = publish_scope.get('program')
+            if isinstance(publish_scope.get('institution_type'), str):
+                filter_path_payload['institution_type'] = publish_scope.get('institution_type')
+            if isinstance(publish_scope.get('form'), str):
+                filter_path_payload['form'] = publish_scope.get('form')
+    except Exception:
+        filter_path_payload = {}
+
     article = Article(
         title=title,
         content=content,
@@ -591,6 +609,15 @@ def create_article():
         except Exception:
             base_class = None
     article.base_class = base_class
+    # Save filter_path if any
+    try:
+        if filter_path_payload:
+            import json as _json
+            # If DB column is JSON/JSONB, assigning dict works; ensure serializable
+            _ = _json.dumps(filter_path_payload)
+            article.filter_path = filter_path_payload
+    except Exception:
+        pass
 
     try:
         db.session.add(article)
