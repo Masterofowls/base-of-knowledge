@@ -483,7 +483,7 @@ def create_article():
     derived_audience = None
     if publish_scope.get('publish_for_all'):
         derived_audience = 'all'
-    elif publish_scope.get('city_id'):
+    elif publish_scope.get('city_id') or publish_scope.get('city_key'):
         derived_audience = 'city'
     elif publish_scope.get('course'):
         derived_audience = 'course'
@@ -505,6 +505,38 @@ def create_article():
         except Exception:
             pass
 
+    # Resolve city_id if provided as key or potentially invalid id
+    resolved_city_id = None
+    try:
+        requested_city_id = publish_scope.get('city_id')
+        if requested_city_id:
+            # verify exists
+            if City.query.get(requested_city_id):
+                resolved_city_id = requested_city_id
+        if resolved_city_id is None and isinstance(publish_scope.get('city_key'), str):
+            city_key = publish_scope.get('city_key')
+            # map common keys to russian names used in cities table
+            key_to_name = {
+                'nsk': 'Новосибирск',
+                'spb': 'Санкт-Петербург',
+                'msk': 'Москва',
+                'ekb': 'Екатеринбург',
+                'krd': 'Краснодар',
+                'rnd': 'Ростов-на-Дону',
+            }
+            target_name = key_to_name.get(city_key)
+            if target_name:
+                from sqlalchemy import func
+                c = City.query.filter(func.lower(City.name) == func.lower(target_name)).first()
+                if c:
+                    resolved_city_id = c.id
+    except Exception:
+        resolved_city_id = None
+
+    # If audience is city but city can't be resolved, fallback to 'all'
+    if derived_audience == 'city' and not resolved_city_id:
+        derived_audience = 'all'
+
     article = Article(
         title=title,
         content=content,
@@ -514,7 +546,7 @@ def create_article():
         tag=(incoming_tag if incoming_tag in ('study','group') else None),
         base_class=None,
         audience=derived_audience,
-        audience_city_id=(publish_scope.get('city_id') if derived_audience == 'city' else None),
+        audience_city_id=(resolved_city_id if derived_audience == 'city' else None),
         audience_course=(publish_scope.get('course') if derived_audience == 'course' else None),
         audience_admission_year_id=(publish_scope.get('admission_year_id') if derived_audience not in ('all','city') else None)
     )
