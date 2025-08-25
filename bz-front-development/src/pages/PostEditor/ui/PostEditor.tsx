@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Quill from 'quill';
+import 'quill/dist/quill.snow.css';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from 'shared/ui/Button';
 import { Input } from 'shared/ui/Input/Input';
@@ -87,16 +89,33 @@ export default function PostEditor() {
         filter_path: {}
     });
 
-    const editorRef = useRef<HTMLDivElement>(null);
+    const quillContainerRef = useRef<HTMLDivElement>(null);
+    const quillRef = useRef<Quill | null>(null);
 
-    // initialize editor content once when id/content changes
+    // Initialize Quill editor once
     useEffect(() => {
-        const el = editorRef.current;
-        if (el && typeof formData.content === 'string' && el.innerHTML !== formData.content) {
-            el.innerHTML = formData.content || '';
+        if (!quillContainerRef.current || quillRef.current) return;
+        const q = new Quill(quillContainerRef.current, {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ header: [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['link', 'image'],
+                    ['clean']
+                ]
+            }
+        });
+        quillRef.current = q;
+        if (formData.content) {
+            q.root.innerHTML = formData.content;
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id]);
+        q.on('text-change', () => {
+            const html = q.root.innerHTML;
+            handleInputChange('content', html);
+        });
+    }, [formData.content]);
 
     const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
         try {
@@ -108,10 +127,11 @@ export default function PostEditor() {
             if (yt || vk || isPdf) {
                 event.preventDefault();
                 const html = yt || vk || (isPdf ? `<a href="${pastedText}" target="_blank" rel="noopener noreferrer">${pastedText}</a>` : pastedText);
-                document.execCommand('insertHTML', false, html);
-                const container = editorRef.current;
-                if (container) {
-                    handleInputChange('content', container.innerHTML);
+                const q = quillRef.current;
+                if (q) {
+                    const range = q.getSelection(true);
+                    const index = range ? range.index : q.getLength();
+                    q.clipboard.dangerouslyPasteHTML(index, html);
                 }
             }
         } catch (e) {
@@ -241,9 +261,25 @@ export default function PostEditor() {
         setSuccess(null);
 
         try {
+            // Build publish_scope compatible with backend
+            let publish_scope: any = {};
+            if (!selectedFilters.institution_type || !selectedFilters.city) {
+                publish_scope.publish_for_all = true;
+            } else if (filterTree) {
+                const inst = filterTree[selectedFilters.institution_type];
+                const cityEntry = inst?.city?.[selectedFilters.city];
+                if (cityEntry && typeof cityEntry.id === 'number') {
+                    publish_scope.city_id = cityEntry.id;
+                } else {
+                    publish_scope.publish_for_all = true;
+                }
+            } else {
+                publish_scope.publish_for_all = true;
+            }
+
             const postData = {
                 ...formData,
-                filter_path: selectedFilters
+                publish_scope
             };
 
             if (id) {
@@ -348,15 +384,8 @@ export default function PostEditor() {
 
                 <div className="form-group">
                     <label>Содержимое</label>
-                    <div
-                        ref={editorRef}
-                        className="content-editor"
-                        contentEditable
-                        suppressContentEditableWarning
-                        onInput={(e) => handleInputChange('content', e.currentTarget.innerHTML)}
-                        onPaste={handlePaste}
-                        />
-                    </div>
+                    <div ref={quillContainerRef} className="content-editor" onPaste={handlePaste as any} />
+                </div>
 
                 <div className="form-group">
                     <label>
