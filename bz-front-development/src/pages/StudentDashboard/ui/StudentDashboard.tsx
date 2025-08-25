@@ -1,7 +1,6 @@
 import {classNames} from "shared/lib/classNames/classNames.ts";
 import PostsList from "pages/PostsList/ui/PostsList";
 import StudentTreeFilter from "widgets/StudentTreeFilter/ui/StudentTreeFilter";
-import {useState} from 'react';
 import {useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 
