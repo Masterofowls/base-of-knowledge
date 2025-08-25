@@ -36,27 +36,38 @@ const StudentTreeFilter: React.FC<Props> = ({ onApply, onResults }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [cityDict, setCityDict] = useState<Array<{ value:string; label:string }>>([]);
 
   useEffect(() => {
     let ignore = false;
     setIsLoading(true);
-    http.get('/api/filters/tree').then(res => {
+    Promise.all([
+      http.get('/api/filters/tree').catch(()=>null),
+      http.get('/api/categories/cities').catch(()=>null),
+    ]).then(([resTree, resCities]) => {
       if (ignore) return;
-      if (res.data?.success) setTree(res.data.data as FilterTree);
-    }).catch(() => {}).finally(() => setIsLoading(false));
+      if (resTree?.data?.success) setTree(resTree.data.data as FilterTree);
+      const cds = (resCities?.data || []).map((c:any)=>({ value: (c.key || '').toLowerCase(), label: c.name }))
+        .filter((c:any)=> c.value);
+      setCityDict(cds);
+    }).finally(()=> setIsLoading(false));
     return () => { ignore = true };
   }, []);
 
   const options = useMemo(() => {
     const empty: Array<{ value: string; label: string }> = [];
-    if (!tree) return { inst: empty, city: empty, program: empty, course: empty, form: empty };
+    if (!tree) return { inst: empty, city: cityDict, program: empty, course: empty, form: empty };
     const inst = Object.entries(tree).map(([key, value]) => ({ value: key, label: value.display_name }));
-    const city = sel.institution_type ? Object.entries(tree[sel.institution_type].city).map(([key, value]) => ({ value: key, label: value.display_name })) : empty;
+    // city: if institution selected use tree cities, else use dict (all cities)
+    let city = cityDict;
+    if (sel.institution_type) {
+      city = Object.entries(tree[sel.institution_type].city).map(([key, value]) => ({ value: key, label: value.display_name }));
+    }
     const program = sel.institution_type ? Object.keys(tree[sel.institution_type].study_info).map(key => ({ value: key, label: key })) : empty;
     const course = (sel.institution_type && sel.program) ? Object.keys(tree[sel.institution_type].study_info[sel.program]).map(key => ({ value: key, label: key })) : empty;
     const form = (sel.institution_type && sel.program && sel.course) ? Object.keys(tree[sel.institution_type].study_info[sel.program][sel.course]).map(key => ({ value: key, label: key })) : empty;
     return { inst, city, program, course, form };
-  }, [tree, sel]);
+  }, [tree, sel, cityDict]);
 
   function change(key: keyof SelectedPath, value: string) {
     setSel(prev => {
@@ -112,6 +123,8 @@ const StudentTreeFilter: React.FC<Props> = ({ onApply, onResults }) => {
         else localStorage.removeItem('student_course');
       } else localStorage.removeItem('student_course');
       // form not used server-side yet; keep for future
+      localStorage.setItem('user_role','student');
+      localStorage.setItem('strict_audience','1');
       if (onApply) onApply();
     } catch {}
   }

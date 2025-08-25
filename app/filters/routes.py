@@ -186,7 +186,7 @@ def get_filtered_articles():
         def fp_contains(sub: dict):
             try:
                 payload = json.dumps(sub, ensure_ascii=False)
-                return Article.filter_path.op('@>')(cast(literal(payload), JSONB))
+                return cast(Article.filter_path, JSONB).op('@>')(cast(literal(payload), JSONB))
             except Exception:
                 # Fallback: always true no-op if cast fails
                 return Article.id.isnot(None)
