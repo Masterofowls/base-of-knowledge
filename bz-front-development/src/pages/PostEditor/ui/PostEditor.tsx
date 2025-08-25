@@ -89,6 +89,15 @@ export default function PostEditor() {
 
     const editorRef = useRef<HTMLDivElement>(null);
 
+    // initialize editor content once when id/content changes
+    useEffect(() => {
+        const el = editorRef.current;
+        if (el && typeof formData.content === 'string' && el.innerHTML !== formData.content) {
+            el.innerHTML = formData.content || '';
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id]);
+
     const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
         try {
             const pastedText = event.clipboardData.getData('text');
@@ -120,8 +129,8 @@ export default function PostEditor() {
                 }
         } catch (error) {
                 console.error('Error fetching filter tree:', error);
-            }
-        };
+        }
+    };
 
         fetchFilterTree();
     }, []);
@@ -343,9 +352,9 @@ export default function PostEditor() {
                         ref={editorRef}
                         className="content-editor"
                         contentEditable
+                        suppressContentEditableWarning
                         onInput={(e) => handleInputChange('content', e.currentTarget.innerHTML)}
                         onPaste={handlePaste}
-                        dangerouslySetInnerHTML={{ __html: formData.content }}
                         />
                     </div>
 
