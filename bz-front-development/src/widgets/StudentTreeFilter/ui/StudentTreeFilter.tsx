@@ -28,12 +28,14 @@ interface SelectedPath {
   form?: string;
 }
 
-type Props = { onApply?: () => void };
+type Props = { onApply?: () => void; onResults?: (items: Array<{ id:number; title:string; content:string; created_at?: string }>) => void };
 
-const StudentTreeFilter: React.FC<Props> = ({ onApply }) => {
+const StudentTreeFilter: React.FC<Props> = ({ onApply, onResults }) => {
   const [tree, setTree] = useState<FilterTree | null>(null);
   const [sel, setSel] = useState<SelectedPath>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -66,6 +68,31 @@ const StudentTreeFilter: React.FC<Props> = ({ onApply }) => {
       return next;
     });
   }
+
+  // Fetch filtered articles incrementally on every selection
+  useEffect(() => {
+    if (!sel.institution_type && !sel.city && !sel.program && !sel.course && !sel.form) {
+      if (onResults) onResults([]);
+      return;
+    }
+    const params: Record<string, any> = {};
+    if (sel.city) params.city = sel.city;
+    if (sel.institution_type) params.institution_type = sel.institution_type;
+    if (sel.program) params.program = sel.program;
+    if (sel.course) {
+      const m = sel.course.match(/^(\d+)/);
+      params.course = m ? m[1] : sel.course;
+    }
+    if (sel.form) params.form = sel.form;
+    setFetching(true); setErr(null);
+    http.get('/api/filters/articles', { params }).then(res => {
+      const items = (res.data?.data || []) as Array<{ id:number; title:string; content:string; created_at?: string }>;
+      if (onResults) onResults(items);
+    }).catch((e:any)=>{
+      setErr(e?.response?.data?.error || 'Не удалось получить посты');
+      if (onResults) onResults([]);
+    }).finally(()=> setFetching(false));
+  }, [sel, onResults]);
 
   function apply() {
     try {
@@ -112,7 +139,8 @@ const StudentTreeFilter: React.FC<Props> = ({ onApply }) => {
         <InputSelect placeholder='Выберите' options={options.form} value={sel.form || ''} onChange={(v)=>change('form', v)} />
       </div>
       <div style={{ gridColumn:'1 / -1', display:'flex', justifyContent:'flex-end' }}>
-        <Button variant='contained' disabled={isLoading} onClick={apply}>Применить</Button>
+        {err && <span style={{ color:'#E44A77', marginRight: 12, fontSize:12 }}>{err}</span>}
+        <Button variant='contained' disabled={isLoading || fetching} onClick={apply}>{fetching ? 'Загрузка…' : 'Применить'}</Button>
       </div>
     </div>
   );

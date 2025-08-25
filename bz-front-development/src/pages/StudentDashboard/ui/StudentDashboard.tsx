@@ -1,11 +1,13 @@
 import {classNames} from "shared/lib/classNames/classNames.ts";
 import PostsList from "pages/PostsList/ui/PostsList";
 import StudentTreeFilter from "widgets/StudentTreeFilter/ui/StudentTreeFilter";
+import {useState} from 'react';
 import {useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 
 export default function StudentDashboard() {
     const navigate = useNavigate();
+    const [filtered, setFiltered] = useState<any[] | null>(null);
     const [studentInfo, setStudentInfo] = useState<{
         city?: string;
         group: string;
@@ -49,12 +51,23 @@ export default function StudentDashboard() {
     return (
         <main style={{display: 'flex', flexDirection: 'column'}} className={classNames('container', {}, [])}>
             {/* Tree-based filter for student context */}
-            <StudentTreeFilter onApply={()=>{ /* re-render PostsList will pick localStorage values */ }} />
+            <StudentTreeFilter onApply={()=>{ /* re-render PostsList will pick localStorage values */ }} onResults={(items)=> setFiltered(items)} />
 
             {/* Feed only, full available width */}
             <div style={{display:'flex', justifyContent:'center', width:'100%'}}>
                 <div style={{flex: 1, maxWidth: 900}}>
-                    <PostsList fullscreen notionMode />
+                    {filtered && (
+                        <div style={{ padding:'0 12px' }}>
+                            {filtered.length === 0 && <div style={{ color:'#888', padding:'8px 0' }}>Ничего не найдено</div>}
+                            {filtered.map((a:any)=> (
+                                <div key={a.id} style={{ borderBottom:'1px solid rgba(0,0,0,0.08)', padding:'12px 0' }}>
+                                    <div style={{ fontWeight:700 }}>{a.title}</div>
+                                    <div style={{ color:'#555', fontSize:14 }} dangerouslySetInnerHTML={{ __html: (a.content || '') }} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {!filtered && <PostsList fullscreen notionMode />}
                 </div>
             </div>
         </main>
