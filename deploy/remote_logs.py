@@ -21,6 +21,8 @@ commands = [
     # Use python inside the container to make a request (curl may be missing)
     "docker exec kb-api sh -lc "
     "'python - <<PY\nimport sys,urllib.request\ntry:\n  r=urllib.request.urlopen(\"http://127.0.0.1:8080/api/articles?per_page=1\", timeout=5)\n  print(r.status); print(r.read().decode())\nexcept Exception as e:\n  print(\"ERR:\", e)\nPY' || true",
+    # Tail logs again to capture traceback
+    "docker logs --tail=200 kb-api || true",
 ]
 
 for cmd in commands:

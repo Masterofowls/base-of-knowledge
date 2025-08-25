@@ -26,6 +26,9 @@ def run_startup_migrations(db):
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_mode VARCHAR(20)",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_form_id INTEGER",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS speciality_id INTEGER",
+                # New hierarchical filter columns
+                "ALTER TABLE articles ADD COLUMN IF NOT EXISTS filter_tree_id INTEGER",
+                "ALTER TABLE articles ADD COLUMN IF NOT EXISTS filter_path JSONB",
                 # Relax NOT NULL on filter_courses.city_id (unconditional safe try)
                 "ALTER TABLE IF EXISTS filter_courses ALTER COLUMN city_id DROP NOT NULL",
             ]
@@ -47,7 +50,9 @@ def run_startup_migrations(db):
                 "CREATE INDEX IF NOT EXISTS idx_articles_audience ON articles (audience)",
                 "CREATE INDEX IF NOT EXISTS idx_articles_base_class ON articles (base_class)",
                 "CREATE INDEX IF NOT EXISTS idx_articles_city ON articles (audience_city_id)",
-                "CREATE INDEX IF NOT EXISTS idx_articles_course ON articles (audience_course)"
+                "CREATE INDEX IF NOT EXISTS idx_articles_course ON articles (audience_course)",
+                # GIN index for JSONB filter_path
+                "CREATE INDEX IF NOT EXISTS idx_articles_filter_path ON articles USING GIN (filter_path)"
             ]:
                 try:
                     conn.execute(text(idx_stmt))
@@ -89,6 +94,9 @@ def run_startup_migrations(db):
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_mode VARCHAR(20)",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS education_form_id INT",
                 "ALTER TABLE articles ADD COLUMN IF NOT EXISTS speciality_id INT",
+                # New hierarchical filter columns
+                "ALTER TABLE articles ADD COLUMN IF NOT EXISTS filter_tree_id INT",
+                "ALTER TABLE articles ADD COLUMN IF NOT EXISTS filter_path JSON",
                 # MySQL: drop NOT NULL if exists
                 "SET @stmt := (SELECT IF(
                     (SELECT IS_NULLABLE = 'NO' FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'filter_courses' AND COLUMN_NAME = 'city_id' LIMIT 1),
