@@ -298,7 +298,10 @@ export default function PostEditor() {
             }, 1500);
 
         } catch (error: any) {
-            setError(error.response?.data?.error || 'Произошла ошибка при сохранении поста');
+            const msg = error?.response?.data?.error || 'Произошла ошибка при сохранении поста';
+            const details = error?.response?.data?.details;
+            setError(details ? `${msg}: ${details}` : msg);
+            try { console.error('Create article failed:', error?.response?.data || error?.message || error); } catch (_) {}
         } finally {
             setIsLoading(false);
         }
