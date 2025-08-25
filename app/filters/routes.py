@@ -169,55 +169,77 @@ def create_filter_structure(tree_id):
 
 @filters_bp.route('/articles', methods=['GET'])
 def get_filtered_articles():
-    """Получить статьи с фильтрацией по иерархии"""
+    """Инкрементальная фильтрация: каждый следующий параметр сужает выбор (AND).
+    Поддержка как filter_path, так и полей аудитории (город/курс).
+    Параметры: city, institution_type, program, course, form.
+    """
     try:
-        # Параметры фильтрации
-        institution_type = request.args.get('institution_type')
         city = request.args.get('city')
+        institution_type = request.args.get('institution_type')
         program = request.args.get('program')
         course = request.args.get('course')
         form = request.args.get('form')
 
-        # Базовый запрос
-        query = Article.query.filter_by(is_published=True)
+        from sqlalchemy import or_, and_
 
-        # Применяем фильтры
+        query = Article.query.filter(Article.is_published.is_(True))
+
+        # City: accept either filter_path.city == city OR audience city match
+        if city:
+            # filter_path intersection
+            fp_city = Article.filter_path.contains({'city': city})
+            # audience mapping: resolve city_key -> City id if possible via a lightweight map
+            from app.models import City
+            resolved_id = None
+            try:
+                key_to_name = {
+                    'nsk': 'Новосибирск',
+                    'spb': 'Санкт-Петербург',
+                    'msk': 'Москва',
+                    'ekb': 'Екатеринбург',
+                    'krd': 'Краснодар',
+                    'rnd': 'Ростов-на-Дону',
+                }
+                target = key_to_name.get(city)
+                if target:
+                    from sqlalchemy import func
+                    c = City.query.filter(func.lower(City.name) == func.lower(target)).first()
+                    if c:
+                        resolved_id = c.id
+            except Exception:
+                resolved_id = None
+            aud_city = and_(Article.audience == 'city', Article.audience_city_id == resolved_id) if resolved_id else None
+            query = query.filter(or_(fp_city, aud_city) if aud_city is not None else fp_city)
+
         if institution_type:
             query = query.filter(Article.filter_path.contains({'institution_type': institution_type}))
-
-        if city:
-            query = query.filter(Article.filter_path.contains({'city': city}))
-
         if program:
             query = query.filter(Article.filter_path.contains({'program': program}))
-
         if course:
-            query = query.filter(Article.filter_path.contains({'course': course}))
-
+            # course may be numeric audience field or string in filter_path
+            try:
+                course_num = int(course)
+            except Exception:
+                course_num = None
+            fp_course = Article.filter_path.contains({'course': str(course)})
+            aud_course = and_(Article.audience == 'course', Article.audience_course == course_num) if course_num is not None else None
+            query = query.filter(or_(fp_course, aud_course) if aud_course is not None else fp_course)
         if form:
             query = query.filter(Article.filter_path.contains({'form': form}))
 
-        # Получаем статьи
         articles = query.order_by(Article.created_at.desc()).all()
-
-        # Формируем ответ
-        articles_data = []
-        for article in articles:
-            articles_data.append({
-                'id': article.id,
-                'title': article.title,
-                'content': article.content[:200] + '...' if len(article.content) > 200 else article.content,
-                'created_at': article.created_at.isoformat(),
-                'filter_path': article.filter_path,
-                'views_count': article.views_count
-            })
-
-        return jsonify({
-            'success': True,
-            'data': articles_data,
-            'total': len(articles_data)
-        })
-
+        result = [{
+            'id': a.id,
+            'title': a.title,
+            'content': (a.content[:200] + '...') if a.content and len(a.content) > 200 else (a.content or ''),
+            'created_at': a.created_at.isoformat() if a.created_at else None,
+            'filter_path': a.filter_path,
+            'views_count': getattr(a, 'views_count', 0),
+            'audience': a.audience,
+            'audience_city_id': a.audience_city_id,
+            'audience_course': a.audience_course,
+        } for a in articles]
+        return jsonify({'success': True, 'data': result, 'total': len(result)}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
