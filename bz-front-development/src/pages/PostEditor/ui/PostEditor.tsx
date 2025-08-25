@@ -323,7 +323,7 @@ export default function PostEditor() {
                     <label>Заголовок</label>
                     <Input
                         value={formData.title}
-                        onChange={(e) => handleInputChange('title', e.target.value)}
+                        onChange={(value) => handleInputChange('title', value)}
                         placeholder="Введите заголовок поста"
                     />
                 </div>
